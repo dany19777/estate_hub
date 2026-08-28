@@ -1,0 +1,73 @@
+'use client';
+
+import { useState } from 'react';
+import {
+  Bell,
+  Building2,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Clock3,
+  Heart,
+  Home,
+  LogOut,
+  MessageCircle,
+  Search,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserRound,
+  WalletCards,
+} from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+
+const sidebar = [
+  { icon: Home, label: 'Обзор' },
+  { icon: Heart, label: 'Избранное', count: 4 },
+  { icon: SlidersHorizontal, label: 'Сравнения', count: 2 },
+  { icon: CalendarDays, label: 'Мои просмотры' },
+  { icon: WalletCards, label: 'Бронирования', count: 1 },
+  { icon: MessageCircle, label: 'Сообщения', count: 3 },
+  { icon: Bell, label: 'Уведомления', count: 5 },
+  { icon: Settings, label: 'Профиль и безопасность' },
+];
+
+export default function BuyerProfile() {
+  const [active, setActive] = useState('Обзор');
+  return (
+    <main className="buyer-profile-page">
+      <header className="profile-header"><a className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></a><nav><a href="/catalog">Купить</a><a href="/catalog">Новостройки</a><a href="/catalog">Вторичный рынок</a></nav><div><button type="button"><Bell /></button><span>ИИ</span><div><strong>Иван Иванов</strong><small>+998 90 123 45 67</small></div></div></header>
+      <div className="profile-layout">
+        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{item.count && <em>{item.count}</em>}</button>)}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
+        <section className="profile-content">
+          <div className="profile-welcome"><div><span>Личный кабинет</span><h1>Добрый день, Иван 👋</h1><p>Ваши объекты, встречи и бронирования — в одном месте.</p></div><Button variant="outline"><Settings /> Настроить профиль</Button></div>
+
+          <div className="profile-status-grid">
+            <article><span className="profile-stat-icon blue"><Heart /></span><div><strong>4</strong><small>в избранном</small></div><a href="#favorites"><ChevronRight /></a></article>
+            <article><span className="profile-stat-icon orange"><CalendarDays /></span><div><strong>2</strong><small>записи на просмотр</small></div><a href="#viewings"><ChevronRight /></a></article>
+            <article><span className="profile-stat-icon green"><WalletCards /></span><div><strong>1</strong><small>активная бронь</small></div><a href="#reservation"><ChevronRight /></a></article>
+            <article><span className="profile-stat-icon violet"><MessageCircle /></span><div><strong>3</strong><small>новых сообщения</small></div><a href="#messages"><ChevronRight /></a></article>
+          </div>
+
+          <div className="profile-main-grid">
+            <div>
+              <section className="active-reservation" id="reservation"><div className="profile-section-heading"><div><Badge><Clock3 /> Активная бронь</Badge><h2>Квартира № A-142</h2><p>Bog‘ishamol Residence · 2 комнаты · 72 м²</p></div><a href="/complex/bogishamol">Открыть квартиру</a></div><div className="reservation-summary"><img src="https://images.unsplash.com/photo-1600573472592-401b489a3cdc?auto=format&fit=crop&w=500&q=82" alt="Интерьер квартиры A-142"/><div><div className="reservation-summary-top"><span>Цена зафиксирована</span><strong>685 млн сум</strong></div><div className="reservation-countdown"><span><Clock3 /> До окончания брони</span><strong>47:18:36</strong></div><Progress value={34} /><p>Вам нужно посетить офис продаж до <strong>31 августа, 18:00</strong>. Менеджер уже получил ваши данные.</p><div><Button><MessageCircle /> Написать менеджеру</Button><Button variant="outline">Детали брони</Button></div></div></div><div className="reservation-steps"><div className="done"><span><Check /></span><p><strong>Оплата брони</strong><small>2 500 000 сум</small></p></div><i/><div className="active"><span>2</span><p><strong>Визит в офис</strong><small>до 31 августа</small></p></div><i/><div><span>3</span><p><strong>Решение</strong><small>покупка или отказ</small></p></div></div></section>
+
+              <section className="profile-card-section" id="favorites"><div className="profile-section-heading"><div><span>Сохранено для вас</span><h2>Избранные объекты</h2></div><a href="/catalog">Смотреть все</a></div><div className="favorite-mini-grid"><a href="/complex/bogishamol"><img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=500&q=80" alt="Bog‘ishamol Residence"/><div><strong>Bog‘ishamol Residence</strong><span>от 620 млн сум</span><small>28 квартир · Сдан</small></div><Heart /></a><a href="/complex/bogishamol"><img src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=500&q=80" alt="Registan Gardens"/><div><strong>Registan Gardens</strong><span>от 745 млн сум</span><small>16 квартир · IV кв. 2026</small></div><Heart /></a></div></section>
+            </div>
+
+            <aside className="profile-right-rail">
+              <section className="verification-card"><div><span><ShieldCheck /></span><Badge variant="secondary">Базовый аккаунт</Badge></div><h2>Подтвердите личность заранее</h2><p>Усиленная проверка потребуется перед первой платной бронью.</p><div><span>Готовность профиля <strong>65%</strong></span><Progress value={65} /></div><Button>Пройти проверку</Button></section>
+              <section className="profile-card-section" id="viewings"><div className="profile-section-heading"><div><span>Ближайшие события</span><h2>Мои просмотры</h2></div></div><article className="viewing-item"><div><strong>31</strong><span>авг</span></div><p><strong>Registan Gardens</strong><span>Суббота, 14:00</span><small>Менеджер подтвердил встречу</small></p><Badge>Подтверждено</Badge></article><article className="viewing-item"><div><strong>02</strong><span>сен</span></div><p><strong>Silk Road Avenue</strong><span>Понедельник, 11:30</span><small>Ожидает подтверждения</small></p><Badge variant="secondary">Ожидает</Badge></article></section>
+              <section className="preference-card"><span>Ваш поиск</span><h2>2-комнатная в сданном ЖК</h2><p>Самарканд · до 900 млн · не первый этаж · онлайн-бронь</p><div><span><Bell /></span><p><strong>Уведомления включены</strong><small>Сообщим о новых совпадениях</small></p></div><a href="/catalog">Показать 18 вариантов <ChevronRight /></a></section>
+            </aside>
+          </div>
+        </section>
+      </div>
+      <nav className="mobile-bottom-nav" aria-label="Мобильная навигация"><a href="/"><Home /><span>Главная</span></a><a href="/catalog"><Search /><span>Поиск</span></a><a href="#favorites"><Heart /><span>Избранное</span></a><a href="#messages"><MessageCircle /><span>Сообщения</span></a><a className="active" href="/profile"><UserRound /><span>Профиль</span></a></nav>
+    </main>
+  );
+}
