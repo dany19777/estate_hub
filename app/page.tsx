@@ -304,7 +304,7 @@ export default function HomePage() {
 
         <div className="section-cta">
           <p><strong>42 жилых комплекса</strong><span>и 347 проверенных квартир в Самарканде</span></p>
-          <Button render={<a href="/catalog" />} className="all-complexes-button" size="lg">Смотреть все комплексы <ArrowRight /></Button>
+          <Button nativeButton={false} render={<a href="/catalog" />} className="all-complexes-button" size="lg">Смотреть все комплексы <ArrowRight /></Button>
         </div>
       </section>
 
