@@ -178,6 +178,59 @@ export const schemaStatements = [
     metadata_json TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS crm_customers (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL REFERENCES organizations(id),
+    buyer_user_id TEXT REFERENCES users(id),
+    full_name TEXT NOT NULL,
+    phone_e164 TEXT NOT NULL,
+    email TEXT,
+    first_source TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(organization_id, phone_e164)
+  )`,
+  `CREATE TABLE IF NOT EXISTS organization_sales_settings (
+    organization_id TEXT PRIMARY KEY REFERENCES organizations(id),
+    new_lead_sla_minutes INTEGER NOT NULL DEFAULT 45 CHECK (new_lead_sla_minutes BETWEEN 5 AND 1440),
+    sticky_assignment INTEGER NOT NULL DEFAULT 1 CHECK (sticky_assignment IN (0, 1)),
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS leads (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT NOT NULL REFERENCES crm_customers(id),
+    organization_id TEXT NOT NULL REFERENCES organizations(id),
+    complex_id TEXT NOT NULL REFERENCES complexes(id),
+    listing_id TEXT REFERENCES listings(id),
+    lead_type TEXT NOT NULL CHECK (lead_type IN ('consultation', 'viewing', 'reservation', 'chat', 'manual')),
+    status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'contact_required', 'contacted', 'consultation', 'selection', 'viewing_scheduled', 'viewing_completed', 'reservation', 'deal_in_progress', 'won', 'lost')),
+    source TEXT NOT NULL,
+    message TEXT NOT NULL DEFAULT '',
+    repeated_interaction INTEGER NOT NULL DEFAULT 0 CHECK (repeated_interaction IN (0, 1)),
+    idempotency_key TEXT NOT NULL UNIQUE,
+    lost_reason TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS viewings (
+    id TEXT PRIMARY KEY,
+    lead_id TEXT NOT NULL UNIQUE REFERENCES leads(id),
+    requested_date TEXT NOT NULL,
+    time_slot TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'confirmed', 'rescheduled', 'attended', 'no_show', 'cancelled', 'converted')),
+    confirmed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS lead_activities (
+    id TEXT PRIMARY KEY,
+    lead_id TEXT NOT NULL REFERENCES leads(id),
+    actor_type TEXT NOT NULL,
+    actor_id TEXT,
+    activity_type TEXT NOT NULL,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
 ] as const;
 
 export const indexStatements = [
@@ -194,4 +247,9 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_media_entity_sort ON media_assets(entity_type, entity_id, sort_order)`,
   `CREATE INDEX IF NOT EXISTS idx_verification_subject ON verification_cases(subject_type, subject_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_audit_entity_created ON audit_events(entity_type, entity_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_crm_customers_org_updated ON crm_customers(organization_id, updated_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_leads_org_status_created ON leads(organization_id, status, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_leads_customer_created ON leads(customer_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_viewings_date_status ON viewings(requested_date, status)`,
+  `CREATE INDEX IF NOT EXISTS idx_lead_activities_lead_created ON lead_activities(lead_id, created_at)`,
 ] as const;

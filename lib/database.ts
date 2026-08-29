@@ -76,9 +76,11 @@ async function seedMarketplace(database: D1Database) {
       .bind(organization[0], organization[1], organization[2], organization[3]));
     statements.push(database.prepare(`INSERT OR IGNORE INTO verification_cases (id, subject_type, subject_id, status, risk_level, reviewed_by, reviewed_at) VALUES (?, 'organization', ?, 'approved', 'low', 'system-seed', CURRENT_TIMESTAMP)`)
       .bind(`verification-${organization[0]}`, organization[0]));
+    statements.push(database.prepare(`INSERT OR IGNORE INTO organization_sales_settings (organization_id, new_lead_sla_minutes, sticky_assignment) VALUES (?, 45, 1)`).bind(organization[0]));
   }
   statements.push(database.prepare(`INSERT OR IGNORE INTO organizations (id, slug, name, organization_type, verification_status) VALUES ('org-nurafshon-build', 'nurafshon-build', 'Nurafshon Build', 'developer', 'pending')`));
   statements.push(database.prepare(`INSERT OR IGNORE INTO verification_cases (id, subject_type, subject_id, status, risk_level) VALUES ('verification-org-nurafshon-build', 'organization', 'org-nurafshon-build', 'submitted', 'medium')`));
+  statements.push(database.prepare(`INSERT OR IGNORE INTO organization_sales_settings (organization_id, new_lead_sla_minutes, sticky_assignment) VALUES ('org-nurafshon-build', 45, 1)`));
   for (const complex of complexSeeds) {
     statements.push(database.prepare(`INSERT OR IGNORE INTO complexes (
       id, slug, district_id, developer_org_id, name, address, description, completion_status,

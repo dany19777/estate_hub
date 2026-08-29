@@ -9,6 +9,7 @@ import {
   Bell,
   Building2,
   CalendarDays,
+  Check,
   ChevronDown,
   CreditCard,
   FileText,
@@ -22,6 +23,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Plus,
+  Phone,
   Search,
   Settings,
   ShieldCheck,
@@ -67,6 +69,31 @@ type DeveloperDashboardData = {
   kpis: { projects: number; availableUnits: number; publishedListings: number };
 };
 
+type DeveloperLead = {
+  id: string;
+  customer_name: string;
+  phone: string;
+  email: string | null;
+  complex_name: string;
+  listing_id: string | null;
+  unit_number: string | null;
+  lead_type: string;
+  status: string;
+  message: string;
+  repeated_interaction: boolean;
+  created_at: string;
+  requested_date: string | null;
+  time_slot: string | null;
+  viewing_status: string | null;
+  sla_breached: boolean;
+};
+
+type DeveloperLeadData = {
+  leads: DeveloperLead[];
+  slaMinutes: number;
+  stats: { total: number; new: number; viewings: number; slaBreaches: number };
+};
+
 const projectStatus: Record<string, { label: string; tone: string }> = {
   draft: { label: 'Черновик', tone: 'draft' },
   submitted: { label: 'На проверке', tone: 'pending' },
@@ -75,6 +102,20 @@ const projectStatus: Record<string, { label: string; tone: string }> = {
   published: { label: 'Опубликован', tone: 'published' },
   rejected: { label: 'Отклонён', tone: 'rejected' },
   archived: { label: 'В архиве', tone: 'draft' },
+};
+
+const leadStatus: Record<string, string> = {
+  new: 'Новый',
+  contact_required: 'Нужен контакт',
+  contacted: 'Связались',
+  consultation: 'Консультация',
+  selection: 'Подбор',
+  viewing_scheduled: 'Просмотр подтверждён',
+  viewing_completed: 'Просмотр завершён',
+  reservation: 'Бронирование',
+  deal_in_progress: 'Сделка',
+  won: 'Продано',
+  lost: 'Закрыт',
 };
 
 export default function DeveloperDashboard() {
@@ -92,6 +133,10 @@ export default function DeveloperDashboard() {
   const [addingUnit, setAddingUnit] = useState(false);
   const [unitMessage, setUnitMessage] = useState('');
   const [unitForm, setUnitForm] = useState({ complexId: '', buildingName: 'Корпус A', totalFloors: '16', floorNumber: '4', unitNumber: '', rooms: '2', areaSqm: '72', finish: 'Предчистовая', priceUzs: '650000000', reserveEnabled: true });
+  const [leadData, setLeadData] = useState<DeveloperLeadData | null>(null);
+  const [leadError, setLeadError] = useState('');
+  const [leadProcessing, setLeadProcessing] = useState('');
+  const [leadFeedback, setLeadFeedback] = useState('');
 
   async function loadDashboard() {
     setLoadError('');
@@ -107,8 +152,20 @@ export default function DeveloperDashboard() {
     }
   }
 
+  async function loadLeads() {
+    setLeadError('');
+    try {
+      const response = await fetch('/api/developer/leads', { cache: 'no-store' });
+      const payload = await response.json() as DeveloperLeadData & { message?: string };
+      if (!response.ok) throw new Error(payload.message || 'Не удалось загрузить заявки.');
+      setLeadData(payload);
+    } catch (error) {
+      setLeadError(error instanceof Error ? error.message : 'Не удалось загрузить заявки.');
+    }
+  }
+
   useEffect(() => {
-    const task = window.setTimeout(() => { void loadDashboard(); }, 0);
+    const task = window.setTimeout(() => { void Promise.all([loadDashboard(), loadLeads()]); }, 0);
     return () => window.clearTimeout(task);
   }, []);
 
@@ -130,9 +187,9 @@ export default function DeveloperDashboard() {
     { label: 'Всего проектов', value: dashboard?.kpis.projects ?? '—', change: 'в базе компании', icon: Building2, tone: 'blue' },
     { label: 'Доступно квартир', value: dashboard?.kpis.availableUnits ?? '—', change: 'готовы к продаже', icon: Home, tone: 'violet' },
     { label: 'Объявления', value: dashboard?.kpis.publishedListings ?? '—', change: 'опубликовано', icon: Gauge, tone: 'green' },
-    { label: 'На проверке', value: (workflowCounts.submitted ?? 0) + (workflowCounts.in_verification ?? 0), change: 'ожидают решения', icon: ShieldCheck, tone: 'orange' },
-    { label: 'На модерации', value: workflowCounts.pending_moderation ?? 0, change: 'перед публикацией', icon: ListChecks, tone: 'pink' },
-    { label: 'Опубликовано', value: workflowCounts.published ?? 0, change: 'видно в каталоге', icon: Sparkles, tone: 'yellow' },
+    { label: 'Новые лиды', value: leadData?.stats.new ?? '—', change: 'требуют ответа', icon: MessageCircle, tone: 'orange' },
+    { label: 'Просмотры', value: leadData?.stats.viewings ?? '—', change: 'заявок в CRM', icon: CalendarDays, tone: 'pink' },
+    { label: 'SLA', value: leadData?.stats.slaBreaches ?? '—', change: `дольше ${leadData?.slaMinutes ?? 45} минут`, icon: AlertCircle, tone: 'yellow' },
   ];
 
   async function createComplex(event: SyntheticEvent<HTMLFormElement>) {
@@ -179,13 +236,34 @@ export default function DeveloperDashboard() {
     }
   }
 
+  async function updateLead(lead: DeveloperLead, action: 'contacted' | 'confirm_viewing' | 'lost') {
+    const lostReason = action === 'lost' ? window.prompt('Почему лид закрывается?')?.trim() ?? '' : '';
+    if (action === 'lost' && !lostReason) return;
+    setLeadProcessing(lead.id);
+    setLeadFeedback('');
+    try {
+      const response = await fetch('/api/developer/leads', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ leadId: lead.id, action, lostReason }) });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message || 'Не удалось обновить заявку.');
+      setLeadFeedback(payload.message || 'Заявка обновлена.');
+      await loadLeads();
+    } catch (error) {
+      setLeadFeedback(error instanceof Error ? error.message : 'Не удалось обновить заявку.');
+    } finally {
+      setLeadProcessing('');
+    }
+  }
+
   return (
     <main className="developer-page dark">
       <aside className={`developer-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="developer-logo"><span><Building2 /></span><strong>Estate<em>Hub</em></strong><button type="button" onClick={() => setSidebarOpen(false)} aria-label="Закрыть меню"><X /></button></div>
         <div className="company-mini-card"><span>SD</span><div><strong>{dashboard?.organization?.name ?? 'Компания'}</strong><small><ShieldCheck /> Рабочий кабинет</small></div><ChevronDown /></div>
         <nav>
-          {navGroups.map((group) => <div className="developer-nav-group" key={group.label}><span>{group.label}</span>{group.items.map((item) => <button className={item.active ? 'active' : ''} type="button" key={item.label}><item.icon /> <strong>{item.label}</strong>{item.count && <em>{item.count}</em>}</button>)}</div>)}
+          {navGroups.map((group) => <div className="developer-nav-group" key={group.label}><span>{group.label}</span>{group.items.map((item) => {
+            const count = item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.count;
+            return <button className={item.active ? 'active' : ''} type="button" key={item.label}><item.icon /> <strong>{item.label}</strong>{Boolean(count) && <em>{count}</em>}</button>;
+          })}</div>)}
         </nav>
         <Link className="public-site-link" href="/"><span><ArrowUpRight /></span><div><strong>Публичный сайт</strong><small>Открыть маркетплейс</small></div></Link>
       </aside>
@@ -201,6 +279,8 @@ export default function DeveloperDashboard() {
           <div className="dashboard-heading"><div><h1>Добро пожаловать, {dashboard?.organization?.name ?? dashboard?.session.user.fullName ?? 'застройщик'} 👋</h1><p>Здесь проекты проходят путь от заявки до публикации в каталоге.</p></div><div className="dashboard-heading-actions"><button type="button" onClick={() => setPeriod(period === 'Последние 7 дней' ? 'Этот месяц' : 'Последние 7 дней')}><CalendarDays /> {period} <ChevronDown /></button><Button onClick={() => setCreateOpen(true)}><Plus /> Добавить объект</Button></div></div>
 
           {loadError && <div className="dashboard-operation-state error"><AlertCircle /><span>{loadError}</span><button type="button" onClick={() => void loadDashboard()}>Повторить</button></div>}
+          {leadError && <div className="dashboard-operation-state error"><AlertCircle /><span>{leadError}</span><button type="button" onClick={() => void loadLeads()}>Повторить</button></div>}
+          {leadFeedback && <div className="dashboard-operation-state success"><Check /><span>{leadFeedback}</span></div>}
 
           <div className="dashboard-layout">
             <div className="dashboard-main">
@@ -228,16 +308,31 @@ export default function DeveloperDashboard() {
                 <div className="table-footer"><span>Показано {projects.length} из {dashboard?.projects.length ?? 0} проектов</span><div><button type="button" className="active">1</button></div></div>
               </section>
 
+              <section className="dashboard-panel developer-leads-panel" id="developer-leads">
+                <div className="panel-heading"><div><h2>Новые обращения</h2><p>Консультации и просмотры из публичного каталога</p></div><Badge className="project-status pending">{leadData?.stats.new ?? 0} требуют ответа</Badge></div>
+                <Table className="developer-table developer-leads-table">
+                  <TableHeader><TableRow><TableHead>Клиент</TableHead><TableHead>Запрос</TableHead><TableHead>Объект</TableHead><TableHead>Получено</TableHead><TableHead>Статус</TableHead><TableHead>Действия</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {!leadData && !leadError && <TableRow><TableCell colSpan={6}><div className="table-empty-state">Загружаем обращения…</div></TableCell></TableRow>}
+                    {leadData && leadData.leads.length === 0 && <TableRow><TableCell colSpan={6}><div className="table-empty-state">Обращений пока нет. Они появятся здесь после отправки формы из карточки ЖК.</div></TableCell></TableRow>}
+                    {leadData?.leads.slice(0, 8).map((lead) => {
+                      const created = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(lead.created_at.replace(' ', 'T') + 'Z'));
+                      return <TableRow key={lead.id}><TableCell><div className="lead-customer-cell"><span>{lead.customer_name.split(/\s+/).slice(0,2).map((part) => part[0]).join('').toUpperCase()}</span><div><strong>{lead.customer_name}{lead.repeated_interaction && <em>Повторный</em>}</strong><small><Phone /> {lead.phone}</small></div></div></TableCell><TableCell><strong>{lead.lead_type === 'viewing' ? 'Просмотр' : 'Консультация'}</strong>{lead.requested_date && <small>{lead.requested_date} · {lead.time_slot}</small>}</TableCell><TableCell><strong>{lead.complex_name}</strong>{lead.unit_number && <small>Квартира № {lead.unit_number}</small>}</TableCell><TableCell><span className={lead.sla_breached ? 'lead-sla-breached' : ''}>{created}</span>{lead.sla_breached && <small>Нарушен SLA</small>}</TableCell><TableCell><Badge className={`lead-status ${lead.status}`}>{leadStatus[lead.status] ?? lead.status}</Badge></TableCell><TableCell><div className="lead-row-actions">{lead.status === 'new' && (lead.lead_type === 'viewing' ? <button type="button" onClick={() => void updateLead(lead, 'confirm_viewing')} disabled={leadProcessing === lead.id}><CalendarDays /> Подтвердить</button> : <button type="button" onClick={() => void updateLead(lead, 'contacted')} disabled={leadProcessing === lead.id}><Phone /> Связались</button>)}{!['won', 'lost'].includes(lead.status) && <button className="close" type="button" onClick={() => void updateLead(lead, 'lost')} disabled={leadProcessing === lead.id} aria-label={`Закрыть заявку ${lead.customer_name}`}><X /></button>}</div></TableCell></TableRow>;
+                    })}
+                  </TableBody>
+                </Table>
+              </section>
+
               <div className="analytics-grid">
                 <section className="dashboard-panel chart-panel"><div className="panel-heading"><div><h2>Пример отчёта: просмотры</h2><p>Демонстрационные данные</p></div><button type="button">Неделя <ChevronDown /></button></div><div className="dashboard-line-chart"><span className="chart-value">2 450<small>16 авг</small></span><svg viewBox="0 0 600 220" aria-label="Пример графика просмотров за неделю"><defs><linearGradient id="devLine" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#4d7cff" stopOpacity=".3"/><stop offset="1" stopColor="#4d7cff" stopOpacity="0"/></linearGradient></defs><path d="M5 190 C55 160 73 119 119 148 S176 103 224 123 S290 62 337 96 S403 49 449 62 S526 89 595 25 L595 218 L5 218 Z" fill="url(#devLine)"/><path d="M5 190 C55 160 73 119 119 148 S176 103 224 123 S290 62 337 96 S403 49 449 62 S526 89 595 25" fill="none" stroke="#4d7cff" strokeWidth="4" strokeLinecap="round"/></svg><div><span>12 авг</span><span>13 авг</span><span>14 авг</span><span>15 авг</span><span>16 авг</span><span>17 авг</span><span>18 авг</span></div></div></section>
-                <section className="dashboard-panel chart-panel"><div className="panel-heading"><div><h2>Пример отчёта: лиды</h2><p>Появится после подключения обращений</p></div><button type="button">Неделя <ChevronDown /></button></div><div className="bar-chart" aria-label="Пример лидов за неделю">{[44, 59, 49, 73, 68, 91, 61].map((value, index) => <div key={index}><i style={{ height: `${value}%` }} /><span>{12 + index} авг</span></div>)}</div></section>
+                <section className="dashboard-panel chart-panel"><div className="panel-heading"><div><h2>Воронка обращений</h2><p>{leadData?.stats.total ?? 0} заявок · {leadData?.stats.viewings ?? 0} просмотров</p></div><button type="button">Неделя <ChevronDown /></button></div><div className="bar-chart" aria-label="Активность обращений">{[32, 46, 38, 65, 52, Math.max(18, Math.min(95, (leadData?.stats.total ?? 0) * 12)), 44].map((value, index) => <div key={index}><i style={{ height: `${value}%` }} /><span>{12 + index} авг</span></div>)}</div></section>
               </div>
             </div>
 
             <aside className="dashboard-rail">
               <section className="company-profile-card"><div className="company-cover"><span>SD</span></div><h2>{dashboard?.organization?.name ?? 'Компания'} <ShieldCheck /></h2><p>Застройщик · Самарканд</p><div><span><strong>{dashboard?.kpis.projects ?? 0}</strong>проектов</span><span><strong>{dashboard?.kpis.availableUnits ?? 0}</strong>доступно</span><span><strong>{dashboard?.kpis.publishedListings ?? 0}</strong>объявлений</span></div><div className="profile-progress"><span>Профиль заполнен <strong>70%</strong></span><Progress value={70} /></div><button type="button" disabled title="Редактирование профиля — следующий этап">Редактировать профиль</button></section>
               <section className="quick-actions"><h2>Быстрые действия</h2><div><button type="button" onClick={() => setCreateOpen(true)}><Plus /><span>Новый комплекс</span></button><button type="button" onClick={() => setUnitOpen(true)} disabled={!dashboard?.projects.length} title={dashboard?.projects.length ? 'Добавить квартиру и объявление' : 'Сначала создайте ЖК'}><Home /><span>Добавить квартиру</span></button><button type="button" disabled title="Будет подключено следующим этапом"><Sparkles /><span>Создать акцию</span></button><button type="button" disabled title="Будет подключено следующим этапом"><CalendarDays /><span>Бронирования</span></button><button type="button" disabled title="Будет подключено следующим этапом"><FileText /><span>Сформировать отчёт</span></button><button type="button" disabled title="Будет подключено следующим этапом"><ImageIcon /><span>Медиа</span></button></div></section>
-              <section className="attention-card"><div><h2>Требует внимания</h2><a href="#attention">Смотреть все</a></div><article><span className="urgent"><AlertCircle /></span><div><strong>3 нарушения SLA</strong><small>Лиды ожидают ответа более 30 минут</small></div><ArrowUpRight /></article><article><span className="warning"><Clock3Icon /></span><div><strong>5 броней истекают</strong><small>В течение ближайших 24 часов</small></div><ArrowUpRight /></article><article><span className="info"><MessageCircle /></span><div><strong>8 сообщений без ответа</strong><small>Самое раннее — 42 минуты назад</small></div><ArrowUpRight /></article></section>
+              <section className="attention-card"><div><h2>Требует внимания</h2><a href="#developer-leads">Смотреть заявки</a></div><article><span className="urgent"><AlertCircle /></span><div><strong>{leadData?.stats.slaBreaches ?? 0} нарушений SLA</strong><small>Порог компании — {leadData?.slaMinutes ?? 45} минут</small></div><ArrowUpRight /></article><article><span className="warning"><Clock3Icon /></span><div><strong>{leadData?.stats.viewings ?? 0} заявок на просмотр</strong><small>Новые запросы нужно подтвердить</small></div><ArrowUpRight /></article><article><span className="info"><MessageCircle /></span><div><strong>{leadData?.stats.new ?? 0} новых обращений</strong><small>Консультации и просмотры из каталога</small></div><ArrowUpRight /></article></section>
             </aside>
           </div>
         </div>
