@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -26,6 +25,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { InternalLink as Link } from '@/components/internal-link';
 
 const results = [
   { id: 1, name: 'Bog‘ishamol Residence', location: 'Боғишамол', price: 'от 620 млн', units: 28, rooms: '1–4', status: 'Сдан', type: 'Первичный', verified: true, reserve: true, x: 54, y: 44, image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=86' },
@@ -43,6 +43,27 @@ const filterGroups = [
   { title: 'Продавец', options: ['Застройщик', 'Владелец', 'Агентство'] },
 ];
 
+const marketContext = {
+  'Все': {
+    label: 'Купить',
+    title: 'Все варианты покупки в одном каталоге',
+    description: 'Новостройки от проверенных застройщиков и квартиры собственников на вторичном рынке.',
+    examples: [1, 6],
+  },
+  'Первичный': {
+    label: 'Новостройки',
+    title: 'Квартиры напрямую от застройщиков',
+    description: 'Смотрите готовые и строящиеся комплексы, сроки сдачи и возможность онлайн-бронирования.',
+    examples: [1, 2],
+  },
+  'Вторичный': {
+    label: 'Вторичный рынок',
+    title: 'Готовые квартиры от владельцев и агентств',
+    description: 'Сравнивайте предложения в сданных домах, состояние квартиры и историю актуальной цены.',
+    examples: [6, 3],
+  },
+} as const;
+
 export default function CatalogPage() {
   const [view, setView] = useState<'list' | 'map'>('list');
   const [activeMarket, setActiveMarket] = useState('Все');
@@ -50,6 +71,19 @@ export default function CatalogPage() {
   const [selected, setSelected] = useState(results[0]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const market = new URLSearchParams(window.location.search).get('market');
+    if (market === 'primary') setActiveMarket('Первичный');
+    if (market === 'secondary') setActiveMarket('Вторичный');
+    if (market === 'all') setActiveMarket('Все');
+  }, []);
+
+  const selectMarket = (nextMarket: string) => {
+    setActiveMarket(nextMarket);
+    const value = nextMarket === 'Первичный' ? 'primary' : nextMarket === 'Вторичный' ? 'secondary' : 'all';
+    window.history.replaceState({}, '', `/catalog?market=${value}`);
+  };
 
   const filtered = useMemo(() => {
     return results.filter((item) => {
@@ -62,6 +96,9 @@ export default function CatalogPage() {
   const toggleFavorite = (id: number) => {
     setFavorites((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   };
+
+  const context = marketContext[activeMarket as keyof typeof marketContext];
+  const examples = context.examples.map((id) => results.find((item) => item.id === id)).filter(Boolean) as typeof results;
 
   return (
     <main className="catalog-page">
@@ -82,7 +119,7 @@ export default function CatalogPage() {
           <span><Bot /> AI</span>
         </div>
         <div className="market-quick-tabs" aria-label="Тип рынка">
-          {['Все', 'Первичный', 'Вторичный'].map((item) => <button type="button" className={activeMarket === item ? 'active' : ''} key={item} onClick={() => setActiveMarket(item)}>{item}</button>)}
+          {['Все', 'Первичный', 'Вторичный'].map((item) => <button type="button" className={activeMarket === item ? 'active' : ''} key={item} onClick={() => selectMarket(item)}>{item}</button>)}
         </div>
         <button className="mobile-filter-trigger" type="button" onClick={() => setFiltersOpen(true)}><SlidersHorizontal /> Фильтры</button>
         <div className="catalog-view-switcher">
@@ -122,6 +159,22 @@ export default function CatalogPage() {
             <div><span>Самарканд</span><h1>{filtered.length} жилых комплексов</h1></div>
             <button type="button">Сначала рекомендуемые <ChevronDown /></button>
           </div>
+
+          <section className="market-context-card" aria-label={`Примеры раздела ${context.label}`}>
+            <div>
+              <Badge variant="secondary">Раздел: {context.label}</Badge>
+              <h2>{context.title}</h2>
+              <p>{context.description}</p>
+            </div>
+            <div className="market-context-examples">
+              {examples.map((item, index) => (
+                <article key={item.id}>
+                  <img src={item.image} alt="" />
+                  <div><small>Пример {index + 1}</small><strong>{item.name}</strong><span>{item.type} · {item.price} сум</span></div>
+                </article>
+              ))}
+            </div>
+          </section>
 
           {view === 'list' ? (
             <div className="result-grid">

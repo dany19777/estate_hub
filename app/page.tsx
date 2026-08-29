@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import {
   ArrowRight,
   Bell,
@@ -25,6 +24,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { InternalLink as Link } from '@/components/internal-link';
 
 const complexes = [
   {
@@ -104,9 +104,9 @@ function Header() {
       <div className="shell header-inner">
         <BrandMark />
         <nav className="desktop-nav" aria-label="Основная навигация">
-          <Link className="active" href="/catalog">Купить</Link>
-          <Link href="/catalog">Новостройки</Link>
-          <Link href="/catalog">Вторичный рынок</Link>
+          <Link className="active" href="/catalog?market=all">Купить</Link>
+          <Link href="/catalog?market=primary">Новостройки</Link>
+          <Link href="/catalog?market=secondary">Вторичный рынок</Link>
           <a href="#how-it-works">Как это работает</a>
           <Link href="/developer">Для застройщиков</Link>
         </nav>

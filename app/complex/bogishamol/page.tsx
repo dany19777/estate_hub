@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
@@ -37,6 +36,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { InternalLink as Link } from '@/components/internal-link';
 
 const gallery = [
   'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=90',
@@ -63,7 +63,7 @@ export default function ComplexPage() {
     <main className="complex-page">
       <header className="detail-header">
         <Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link>
-        <nav><Link href="/catalog">Купить</Link><Link href="/catalog">Новостройки</Link><Link href="/catalog">Вторичный рынок</Link></nav>
+        <nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav>
         <div><button type="button"><Bell /></button><button type="button"><UserRound /></button></div>
       </header>
 
