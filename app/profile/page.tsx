@@ -30,6 +30,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useSavedSearches } from '@/hooks/use-saved-searches';
 import { useReservations } from '@/hooks/use-reservations';
+import { useViewings } from '@/hooks/use-viewings';
 import { formatPriceMillions } from '@/lib/marketplace';
 
 const sidebar = [
@@ -50,13 +51,14 @@ export default function BuyerProfile() {
   const { items: comparisons } = useComparisons();
   const { searches } = useSavedSearches();
   const { reservations } = useReservations();
+  const { viewings } = useViewings();
   const activeReservation = reservations[0];
   const reservationDate = activeReservation?.reservation_expires_at ?? activeReservation?.hold_expires_at;
   return (
     <main className="buyer-profile-page">
       <header className="profile-header"><Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link><nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav><div><button type="button"><Bell /></button><span>ИИ</span><div><strong>Иван Иванов</strong><small>+998 90 123 45 67</small></div></div></header>
       <div className="profile-layout">
-        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.label === 'Сравнения' ? comparisons.length : item.label === 'Сохранённые поиски' ? searches.length : item.label === 'Бронирования' ? reservations.length : item.count; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
+        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.label === 'Сравнения' ? comparisons.length : item.label === 'Сохранённые поиски' ? searches.length : item.label === 'Мои просмотры' ? viewings.length : item.label === 'Бронирования' ? reservations.length : item.count; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
         <section className="profile-content">
           <div className="profile-welcome"><div><span>Личный кабинет</span><h1>Добрый день, Иван 👋</h1><p>Ваши объекты, встречи и бронирования — в одном месте.</p></div><Button variant="outline"><Settings /> Настроить профиль</Button></div>
 
@@ -65,7 +67,7 @@ export default function BuyerProfile() {
 
           <div className="profile-status-grid">
             <article><span className="profile-stat-icon blue"><Heart /></span><div><strong>{favorites.length}</strong><small>в избранном</small></div><a href="#favorites"><ChevronRight /></a></article>
-            <article><span className="profile-stat-icon orange"><CalendarDays /></span><div><strong>2</strong><small>записи на просмотр</small></div><a href="#viewings"><ChevronRight /></a></article>
+            <article><span className="profile-stat-icon orange"><CalendarDays /></span><div><strong>{viewings.length}</strong><small>записей на просмотр</small></div><a href="#viewings"><ChevronRight /></a></article>
             <article><span className="profile-stat-icon green"><WalletCards /></span><div><strong>{reservations.length}</strong><small>активных броней</small></div><a href="#reservation"><ChevronRight /></a></article>
             <article><span className="profile-stat-icon violet"><MessageCircle /></span><div><strong>3</strong><small>новых сообщения</small></div><a href="#messages"><ChevronRight /></a></article>
           </div>
@@ -79,7 +81,7 @@ export default function BuyerProfile() {
 
             <aside className="profile-right-rail">
               <section className="verification-card"><div><span><ShieldCheck /></span><Badge variant="secondary">Базовый аккаунт</Badge></div><h2>Подтвердите личность заранее</h2><p>Усиленная проверка потребуется перед первой платной бронью.</p><div><span>Готовность профиля <strong>65%</strong></span><Progress value={65} /></div><Button>Пройти проверку</Button></section>
-              <section className="profile-card-section" id="viewings"><div className="profile-section-heading"><div><span>Ближайшие события</span><h2>Мои просмотры</h2></div></div><article className="viewing-item"><div><strong>31</strong><span>авг</span></div><p><strong>Registan Gardens</strong><span>Суббота, 14:00</span><small>Менеджер подтвердил встречу</small></p><Badge>Подтверждено</Badge></article><article className="viewing-item"><div><strong>02</strong><span>сен</span></div><p><strong>Silk Road Avenue</strong><span>Понедельник, 11:30</span><small>Ожидает подтверждения</small></p><Badge variant="secondary">Ожидает</Badge></article></section>
+              <section className="profile-card-section" id="viewings"><div className="profile-section-heading"><div><span>Ближайшие события</span><h2>Мои просмотры</h2></div></div>{viewings.length ? viewings.slice(0, 3).map((viewing) => { const date = new Date(`${viewing.requested_date}T00:00:00Z`); return <article className="viewing-item" key={viewing.id}><div><strong>{new Intl.DateTimeFormat('ru-RU', { day: '2-digit' }).format(date)}</strong><span>{new Intl.DateTimeFormat('ru-RU', { month: 'short' }).format(date).replace('.', '')}</span></div><p><strong>{viewing.complex_name}{viewing.unit_number ? ` · № ${viewing.unit_number}` : ''}</strong><span>{viewing.requested_date} · {viewing.time_slot}</span><small>{viewing.status === 'confirmed' ? 'Менеджер подтвердил встречу' : viewing.status === 'rescheduled' ? 'Требуется согласовать новое время' : 'Ожидает подтверждения'}</small></p><Badge variant={viewing.status === 'confirmed' ? 'default' : 'secondary'}>{viewing.status === 'confirmed' ? 'Подтверждено' : viewing.status === 'rescheduled' ? 'Перенос' : 'Ожидает'}</Badge></article>; }) : <p className="profile-empty">Запишитесь на просмотр на странице ЖК — здесь появятся время и статус подтверждения.</p>}</section>
               <section className="preference-card"><span>Ваш поиск</span><h2>2-комнатная в сданном ЖК</h2><p>Самарканд · до 900 млн · не первый этаж · онлайн-бронь</p><div><span><Bell /></span><p><strong>Уведомления включены</strong><small>Сообщим о новых совпадениях</small></p></div><Link href="/catalog">Показать 18 вариантов <ChevronRight /></Link></section>
             </aside>
           </div>
