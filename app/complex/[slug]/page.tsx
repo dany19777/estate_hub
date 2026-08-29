@@ -16,6 +16,7 @@ import {
   Maximize2,
   MessageCircle,
   Search,
+  Scale,
   Share2,
   ShieldCheck,
   Sparkles,
@@ -29,6 +30,7 @@ import { InternalLink as Link } from '@/components/internal-link';
 import { LeadRequestDialog } from '@/components/lead-request-dialog';
 import { ReservationDialog } from '@/components/reservation-dialog';
 import { useComplexDetail } from '@/hooks/use-complex-detail';
+import { useComparisons } from '@/hooks/use-comparisons';
 import { useFavorites } from '@/hooks/use-favorites';
 import { formatPriceMillions, formatPricePerSqm } from '@/lib/marketplace';
 
@@ -39,6 +41,7 @@ export default function ComplexPage() {
   const { data, loading, error, retry } = useComplexDetail(slug);
   const [activeImage, setActiveImage] = useState(0);
   const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
+  const { items: comparisonItems, has: isCompared, toggle: toggleComparison } = useComparisons();
   const [inventoryTab, setInventoryTab] = useState<'Все' | 'Первичный' | 'Вторичный'>('Все');
 
   const shareComplex = async () => {
@@ -105,12 +108,13 @@ export default function ComplexPage() {
                     <div className="plan-preview"><div><span>{listing.rooms}</span><i /><i /><i /></div><small>№ {listing.unitNumber}</small></div>
                     <div className="listing-info"><Badge variant={listing.marketType === 'PRIMARY_DEVELOPER' ? 'default' : 'secondary'}>{listing.marketType === 'PRIMARY_DEVELOPER' ? 'Первичный' : 'Вторичный'}</Badge><h3>{listing.rooms}-комнатная квартира, {listing.areaSqm} м²</h3><p>{listing.floorNumber} / {listing.totalFloors} этаж · {listing.finish}</p><span><ShieldCheck /> {listing.seller}</span></div>
                     <div className="listing-price"><strong>{formatPriceMillions(listing.priceUzs)} сум</strong><span>{formatPricePerSqm(Math.round(listing.priceUzs / listing.areaSqm))}</span><small>Цена из реестра объявлений</small></div>
-                    <div className="listing-actions">{listing.marketType === 'PRIMARY_DEVELOPER' ? <LeadRequestDialog type="consultation" complexId={summary.id} complexName={summary.name} listingId={listing.id} unitNumber={listing.unitNumber} trigger={<Button variant="outline" size="sm"><Eye /> Консультация</Button>} /> : <Button variant="outline" size="sm"><MessageCircle /> Продавцу</Button>}{listing.reserveEnabled ? <ReservationDialog listingId={listing.id} unitNumber={listing.unitNumber} trigger={<Button size="sm" />} /> : <Button size="sm"><MessageCircle /> Написать продавцу</Button>}</div>
+                    <div className="listing-actions"><Button variant="outline" size="sm" onClick={() => void toggleComparison(listing.id)}><Scale /> {isCompared(listing.id) ? 'В сравнении' : 'Сравнить'}</Button>{listing.marketType === 'PRIMARY_DEVELOPER' ? <LeadRequestDialog type="consultation" complexId={summary.id} complexName={summary.name} listingId={listing.id} unitNumber={listing.unitNumber} trigger={<Button variant="outline" size="sm"><Eye /> Консультация</Button>} /> : <Button variant="outline" size="sm"><MessageCircle /> Продавцу</Button>}{listing.reserveEnabled ? <ReservationDialog listingId={listing.id} unitNumber={listing.unitNumber} trigger={<Button size="sm" />} /> : <Button size="sm"><MessageCircle /> Написать продавцу</Button>}</div>
                   </article>
                 ))}
               </div>
             </div>
 
+            {comparisonItems.length > 0 && <Link className="compare-mini-bar" href="/compare"><Scale /> В сравнении: {comparisonItems.length} из 4 квартир <span>Открыть</span></Link>}
             <section className="price-history-card">
               <div><span>Прозрачность цены</span><h2>Текущая стоимость за м²</h2><p>Минимальная цена по активным объявлениям · {listings.length} предложений</p></div>
               <div className="price-chart" aria-label={`Стоимость начинается от ${formatPricePerSqm(summary.pricePerSqmFrom)}`}>

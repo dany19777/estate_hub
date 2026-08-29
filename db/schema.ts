@@ -267,6 +267,12 @@ export const schemaStatements = [
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS buyer_comparisons (
+    user_id TEXT NOT NULL REFERENCES users(id),
+    listing_id TEXT NOT NULL REFERENCES listings(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(user_id, listing_id)
+  )`,
 ] as const;
 
 export const indexStatements = [
@@ -293,4 +299,5 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_reservations_hold_expiry ON reservation_transactions(status, hold_expires_at)`,
   `CREATE INDEX IF NOT EXISTS idx_buyer_favorites_created ON buyer_favorites(user_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_buyer_saved_searches_updated ON buyer_saved_searches(user_id, updated_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_buyer_comparisons_created ON buyer_comparisons(user_id, created_at)`,
 ] as const;
