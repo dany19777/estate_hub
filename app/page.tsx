@@ -3,16 +3,13 @@
 import { useMemo, useState } from 'react';
 import {
   ArrowRight,
-  Bell,
   Bot,
   Building2,
   Check,
-  ChevronDown,
   Heart,
   Home,
   Map,
   MapPin,
-  Menu,
   MessageCircle,
   Search,
   ShieldCheck,
@@ -25,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InternalLink as Link } from '@/components/internal-link';
+import { MarketplaceHeader } from '@/components/marketplace-header';
 
 const complexes = [
   {
@@ -86,42 +84,6 @@ const complexes = [
 ];
 
 const quickFilters = ['2 комнаты', 'до 900 млн', 'не первый этаж', 'сдан', 'онлайн-бронь'];
-
-function BrandMark() {
-  return (
-    <a href="#top" className="brand" aria-label="EstateHub — главная">
-      <span className="brand-mark" aria-hidden="true">
-        <Building2 />
-      </span>
-      <span>Estate<span>Hub</span></span>
-    </a>
-  );
-}
-
-function Header() {
-  return (
-    <header className="site-header">
-      <div className="shell header-inner">
-        <BrandMark />
-        <nav className="desktop-nav" aria-label="Основная навигация">
-          <Link className="active" href="/catalog?market=all">Купить</Link>
-          <Link href="/catalog?market=primary">Новостройки</Link>
-          <Link href="/catalog?market=secondary">Вторичный рынок</Link>
-          <a href="#how-it-works">Как это работает</a>
-          <Link href="/developer">Для застройщиков</Link>
-        </nav>
-        <div className="header-actions">
-          <button className="locale-button" type="button">RU <ChevronDown /></button>
-          <button className="currency-button" type="button">UZS <ChevronDown /></button>
-          <button className="icon-button desktop-only" type="button" aria-label="Избранное"><Heart /></button>
-          <button className="icon-button desktop-only notification-button" type="button" aria-label="Уведомления"><Bell /><span /></button>
-          <Link className="profile-button" href="/profile" aria-label="Личный кабинет"><UserRound /></Link>
-          <button className="icon-button mobile-menu" type="button" aria-label="Открыть меню"><Menu /></button>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 function ComplexCard({ complex, favorite, onFavorite }: {
   complex: (typeof complexes)[number];
@@ -209,7 +171,7 @@ export default function HomePage() {
 
   return (
     <main id="top">
-      <Header />
+      <MarketplaceHeader />
 
       <section className="hero-section">
         <div className="hero-image" aria-hidden="true" />

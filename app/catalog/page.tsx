@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   ArrowRight,
-  Bell,
   Bot,
   Building2,
   Check,
@@ -26,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InternalLink as Link } from '@/components/internal-link';
+import { MarketplaceHeader } from '@/components/marketplace-header';
 
 const results = [
   { id: 1, name: 'Bog‘ishamol Residence', location: 'Боғишамол', price: 'от 620 млн', units: 28, rooms: '1–4', status: 'Сдан', type: 'Первичный', verified: true, reserve: true, x: 54, y: 44, image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=86' },
@@ -99,18 +98,11 @@ export default function CatalogPage() {
 
   const context = marketContext[activeMarket as keyof typeof marketContext];
   const examples = context.examples.map((id) => results.find((item) => item.id === id)).filter(Boolean) as typeof results;
+  const activeHeaderSection = activeMarket === 'Первичный' ? 'primary' : activeMarket === 'Вторичный' ? 'secondary' : 'all';
 
   return (
     <main className="catalog-page">
-      <header className="catalog-header">
-        <Link className="catalog-back" href="/"><ArrowLeft /> На главную</Link>
-        <Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link>
-        <div className="catalog-header-actions">
-          <button type="button">RU <ChevronDown /></button>
-          <button type="button" aria-label="Уведомления"><Bell /></button>
-          <button type="button" aria-label="Профиль"><UserRound /></button>
-        </div>
-      </header>
+      <MarketplaceHeader active={activeHeaderSection} />
 
       <section className="catalog-toolbar">
         <div className="catalog-search">
