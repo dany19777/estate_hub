@@ -9,8 +9,6 @@ import {
   Bell,
   Building2,
   CalendarDays,
-  Check,
-  Clock3,
   Eye,
   Heart,
   Home,
@@ -27,19 +25,9 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { InternalLink as Link } from '@/components/internal-link';
 import { LeadRequestDialog } from '@/components/lead-request-dialog';
+import { ReservationDialog } from '@/components/reservation-dialog';
 import { useComplexDetail } from '@/hooks/use-complex-detail';
 import { formatPriceMillions, formatPricePerSqm } from '@/lib/marketplace';
 
@@ -51,7 +39,6 @@ export default function ComplexPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [favorite, setFavorite] = useState(false);
   const [inventoryTab, setInventoryTab] = useState<'Все' | 'Первичный' | 'Вторичный'>('Все');
-  const [reservationStarted, setReservationStarted] = useState<string | null>(null);
 
   const shareComplex = async () => {
     const shareData = { title: data?.summary.name ?? 'EstateHub', url: window.location.href };
@@ -117,16 +104,7 @@ export default function ComplexPage() {
                     <div className="plan-preview"><div><span>{listing.rooms}</span><i /><i /><i /></div><small>№ {listing.unitNumber}</small></div>
                     <div className="listing-info"><Badge variant={listing.marketType === 'PRIMARY_DEVELOPER' ? 'default' : 'secondary'}>{listing.marketType === 'PRIMARY_DEVELOPER' ? 'Первичный' : 'Вторичный'}</Badge><h3>{listing.rooms}-комнатная квартира, {listing.areaSqm} м²</h3><p>{listing.floorNumber} / {listing.totalFloors} этаж · {listing.finish}</p><span><ShieldCheck /> {listing.seller}</span></div>
                     <div className="listing-price"><strong>{formatPriceMillions(listing.priceUzs)} сум</strong><span>{formatPricePerSqm(Math.round(listing.priceUzs / listing.areaSqm))}</span><small>Цена из реестра объявлений</small></div>
-                    <div className="listing-actions">{listing.marketType === 'PRIMARY_DEVELOPER' ? <LeadRequestDialog type="consultation" complexId={summary.id} complexName={summary.name} listingId={listing.id} unitNumber={listing.unitNumber} trigger={<Button variant="outline" size="sm"><Eye /> Консультация</Button>} /> : <Button variant="outline" size="sm"><MessageCircle /> Продавцу</Button>}{listing.reserveEnabled ? (
-                      <Dialog>
-                        <DialogTrigger render={<Button size="sm" />}>Забронировать</DialogTrigger>
-                        <DialogContent className="reservation-dialog">
-                          <DialogHeader><Badge><Clock3 /> Онлайн-бронь</Badge><DialogTitle>Квартира № {listing.unitNumber}</DialogTitle><DialogDescription>Это следующий MVP-сценарий: после проверки покупателя сервер атомарно удержит квартиру на 5 минут для оплаты брони.</DialogDescription></DialogHeader>
-                          {reservationStarted !== listing.id ? <div className="reservation-form"><label htmlFor={`reservation-name-${listing.id}`}>Имя и фамилия<Input id={`reservation-name-${listing.id}`} defaultValue="Иван Иванов" /></label><label htmlFor={`reservation-phone-${listing.id}`}>Телефон<Input id={`reservation-phone-${listing.id}`} defaultValue="+998 90 123 45 67" /></label><label className="consent-row"><input defaultChecked type="checkbox" /> Я принимаю условия онлайн-бронирования</label><div><span>Стоимость бронирования</span><strong>2 500 000 сум</strong></div></div> : <div className="reservation-success"><span><Check /></span><h3>Демо-заявка подготовлена</h3><p>Платёж и удержание квартиры будут подключены отдельным защищённым этапом.</p></div>}
-                          <DialogFooter>{reservationStarted === listing.id ? <DialogClose render={<Button />}>Понятно</DialogClose> : <><DialogClose render={<Button variant="outline" />}>Отмена</DialogClose><Button onClick={() => setReservationStarted(listing.id)}>Продолжить</Button></>}</DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    ) : <Button size="sm"><MessageCircle /> Написать продавцу</Button>}</div>
+                    <div className="listing-actions">{listing.marketType === 'PRIMARY_DEVELOPER' ? <LeadRequestDialog type="consultation" complexId={summary.id} complexName={summary.name} listingId={listing.id} unitNumber={listing.unitNumber} trigger={<Button variant="outline" size="sm"><Eye /> Консультация</Button>} /> : <Button variant="outline" size="sm"><MessageCircle /> Продавцу</Button>}{listing.reserveEnabled ? <ReservationDialog listingId={listing.id} unitNumber={listing.unitNumber} trigger={<Button size="sm" />} /> : <Button size="sm"><MessageCircle /> Написать продавцу</Button>}</div>
                   </article>
                 ))}
               </div>
