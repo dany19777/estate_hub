@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
   Bell,
+  BookmarkCheck,
   Building2,
   CalendarDays,
   Check,
@@ -13,6 +14,7 @@ import {
   LogOut,
   MessageCircle,
   Search,
+  Scale,
   Settings,
   ShieldCheck,
   SlidersHorizontal,
@@ -25,12 +27,15 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { InternalLink as Link } from '@/components/internal-link';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useComparisons } from '@/hooks/use-comparisons';
+import { useSavedSearches } from '@/hooks/use-saved-searches';
 import { formatPriceMillions } from '@/lib/marketplace';
 
 const sidebar = [
   { icon: Home, label: 'Обзор' },
-  { icon: Heart, label: 'Избранное', count: 4 },
-  { icon: SlidersHorizontal, label: 'Сравнения', count: 2 },
+  { icon: Heart, label: 'Избранное' },
+  { icon: Scale, label: 'Сравнения' },
+  { icon: BookmarkCheck, label: 'Сохранённые поиски' },
   { icon: CalendarDays, label: 'Мои просмотры' },
   { icon: WalletCards, label: 'Бронирования', count: 1 },
   { icon: MessageCircle, label: 'Сообщения', count: 3 },
@@ -41,13 +46,18 @@ const sidebar = [
 export default function BuyerProfile() {
   const [active, setActive] = useState('Обзор');
   const { favorites } = useFavorites();
+  const { items: comparisons } = useComparisons();
+  const { searches } = useSavedSearches();
   return (
     <main className="buyer-profile-page">
       <header className="profile-header"><Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link><nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav><div><button type="button"><Bell /></button><span>ИИ</span><div><strong>Иван Иванов</strong><small>+998 90 123 45 67</small></div></div></header>
       <div className="profile-layout">
-        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.count; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
+        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.label === 'Сравнения' ? comparisons.length : item.label === 'Сохранённые поиски' ? searches.length : item.count; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
         <section className="profile-content">
           <div className="profile-welcome"><div><span>Личный кабинет</span><h1>Добрый день, Иван 👋</h1><p>Ваши объекты, встречи и бронирования — в одном месте.</p></div><Button variant="outline"><Settings /> Настроить профиль</Button></div>
+
+          {active === 'Сравнения' && <section className="profile-feature-panel"><div><span><Scale /></span><div><small>Подбор квартир</small><h2>Сравнения</h2><p>{comparisons.length ? `В сравнении ${comparisons.length} из 4 квартир.` : 'Добавьте квартиры со страниц ЖК, чтобы увидеть их параметры рядом.'}</p></div></div>{comparisons.length ? <div className="profile-feature-list">{comparisons.map((item) => <Link key={item.id} href={`/complex/${item.slug}`}>{item.complex_name} · № {item.unit_number}<ChevronRight /></Link>)}</div> : null}<Button nativeButton={false} render={<Link href={comparisons.length ? '/compare' : '/catalog'} />}>{comparisons.length ? 'Открыть сравнение' : 'Перейти в каталог'}</Button></section>}
+          {active === 'Сохранённые поиски' && <section className="profile-feature-panel"><div><span><BookmarkCheck /></span><div><small>Ваши предпочтения</small><h2>Сохранённые поиски</h2><p>{searches.length ? 'Откройте поиск — фильтры можно уточнить в каталоге.' : 'Сохраните текущие фильтры в каталоге, чтобы быстро вернуться к подборке.'}</p></div></div>{searches.length ? <div className="profile-feature-list">{searches.map((item) => <Link key={item.id} href={`/catalog?${new URLSearchParams(Object.entries(item.filters).map(([key, value]) => [key, String(value)])).toString()}`}>{item.name}<ChevronRight /></Link>)}</div> : null}<Button nativeButton={false} render={<Link href="/catalog" />}>Открыть каталог</Button></section>}
 
           <div className="profile-status-grid">
             <article><span className="profile-stat-icon blue"><Heart /></span><div><strong>{favorites.length}</strong><small>в избранном</small></div><a href="#favorites"><ChevronRight /></a></article>
