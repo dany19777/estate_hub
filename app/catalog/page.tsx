@@ -72,10 +72,13 @@ export default function CatalogPage() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    const market = new URLSearchParams(window.location.search).get('market');
+    const params = new URLSearchParams(window.location.search);
+    const market = params.get('market');
+    const query = params.get('q');
     if (market === 'primary') setActiveMarket('Первичный');
     if (market === 'secondary') setActiveMarket('Вторичный');
     if (market === 'all') setActiveMarket('Все');
+    if (query) setSearch(query);
   }, []);
 
   const selectMarket = (nextMarket: string) => {
@@ -84,13 +87,42 @@ export default function CatalogPage() {
     window.history.replaceState({}, '', `/catalog?market=${value}`);
   };
 
+  const parsedFilters = useMemo(() => {
+    const normalized = search.toLowerCase();
+    const filters: string[] = [];
+    if (/двуш|2[ -]?комнат/.test(normalized)) filters.push('2 комнаты');
+    if (/до\s*900|900\s*млн/.test(normalized)) filters.push('до 900 млн');
+    if (/сдан|готов/.test(normalized)) filters.push('сдан');
+    if (/не\s+на\s+перв|не\s+перв/.test(normalized)) filters.push('не первый этаж');
+    if (/онлайн[- ]?брон/.test(normalized)) filters.push('онлайн-бронь');
+    return filters;
+  }, [search]);
+
   const filtered = useMemo(() => {
+    const normalized = search.toLowerCase().trim();
+    const naturalLanguageSearch = parsedFilters.length > 0;
+    const wantsTwoRooms = parsedFilters.includes('2 комнаты');
+    const wantsCompleted = parsedFilters.includes('сдан');
+    const wantsBudget = parsedFilters.includes('до 900 млн');
+    const wantsReservation = parsedFilters.includes('онлайн-бронь');
+
     return results.filter((item) => {
       const marketMatch = activeMarket === 'Все' || item.type.includes(activeMarket) || item.type === 'Оба рынка';
-      const queryMatch = !search || `${item.name} ${item.location}`.toLowerCase().includes(search.toLowerCase());
-      return marketMatch && queryMatch;
+      if (!marketMatch) return false;
+      if (!normalized) return true;
+
+      if (naturalLanguageSearch) {
+        const price = Number(item.price.match(/\d+/)?.[0] ?? Number.POSITIVE_INFINITY);
+        const roomMatch = !wantsTwoRooms || item.rooms.includes('2');
+        const statusMatch = !wantsCompleted || item.status === 'Сдан';
+        const budgetMatch = !wantsBudget || price <= 900;
+        const reservationMatch = !wantsReservation || item.reserve;
+        return roomMatch && statusMatch && budgetMatch && reservationMatch;
+      }
+
+      return `${item.name} ${item.location}`.toLowerCase().includes(normalized);
     });
-  }, [activeMarket, search]);
+  }, [activeMarket, parsedFilters, search]);
 
   const toggleFavorite = (id: number) => {
     setFavorites((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
@@ -126,7 +158,7 @@ export default function CatalogPage() {
             <div><ListFilter /><strong>Фильтры</strong></div>
             <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Закрыть фильтры"><X /></button>
           </div>
-          <div className="active-ai-filter"><Bot /><div><span>AI понял ваш запрос</span><strong>до 900 млн · сдан · онлайн-бронь</strong></div></div>
+          <div className="active-ai-filter"><Bot /><div><span>{search ? 'AI понял ваш запрос' : 'AI-поиск готов'}</span><strong>{search ? (parsedFilters.join(' · ') || `Поиск: ${search}`) : 'Опишите квартиру обычным языком'}</strong></div></div>
           <div className="price-filter">
             <span className="price-filter-label">Цена, сум</span>
             <div><Input defaultValue="450 млн" aria-label="Минимальная цена" /><Input defaultValue="900 млн" aria-label="Максимальная цена" /></div>

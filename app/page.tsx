@@ -83,8 +83,6 @@ const complexes = [
   },
 ];
 
-const quickFilters = ['2 комнаты', 'до 900 млн', 'не первый этаж', 'сдан', 'онлайн-бронь'];
-
 function ComplexCard({ complex, favorite, onFavorite }: {
   complex: (typeof complexes)[number];
   favorite: boolean;
@@ -151,7 +149,6 @@ function MobileNavigation() {
 export default function HomePage() {
   const [market, setMarket] = useState<'all' | 'primary' | 'secondary'>('all');
   const [query, setQuery] = useState('');
-  const [submittedQuery, setSubmittedQuery] = useState('');
   const [favorites, setFavorites] = useState<number[]>([1]);
 
   const visibleComplexes = useMemo(() => {
@@ -162,7 +159,11 @@ export default function HomePage() {
 
   const handleSearch = (event: { preventDefault: () => void }) => {
     event.preventDefault();
-    setSubmittedQuery(query.trim() || 'Квартиры в Самарканде');
+    const params = new URLSearchParams({
+      market,
+      q: query.trim() || 'Квартиры в Самарканде',
+    });
+    window.location.assign(`/catalog?${params.toString()}`);
   };
 
   const toggleFavorite = (id: number) => {
@@ -232,16 +233,6 @@ export default function HomePage() {
       </section>
 
       <section className="complexes-section shell" id="complexes">
-        {submittedQuery && (
-          <output className="interpreted-query">
-            <div><Bot /><span>Мы поняли ваш запрос:</span></div>
-            <button type="button" onClick={() => setSubmittedQuery('')} aria-label="Закрыть интерпретацию">×</button>
-            <strong>{submittedQuery}</strong>
-            <div className="query-chips">
-              {quickFilters.map((filter) => <span key={filter}>{filter} <button type="button" aria-label={`Удалить фильтр ${filter}`}>×</button></span>)}
-            </div>
-          </output>
-        )}
         <div className="section-heading">
           <div>
             <span className="eyebrow">Актуально в Самарканде</span>
