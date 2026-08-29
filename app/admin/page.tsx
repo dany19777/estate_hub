@@ -59,6 +59,7 @@ type VerificationCase = {
 type AdminDashboardData = {
   session: { user: { fullName: string }; platformRoles: string[] };
   queue: VerificationCase[];
+  moderation: Array<{ complex_id: string; name: string; developer: string; workflow_status: string; pending_listings: number; submitted_at: string | null }>;
   stats: { users: number; activeComplexes: number; pendingVerifications: number; publishedListings: number };
 };
 
@@ -77,10 +78,15 @@ export default function AdminDashboard() {
   async function loadDashboard() {
     setLoadError('');
     try {
-      const response = await fetch('/api/admin/verifications', { cache: 'no-store' });
-      const payload = await response.json() as AdminDashboardData & { message?: string };
-      if (!response.ok) throw new Error(payload.message || 'Не удалось загрузить административный кабинет.');
-      setDashboard(payload);
+      const [verificationResponse, moderationResponse] = await Promise.all([
+        fetch('/api/admin/verifications', { cache: 'no-store' }),
+        fetch('/api/admin/moderation', { cache: 'no-store' }),
+      ]);
+      const payload = await verificationResponse.json() as Omit<AdminDashboardData, 'moderation'> & { message?: string };
+      const moderationPayload = await moderationResponse.json() as { queue?: AdminDashboardData['moderation']; message?: string };
+      if (!verificationResponse.ok) throw new Error(payload.message || 'Не удалось загрузить административный кабинет.');
+      if (!moderationResponse.ok) throw new Error(moderationPayload.message || 'Не удалось загрузить очередь модерации.');
+      setDashboard({ ...payload, moderation: moderationPayload.queue ?? [] });
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Не удалось загрузить административный кабинет.');
     }
@@ -117,6 +123,23 @@ export default function AdminDashboard() {
     }
   }
 
+  async function moderate(complexId: string, decision: 'publish' | 'reject') {
+    if (decision === 'reject' && !window.confirm('Отклонить материалы на модерации?')) return;
+    setProcessing(complexId);
+    setFeedback('');
+    try {
+      const response = await fetch('/api/admin/moderation', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ complexId, decision }) });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message || 'Не удалось сохранить решение модерации.');
+      setFeedback(payload.message || (decision === 'publish' ? 'Материалы опубликованы.' : 'Материалы отклонены.'));
+      await loadDashboard();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : 'Не удалось сохранить решение модерации.');
+    } finally {
+      setProcessing('');
+    }
+  }
+
   const userInitials = (dashboard?.session.user.fullName ?? 'Администратор').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   const highRiskCount = dashboard?.queue.filter((item) => item.risk_level === 'high').length ?? 0;
 
@@ -126,7 +149,7 @@ export default function AdminDashboard() {
         <div className="admin-brand"><span><ShieldCheck /></span><div><strong>Estate<em>Hub</em></strong><small>Platform Admin</small></div><button type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню"><X /></button></div>
         <div className="admin-user"><span>{userInitials}</span><div><strong>{dashboard?.session.user.fullName ?? 'Администратор'}</strong><small>{dashboard?.session.platformRoles[0] ?? 'Platform Admin'}</small></div><ChevronDown /></div>
         <nav>{adminNav.map((item) => {
-          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.count;
+          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.count;
           return <button type="button" className={item.active ? 'active' : ''} key={item.label}><item.icon /><span>{item.label}</span>{Boolean(count) && <em>{count}</em>}</button>;
         })}</nav>
         <div className="system-status"><span><i/> Все системы работают</span><small>Последняя проверка: сейчас</small></div>
@@ -172,6 +195,15 @@ export default function AdminDashboard() {
               <section className="admin-panel finance-summary"><div className="admin-panel-heading"><div><h2>Финансовый контур</h2><p>Сегодня</p></div></div><div><span><small>Платежи броней</small><strong>87,5 млн сум</strong></span><span><small>К возврату</small><strong>5 млн сум</strong></span><span><small>На сверке</small><strong>2 операции</strong></span></div><a href="#finance">Открыть операции</a></section>
             </aside>
           </div>
+
+          <section className="admin-panel moderation-queue-panel">
+            <div className="admin-panel-heading"><div><h2>Очередь модерации публикаций</h2><p>Проверенные ЖК и новые объявления перед выходом в каталог</p></div><span className="queue-total">{dashboard?.moderation.length ?? 0} заявок</span></div>
+            <Table className="admin-table"><TableHeader><TableRow><TableHead>Жилой комплекс</TableHead><TableHead>Застройщик</TableHead><TableHead>Этап</TableHead><TableHead>Новых объявлений</TableHead><TableHead>Решение</TableHead></TableRow></TableHeader><TableBody>
+              {!dashboard && !loadError && <TableRow><TableCell colSpan={5}><div className="table-empty-state">Загружаем очередь…</div></TableCell></TableRow>}
+              {dashboard && dashboard.moderation.length === 0 && <TableRow><TableCell colSpan={5}><div className="table-empty-state">Очередь модерации пуста.</div></TableCell></TableRow>}
+              {dashboard?.moderation.map((item) => <TableRow key={item.complex_id}><TableCell><div className="admin-applicant"><span>{item.name.slice(0, 2).toUpperCase()}</span><strong>{item.name}</strong></div></TableCell><TableCell>{item.developer}</TableCell><TableCell><Badge className="queue-status working">{item.workflow_status === 'pending_moderation' ? 'Публикация ЖК' : 'Новый инвентарь'}</Badge></TableCell><TableCell>{item.pending_listings}</TableCell><TableCell><div className="verification-actions"><button type="button" className="approve" onClick={() => void moderate(item.complex_id, 'publish')} disabled={processing === item.complex_id} aria-label={`Опубликовать ${item.name}`} title="Опубликовать"><Check /></button><button type="button" className="reject" onClick={() => void moderate(item.complex_id, 'reject')} disabled={processing === item.complex_id} aria-label={`Отклонить ${item.name}`} title="Отклонить"><X /></button></div></TableCell></TableRow>)}
+            </TableBody></Table>
+          </section>
 
           <div className="admin-lower-grid">
             <section className="admin-panel admin-activity"><div className="admin-panel-heading"><div><h2>Последние критические действия</h2><p>Неизменяемый журнал аудита</p></div><a href="#audit">Весь аудит</a></div><div><article><span><Check /></span><p><strong>Одобрен застройщик Imorat Invest</strong><small>Verification Specialist · request 9f32…c181</small></p><time>02:18</time></article><article><span><ShieldCheck /></span><p><strong>Изменена цена квартиры A-142</strong><small>Samarkand Development · 680 → 685 млн сум</small></p><time>01:54</time></article><article><span><WalletCards /></span><p><strong>Инициирован возврат по резерву R-2814</strong><small>Finance Operator · причина: отказ застройщика</small></p><time>00:41</time></article></div></section>

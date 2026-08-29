@@ -88,6 +88,10 @@ export default function DeveloperDashboard() {
   const [creating, setCreating] = useState(false);
   const [createMessage, setCreateMessage] = useState('');
   const [form, setForm] = useState({ name: '', address: '', districtId: '', completionStatus: 'under_construction', completionLabel: 'IV квартал 2027' });
+  const [unitOpen, setUnitOpen] = useState(false);
+  const [addingUnit, setAddingUnit] = useState(false);
+  const [unitMessage, setUnitMessage] = useState('');
+  const [unitForm, setUnitForm] = useState({ complexId: '', buildingName: 'Корпус A', totalFloors: '16', floorNumber: '4', unitNumber: '', rooms: '2', areaSqm: '72', finish: 'Предчистовая', priceUzs: '650000000', reserveEnabled: true });
 
   async function loadDashboard() {
     setLoadError('');
@@ -97,6 +101,7 @@ export default function DeveloperDashboard() {
       if (!response.ok) throw new Error(payload.message || 'Не удалось загрузить кабинет.');
       setDashboard(payload);
       setForm((current) => ({ ...current, districtId: current.districtId || payload.districts[0]?.id || '' }));
+      setUnitForm((current) => ({ ...current, complexId: current.complexId || payload.projects[0]?.id || '' }));
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Не удалось загрузить кабинет.');
     }
@@ -149,6 +154,28 @@ export default function DeveloperDashboard() {
       setCreateMessage(error instanceof Error ? error.message : 'Не удалось создать ЖК.');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function createUnit(event: SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAddingUnit(true);
+    setUnitMessage('');
+    try {
+      const response = await fetch('/api/developer/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(unitForm) });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message || 'Не удалось добавить квартиру.');
+      setUnitMessage(payload.message || 'Квартира добавлена.');
+      await loadDashboard();
+      setTimeout(() => {
+        setUnitOpen(false);
+        setUnitMessage('');
+        setUnitForm((current) => ({ ...current, unitNumber: '' }));
+      }, 650);
+    } catch (error) {
+      setUnitMessage(error instanceof Error ? error.message : 'Не удалось добавить квартиру.');
+    } finally {
+      setAddingUnit(false);
     }
   }
 
@@ -209,7 +236,7 @@ export default function DeveloperDashboard() {
 
             <aside className="dashboard-rail">
               <section className="company-profile-card"><div className="company-cover"><span>SD</span></div><h2>{dashboard?.organization?.name ?? 'Компания'} <ShieldCheck /></h2><p>Застройщик · Самарканд</p><div><span><strong>{dashboard?.kpis.projects ?? 0}</strong>проектов</span><span><strong>{dashboard?.kpis.availableUnits ?? 0}</strong>доступно</span><span><strong>{dashboard?.kpis.publishedListings ?? 0}</strong>объявлений</span></div><div className="profile-progress"><span>Профиль заполнен <strong>70%</strong></span><Progress value={70} /></div><button type="button" disabled title="Редактирование профиля — следующий этап">Редактировать профиль</button></section>
-              <section className="quick-actions"><h2>Быстрые действия</h2><div><button type="button" onClick={() => setCreateOpen(true)}><Plus /><span>Новый комплекс</span></button><button type="button" disabled title="Сначала создайте ЖК"><Home /><span>Добавить квартиры</span></button><button type="button" disabled title="Будет подключено следующим этапом"><Sparkles /><span>Создать акцию</span></button><button type="button" disabled title="Будет подключено следующим этапом"><CalendarDays /><span>Бронирования</span></button><button type="button" disabled title="Будет подключено следующим этапом"><FileText /><span>Сформировать отчёт</span></button><button type="button" disabled title="Будет подключено следующим этапом"><ImageIcon /><span>Медиа</span></button></div></section>
+              <section className="quick-actions"><h2>Быстрые действия</h2><div><button type="button" onClick={() => setCreateOpen(true)}><Plus /><span>Новый комплекс</span></button><button type="button" onClick={() => setUnitOpen(true)} disabled={!dashboard?.projects.length} title={dashboard?.projects.length ? 'Добавить квартиру и объявление' : 'Сначала создайте ЖК'}><Home /><span>Добавить квартиру</span></button><button type="button" disabled title="Будет подключено следующим этапом"><Sparkles /><span>Создать акцию</span></button><button type="button" disabled title="Будет подключено следующим этапом"><CalendarDays /><span>Бронирования</span></button><button type="button" disabled title="Будет подключено следующим этапом"><FileText /><span>Сформировать отчёт</span></button><button type="button" disabled title="Будет подключено следующим этапом"><ImageIcon /><span>Медиа</span></button></div></section>
               <section className="attention-card"><div><h2>Требует внимания</h2><a href="#attention">Смотреть все</a></div><article><span className="urgent"><AlertCircle /></span><div><strong>3 нарушения SLA</strong><small>Лиды ожидают ответа более 30 минут</small></div><ArrowUpRight /></article><article><span className="warning"><Clock3Icon /></span><div><strong>5 броней истекают</strong><small>В течение ближайших 24 часов</small></div><ArrowUpRight /></article><article><span className="info"><MessageCircle /></span><div><strong>8 сообщений без ответа</strong><small>Самое раннее — 42 минуты назад</small></div><ArrowUpRight /></article></section>
             </aside>
           </div>
@@ -233,6 +260,32 @@ export default function DeveloperDashboard() {
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Отмена</Button>
             <Button type="submit" form="create-complex-form" disabled={creating || !dashboard?.organization}>{creating ? 'Отправляем…' : 'Создать и отправить'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={unitOpen} onOpenChange={setUnitOpen}>
+        <DialogContent className="developer-dialog unit-dialog">
+          <DialogHeader>
+            <DialogTitle>Добавить квартиру</DialogTitle>
+            <DialogDescription>Будет создан физический юнит и первичное объявление. Цена сохранится в истории, публикация произойдёт только после модерации.</DialogDescription>
+          </DialogHeader>
+          <form id="create-unit-form" onSubmit={createUnit} className="developer-dialog-form">
+            <label htmlFor="unit-complex">Жилой комплекс<select id="unit-complex" value={unitForm.complexId} onChange={(event) => setUnitForm({ ...unitForm, complexId: event.target.value })} required>{dashboard?.projects.filter((project) => !['rejected', 'archived'].includes(project.workflow_status)).map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+            <label htmlFor="unit-building">Корпус<Input id="unit-building" value={unitForm.buildingName} onChange={(event) => setUnitForm({ ...unitForm, buildingName: event.target.value })} required maxLength={80} /></label>
+            <label htmlFor="unit-number">Номер квартиры<Input id="unit-number" value={unitForm.unitNumber} onChange={(event) => setUnitForm({ ...unitForm, unitNumber: event.target.value })} placeholder="A-204" required maxLength={30} /></label>
+            <label htmlFor="unit-rooms">Комнат<Input id="unit-rooms" type="number" min={1} max={10} value={unitForm.rooms} onChange={(event) => setUnitForm({ ...unitForm, rooms: event.target.value })} required /></label>
+            <label htmlFor="unit-floor">Этаж<Input id="unit-floor" type="number" min={1} max={100} value={unitForm.floorNumber} onChange={(event) => setUnitForm({ ...unitForm, floorNumber: event.target.value })} required /></label>
+            <label htmlFor="unit-total-floors">Этажей в корпусе<Input id="unit-total-floors" type="number" min={1} max={100} value={unitForm.totalFloors} onChange={(event) => setUnitForm({ ...unitForm, totalFloors: event.target.value })} required /></label>
+            <label htmlFor="unit-area">Площадь, м²<Input id="unit-area" type="number" min={10} max={1000} step="0.1" value={unitForm.areaSqm} onChange={(event) => setUnitForm({ ...unitForm, areaSqm: event.target.value })} required /></label>
+            <label htmlFor="unit-finish">Отделка<select id="unit-finish" value={unitForm.finish} onChange={(event) => setUnitForm({ ...unitForm, finish: event.target.value })}><option>Без отделки</option><option>Предчистовая</option><option>Чистовая</option><option>С ремонтом</option></select></label>
+            <label htmlFor="unit-price">Цена, сум<Input id="unit-price" type="number" min={1000000} step={1000000} value={unitForm.priceUzs} onChange={(event) => setUnitForm({ ...unitForm, priceUzs: event.target.value })} required /></label>
+            <label className="developer-checkbox" htmlFor="unit-reserve"><input id="unit-reserve" type="checkbox" checked={unitForm.reserveEnabled} onChange={(event) => setUnitForm({ ...unitForm, reserveEnabled: event.target.checked })} /> Разрешить онлайн-бронирование после публикации</label>
+            {unitMessage && <p className={unitMessage.includes('добавлена') ? 'success' : 'error'}>{unitMessage}</p>}
+          </form>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setUnitOpen(false)} disabled={addingUnit}>Отмена</Button>
+            <Button type="submit" form="create-unit-form" disabled={addingUnit || !unitForm.complexId}>{addingUnit ? 'Отправляем…' : 'Добавить на модерацию'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

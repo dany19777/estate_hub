@@ -1187,8 +1187,14 @@ a { color: inherit; text-decoration: none; }
 .developer-dialog-form > p.error { color: #f0939d; background: #2b1820; }
 .developer-dialog [data-slot="dialog-footer"] { border-color: #26364a; background: #0a1522; }
 .developer-dialog [data-slot="dialog-footer"] button { min-width: 105px; }
+.unit-dialog { max-width: 620px; }
+.unit-dialog .developer-dialog-form label { grid-column: auto; }
+.unit-dialog .developer-dialog-form label:first-child, .unit-dialog .developer-dialog-form .developer-checkbox, .unit-dialog .developer-dialog-form > p { grid-column: 1 / -1; }
+.unit-dialog .developer-checkbox { display: flex; flex-direction: row; align-items: center; font-weight: 500; }
+.unit-dialog .developer-checkbox input { width: 15px; height: 15px; padding: 0; accent-color: #4f7cf1; }
 
 .queue-total { color: #7699ff; font-size: 7px; font-weight: 650; }
+.moderation-queue-panel { margin-top: 12px; overflow: hidden; }
 .verification-actions { display: flex; gap: 5px; }
 .admin-table td .verification-actions > button { width: 25px; height: 25px; cursor: pointer; }
 .admin-table td .verification-actions > button.approve { border-color: #285941; color: #5fcd95; background: #122c22; }
