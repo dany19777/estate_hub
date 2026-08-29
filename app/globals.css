@@ -927,6 +927,7 @@ a { color: inherit; text-decoration: none; }
 .reservation-summary > div > p { margin: 10px 0; color: #6c7889; font-size: 8px; line-height: 1.5; }
 .reservation-summary > div > div:last-child { display: flex; gap: 7px; }
 .reservation-summary > div > div:last-child button { height: 31px; font-size: 7px; }
+.reservation-empty { display: flex; min-height: 116px; align-items: center; gap: 13px; padding: 15px; }.reservation-empty > svg { width: 27px; height: 27px; flex: 0 0 auto; color: #2a63dc; }.reservation-empty > div { flex: 1; }.reservation-empty h2 { margin: 0 0 4px; color: #26344b; font-size: 14px; }.reservation-empty p { margin: 0; color: #718096; font-size: 9px; line-height: 1.45; }.reservation-empty [data-slot="button"] { flex: 0 0 auto; }
 .reservation-steps { display: grid; grid-template-columns: 1fr 28px 1fr 28px 1fr; align-items: center; margin-top: 18px; }
 .reservation-steps > div { display: flex; align-items: center; gap: 7px; }
 .reservation-steps > div > span { display: grid; width: 25px; height: 25px; flex: 0 0 auto; place-items: center; border: 1px solid #d4dbe4; border-radius: 50%; color: #7c8797; font-size: 8px; }
