@@ -29,6 +29,7 @@ import { InternalLink as Link } from '@/components/internal-link';
 import { LeadRequestDialog } from '@/components/lead-request-dialog';
 import { ReservationDialog } from '@/components/reservation-dialog';
 import { useComplexDetail } from '@/hooks/use-complex-detail';
+import { useFavorites } from '@/hooks/use-favorites';
 import { formatPriceMillions, formatPricePerSqm } from '@/lib/marketplace';
 
 export default function ComplexPage() {
@@ -37,7 +38,7 @@ export default function ComplexPage() {
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug ?? '';
   const { data, loading, error, retry } = useComplexDetail(slug);
   const [activeImage, setActiveImage] = useState(0);
-  const [favorite, setFavorite] = useState(false);
+  const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
   const [inventoryTab, setInventoryTab] = useState<'Все' | 'Первичный' | 'Вторичный'>('Все');
 
   const shareComplex = async () => {
@@ -79,7 +80,7 @@ export default function ComplexPage() {
             <h1>{summary.name}</h1>
             <p><MapPin /> {summary.city}, {summary.district}, {summary.address} · <a href="#location">Показать на карте</a></p>
           </div>
-          <div className="detail-title-actions"><button className={favorite ? 'active' : ''} type="button" onClick={() => setFavorite(!favorite)}><Heart /> <span>{favorite ? 'В избранном' : 'В избранное'}</span></button><button type="button" onClick={shareComplex}><Share2 /> <span>Поделиться</span></button></div>
+          <div className="detail-title-actions"><button className={isFavorite(summary.id) ? 'active' : ''} type="button" onClick={() => void toggleFavorite({ id: summary.id, slug: summary.slug, name: summary.name, image: summary.image, price_from: summary.priceFrom, available_units: summary.availableUnits, completion_label: summary.completionLabel })}><Heart /> <span>{isFavorite(summary.id) ? 'В избранном' : 'В избранное'}</span></button><button type="button" onClick={shareComplex}><Share2 /> <span>Поделиться</span></button></div>
         </section>
 
         <section className="detail-gallery">

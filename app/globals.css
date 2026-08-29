@@ -603,6 +603,8 @@ a { color: inherit; text-decoration: none; }
 .reservation-success h3 { margin: 0; font-size: 16px; }
 .reservation-success p { color: #697587; font-size: 10px; line-height: 1.5; }
 .reservation-error { margin: 0; padding: 10px 12px; border-radius: 8px; color: #b23a45; background: #fff1f2; font-size: 10px; line-height: 1.45; }
+.saved-search-message { display: block; margin-top: 5px; color: #287255; font-size: 10px; font-weight: 650; }
+.profile-empty { margin: 14px 0 0; color: #718095; font-size: 10px; line-height: 1.55; }
 
 @media (max-width: 960px) {
   .detail-header { grid-template-columns: 1fr auto; padding: 0 20px; }

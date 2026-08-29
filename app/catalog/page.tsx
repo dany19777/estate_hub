@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { InternalLink as Link } from '@/components/internal-link';
 import { MarketplaceHeader } from '@/components/marketplace-header';
 import { useComplexes } from '@/hooks/use-complexes';
+import { useFavorites } from '@/hooks/use-favorites';
 import type { ComplexSummary, SellerType } from '@/lib/marketplace';
 import { formatPriceMillions, marketLabel } from '@/lib/marketplace';
 
@@ -54,7 +55,7 @@ export default function CatalogPage() {
   const initialMarket = searchParams.get('market');
   const [view, setView] = useState<'list' | 'map'>('list');
   const [activeMarket, setActiveMarket] = useState(() => initialMarket === 'primary' ? 'Первичный' : initialMarket === 'secondary' ? 'Вторичный' : 'Все');
-  const [favorites, setFavorites] = useState<string[]>(['complex-silk-road']);
+  const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
   const [selected, setSelected] = useState<ComplexSummary | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
@@ -66,6 +67,7 @@ export default function CatalogPage() {
   const [verified, setVerified] = useState(true);
   const [reservable, setReservable] = useState(false);
   const [sort, setSort] = useState<'recommended' | 'price_asc' | 'price_desc' | 'newest'>('recommended');
+  const [saveMessage, setSaveMessage] = useState('');
 
   const request = useMemo(() => ({
     market: marketValue(activeMarket),
@@ -92,8 +94,12 @@ export default function CatalogPage() {
     window.history.replaceState({}, '', `/catalog?${params.toString()}`);
   };
 
-  const toggleFavorite = (id: string) => {
-    setFavorites((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  const saveSearch = async () => {
+    setSaveMessage('Сохраняем…');
+    const name = search.trim() || `${activeMarket}: ${rooms ? `${rooms} комн.` : 'все квартиры'}`;
+    const response = await fetch('/api/buyer/preferences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, filters: request }) });
+    const payload = await response.json() as { message?: string };
+    setSaveMessage(response.ok ? 'Поиск сохранён' : (payload.message ?? 'Не удалось сохранить'));
   };
 
   const resetFilters = () => {
@@ -163,7 +169,8 @@ export default function CatalogPage() {
 
         <section className="catalog-results">
           <div className="catalog-results-heading">
-            <div><span>Самарканд</span><h1>{loading ? 'Ищем предложения…' : `${catalog.total} жилых комплексов`}</h1></div>
+            <div><span>Самарканд</span><h1>{loading ? 'Ищем предложения…' : `${catalog.total} жилых комплексов`}</h1>{saveMessage && <small className="saved-search-message">{saveMessage}</small>}</div>
+            <Button variant="outline" size="sm" onClick={saveSearch}>Сохранить поиск</Button>
             <label className="catalog-sort"><span className="sr-only">Сортировка</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="recommended">Сначала рекомендуемые</option><option value="price_asc">Сначала дешевле</option><option value="price_desc">Сначала дороже</option><option value="newest">Сначала новые</option></select></label>
           </div>
 
@@ -190,7 +197,7 @@ export default function CatalogPage() {
                   <div className="result-card-image">
                     <img src={item.image} alt={item.name} />
                     <Badge>{marketLabel(item.marketTypes)}</Badge>
-                    <button className={favorites.includes(item.id) ? 'active' : ''} onClick={() => toggleFavorite(item.id)} type="button" aria-label="Добавить в избранное"><Heart /></button>
+                    <button className={isFavorite(item.id) ? 'active' : ''} onClick={() => void toggleFavorite({ id: item.id, slug: item.slug, name: item.name, image: item.image, price_from: item.priceFrom, available_units: item.availableUnits, completion_label: item.completionLabel })} type="button" aria-label="Добавить в избранное"><Heart /></button>
                   </div>
                   <div className="result-card-body">
                     <div className="result-title-row"><div><h2>{item.name}</h2><p><MapPin /> {item.city}, {item.district}</p></div><span>{item.rating.toFixed(1)} ★</span></div>

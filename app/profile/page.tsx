@@ -24,6 +24,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { InternalLink as Link } from '@/components/internal-link';
+import { useFavorites } from '@/hooks/use-favorites';
+import { formatPriceMillions } from '@/lib/marketplace';
 
 const sidebar = [
   { icon: Home, label: 'Обзор' },
@@ -38,16 +40,17 @@ const sidebar = [
 
 export default function BuyerProfile() {
   const [active, setActive] = useState('Обзор');
+  const { favorites } = useFavorites();
   return (
     <main className="buyer-profile-page">
       <header className="profile-header"><Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link><nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav><div><button type="button"><Bell /></button><span>ИИ</span><div><strong>Иван Иванов</strong><small>+998 90 123 45 67</small></div></div></header>
       <div className="profile-layout">
-        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{item.count && <em>{item.count}</em>}</button>)}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
+        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.count; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
         <section className="profile-content">
           <div className="profile-welcome"><div><span>Личный кабинет</span><h1>Добрый день, Иван 👋</h1><p>Ваши объекты, встречи и бронирования — в одном месте.</p></div><Button variant="outline"><Settings /> Настроить профиль</Button></div>
 
           <div className="profile-status-grid">
-            <article><span className="profile-stat-icon blue"><Heart /></span><div><strong>4</strong><small>в избранном</small></div><a href="#favorites"><ChevronRight /></a></article>
+            <article><span className="profile-stat-icon blue"><Heart /></span><div><strong>{favorites.length}</strong><small>в избранном</small></div><a href="#favorites"><ChevronRight /></a></article>
             <article><span className="profile-stat-icon orange"><CalendarDays /></span><div><strong>2</strong><small>записи на просмотр</small></div><a href="#viewings"><ChevronRight /></a></article>
             <article><span className="profile-stat-icon green"><WalletCards /></span><div><strong>1</strong><small>активная бронь</small></div><a href="#reservation"><ChevronRight /></a></article>
             <article><span className="profile-stat-icon violet"><MessageCircle /></span><div><strong>3</strong><small>новых сообщения</small></div><a href="#messages"><ChevronRight /></a></article>
@@ -57,7 +60,7 @@ export default function BuyerProfile() {
             <div>
               <section className="active-reservation" id="reservation"><div className="profile-section-heading"><div><Badge><Clock3 /> Активная бронь</Badge><h2>Квартира № A-142</h2><p>Bog‘ishamol Residence · 2 комнаты · 72 м²</p></div><Link href="/complex/bogishamol">Открыть квартиру</Link></div><div className="reservation-summary"><img src="https://images.unsplash.com/photo-1600573472592-401b489a3cdc?auto=format&fit=crop&w=500&q=82" alt="Интерьер квартиры A-142"/><div><div className="reservation-summary-top"><span>Цена зафиксирована</span><strong>685 млн сум</strong></div><div className="reservation-countdown"><span><Clock3 /> До окончания брони</span><strong>47:18:36</strong></div><Progress value={34} /><p>Вам нужно посетить офис продаж до <strong>31 августа, 18:00</strong>. Менеджер уже получил ваши данные.</p><div><Button><MessageCircle /> Написать менеджеру</Button><Button variant="outline">Детали брони</Button></div></div></div><div className="reservation-steps"><div className="done"><span><Check /></span><p><strong>Оплата брони</strong><small>2 500 000 сум</small></p></div><i/><div className="active"><span>2</span><p><strong>Визит в офис</strong><small>до 31 августа</small></p></div><i/><div><span>3</span><p><strong>Решение</strong><small>покупка или отказ</small></p></div></div></section>
 
-              <section className="profile-card-section" id="favorites"><div className="profile-section-heading"><div><span>Сохранено для вас</span><h2>Избранные объекты</h2></div><Link href="/catalog">Смотреть все</Link></div><div className="favorite-mini-grid"><Link href="/complex/bogishamol"><img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=500&q=80" alt="Bog‘ishamol Residence"/><div><strong>Bog‘ishamol Residence</strong><span>от 620 млн сум</span><small>28 квартир · Сдан</small></div><Heart /></Link><Link href="/complex/bogishamol"><img src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=500&q=80" alt="Registan Gardens"/><div><strong>Registan Gardens</strong><span>от 745 млн сум</span><small>16 квартир · IV кв. 2026</small></div><Heart /></Link></div></section>
+              <section className="profile-card-section" id="favorites"><div className="profile-section-heading"><div><span>Сохранено для вас</span><h2>Избранные объекты</h2></div><Link href="/catalog">Смотреть каталог</Link></div>{favorites.length ? <div className="favorite-mini-grid">{favorites.slice(0, 4).map((favorite) => <Link key={favorite.id} href={`/complex/${favorite.slug}`}><img src={favorite.image} alt={favorite.name}/><div><strong>{favorite.name}</strong><span>от {formatPriceMillions(favorite.price_from)} сум</span><small>{favorite.available_units} квартир · {favorite.completion_label}</small></div><Heart /></Link>)}</div> : <p className="profile-empty">В избранном пока нет объектов. Сохраняйте понравившиеся ЖК из каталога.</p>}</section>
             </div>
 
             <aside className="profile-right-rail">
