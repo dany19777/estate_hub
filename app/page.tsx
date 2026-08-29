@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowRight,
   Bell,
@@ -103,18 +104,18 @@ function Header() {
       <div className="shell header-inner">
         <BrandMark />
         <nav className="desktop-nav" aria-label="Основная навигация">
-          <a className="active" href="/catalog">Купить</a>
-          <a href="/catalog">Новостройки</a>
-          <a href="/catalog">Вторичный рынок</a>
+          <Link className="active" href="/catalog">Купить</Link>
+          <Link href="/catalog">Новостройки</Link>
+          <Link href="/catalog">Вторичный рынок</Link>
           <a href="#how-it-works">Как это работает</a>
-          <a href="/developer">Для застройщиков</a>
+          <Link href="/developer">Для застройщиков</Link>
         </nav>
         <div className="header-actions">
           <button className="locale-button" type="button">RU <ChevronDown /></button>
           <button className="currency-button" type="button">UZS <ChevronDown /></button>
           <button className="icon-button desktop-only" type="button" aria-label="Избранное"><Heart /></button>
           <button className="icon-button desktop-only notification-button" type="button" aria-label="Уведомления"><Bell /><span /></button>
-          <a className="profile-button" href="/profile" aria-label="Личный кабинет"><UserRound /></a>
+          <Link className="profile-button" href="/profile" aria-label="Личный кабинет"><UserRound /></Link>
           <button className="icon-button mobile-menu" type="button" aria-label="Открыть меню"><Menu /></button>
         </div>
       </div>
@@ -166,7 +167,7 @@ function ComplexCard({ complex, favorite, onFavorite }: {
         </div>
         <div className="card-bottom">
           <strong>{complex.price}</strong>
-          <a href="/complex/bogishamol" aria-label={`Открыть ${complex.name}`}><ArrowRight /></a>
+          <Link href="/complex/bogishamol" aria-label={`Открыть ${complex.name}`}><ArrowRight /></Link>
         </div>
       </div>
     </article>
@@ -177,10 +178,10 @@ function MobileNavigation() {
   return (
     <nav className="mobile-bottom-nav" aria-label="Мобильная навигация">
       <a className="active" href="#top"><Home /><span>Главная</span></a>
-      <a href="/catalog"><Search /><span>Поиск</span></a>
+      <Link href="/catalog"><Search /><span>Поиск</span></Link>
       <a href="#complexes"><Heart /><span>Избранное</span></a>
       <a href="#how-it-works"><MessageCircle /><span>Сообщения</span></a>
-      <a href="/profile"><UserRound /><span>Профиль</span></a>
+      <Link href="/profile"><UserRound /><span>Профиль</span></Link>
     </nav>
   );
 }
@@ -287,7 +288,7 @@ export default function HomePage() {
           </div>
           <div className="view-switcher" aria-label="Вид результатов">
             <button className="active" type="button"><Building2 /> Каталог</button>
-            <a href="/catalog"><Map /> Карта</a>
+            <Link href="/catalog"><Map /> Карта</Link>
           </div>
         </div>
 
@@ -304,7 +305,7 @@ export default function HomePage() {
 
         <div className="section-cta">
           <p><strong>42 жилых комплекса</strong><span>и 347 проверенных квартир в Самарканде</span></p>
-          <Button nativeButton={false} render={<a href="/catalog" />} className="all-complexes-button" size="lg">Смотреть все комплексы <ArrowRight /></Button>
+          <Button nativeButton={false} render={<Link href="/catalog" />} className="all-complexes-button" size="lg">Смотреть все комплексы <ArrowRight /></Button>
         </div>
       </section>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
@@ -61,14 +62,14 @@ export default function ComplexPage() {
   return (
     <main className="complex-page">
       <header className="detail-header">
-        <a className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></a>
-        <nav><a href="/catalog">Купить</a><a href="/catalog">Новостройки</a><a href="/catalog">Вторичный рынок</a></nav>
+        <Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link>
+        <nav><Link href="/catalog">Купить</Link><Link href="/catalog">Новостройки</Link><Link href="/catalog">Вторичный рынок</Link></nav>
         <div><button type="button"><Bell /></button><button type="button"><UserRound /></button></div>
       </header>
 
       <div className="detail-shell">
-        <div className="breadcrumbs"><a href="/"><Home /></a><span>/</span><a href="/catalog">Самарканд</a><span>/</span><a href="/catalog">Боғишамол</a><span>/</span><strong>Bog‘ishamol Residence</strong></div>
-        <a className="mobile-detail-back" href="/catalog"><ArrowLeft /> Вернуться к поиску</a>
+        <div className="breadcrumbs"><Link href="/"><Home /></Link><span>/</span><Link href="/catalog">Самарканд</Link><span>/</span><Link href="/catalog">Боғишамол</Link><span>/</span><strong>Bog‘ishamol Residence</strong></div>
+        <Link className="mobile-detail-back" href="/catalog"><ArrowLeft /> Вернуться к поиску</Link>
 
         <section className="detail-title">
           <div>
@@ -93,7 +94,7 @@ export default function ComplexPage() {
             </div>
 
             <div className="inventory-section" id="inventory">
-              <div className="inventory-heading"><div><span>Доступно сейчас</span><h2>Квартиры в комплексе</h2><p>{listings.length} предложения от проверенных продавцов</p></div><a href="/catalog">Все фильтры <ArrowRight /></a></div>
+              <div className="inventory-heading"><div><span>Доступно сейчас</span><h2>Квартиры в комплексе</h2><p>{listings.length} предложения от проверенных продавцов</p></div><Link href="/catalog">Все фильтры <ArrowRight /></Link></div>
               <div className="inventory-tabs">{(['Все', 'Первичный', 'Вторичный'] as const).map((tab) => <button type="button" className={inventoryTab === tab ? 'active' : ''} onClick={() => setInventoryTab(tab)} key={tab}>{tab}{tab === 'Все' ? ' 28' : tab === 'Первичный' ? ' 21' : ' 7'}</button>)}</div>
               <div className="listing-stack">
                 {inventory.map((listing) => (
@@ -135,7 +136,7 @@ export default function ComplexPage() {
         </section>
       </div>
 
-      <nav className="mobile-bottom-nav" aria-label="Мобильная навигация"><a href="/"><Home /><span>Главная</span></a><a className="active" href="/catalog"><Search /><span>Поиск</span></a><a href="/profile"><Heart /><span>Избранное</span></a><a href="/profile"><MessageCircle /><span>Сообщения</span></a><a href="/profile"><UserRound /><span>Профиль</span></a></nav>
+      <nav className="mobile-bottom-nav" aria-label="Мобильная навигация"><Link href="/"><Home /><span>Главная</span></Link><Link className="active" href="/catalog"><Search /><span>Поиск</span></Link><Link href="/profile"><Heart /><span>Избранное</span></Link><Link href="/profile"><MessageCircle /><span>Сообщения</span></Link><Link href="/profile"><UserRound /><span>Профиль</span></Link></nav>
     </main>
   );
 }

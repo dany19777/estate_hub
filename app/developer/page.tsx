@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   AlertCircle,
   ArrowUpRight,
@@ -73,14 +74,14 @@ export default function DeveloperDashboard() {
         <nav>
           {navGroups.map((group) => <div className="developer-nav-group" key={group.label}><span>{group.label}</span>{group.items.map((item) => <button className={item.active ? 'active' : ''} type="button" key={item.label}><item.icon /> <strong>{item.label}</strong>{item.count && <em>{item.count}</em>}</button>)}</div>)}
         </nav>
-        <a className="public-site-link" href="/"><span><ArrowUpRight /></span><div><strong>Публичный сайт</strong><small>Открыть маркетплейс</small></div></a>
+        <Link className="public-site-link" href="/"><span><ArrowUpRight /></span><div><strong>Публичный сайт</strong><small>Открыть маркетплейс</small></div></Link>
       </aside>
       {sidebarOpen && <button type="button" className="developer-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-label="Закрыть меню" />}
 
       <section className="developer-workspace">
         <header className="developer-topbar">
           <div><button type="button" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню"><Menu /></button><span>Дашборд</span></div>
-          <div><a href="/">Посмотреть профиль <ArrowUpRight /></a><button type="button" className="topbar-notification"><Bell /><span>3</span></button><div className="topbar-company"><span>SD</span><div><strong>Samarkand Development</strong><small>Застройщик</small></div><ChevronDown /></div></div>
+          <div><Link href="/">Посмотреть профиль <ArrowUpRight /></Link><button type="button" className="topbar-notification"><Bell /><span>3</span></button><div className="topbar-company"><span>SD</span><div><strong>Samarkand Development</strong><small>Застройщик</small></div><ChevronDown /></div></div>
         </header>
 
         <div className="developer-content">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
@@ -65,8 +66,8 @@ export default function CatalogPage() {
   return (
     <main className="catalog-page">
       <header className="catalog-header">
-        <a className="catalog-back" href="/"><ArrowLeft /> На главную</a>
-        <a className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></a>
+        <Link className="catalog-back" href="/"><ArrowLeft /> На главную</Link>
+        <Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link>
         <div className="catalog-header-actions">
           <button type="button">RU <ChevronDown /></button>
           <button type="button" aria-label="Уведомления"><Bell /></button>
@@ -136,7 +137,7 @@ export default function CatalogPage() {
                     <p className="verified-line"><ShieldCheck /> Проверенный застройщик</p>
                     <div className="result-facts"><span>{item.rooms} комн.</span><span>{item.units} квартир</span><span>{item.status}</span></div>
                     {item.reserve && <p className="reservation-available"><Check /> Доступно онлайн-бронирование</p>}
-                    <div className="result-card-footer"><strong>{item.price} сум</strong><a href="/complex/bogishamol">Подробнее <ArrowRight /></a></div>
+                    <div className="result-card-footer"><strong>{item.price} сум</strong><Link href="/complex/bogishamol">Подробнее <ArrowRight /></Link></div>
                   </div>
                 </article>
               ))}
@@ -148,7 +149,7 @@ export default function CatalogPage() {
               {filtered.map((item) => <button key={item.id} type="button" className={`price-marker ${selected.id === item.id ? 'selected' : ''}`} style={{ left: `${item.x}%`, top: `${item.y}%` }} onClick={() => setSelected(item)}>{item.price.replace('от ', '')}</button>)}
               <div className="map-card">
                 <img src={selected.image} alt={selected.name} />
-                <div><Badge>{selected.type}</Badge><h2>{selected.name}</h2><p><MapPin /> {selected.location}</p><strong>{selected.price} сум</strong><a href="/complex/bogishamol">Открыть комплекс <ArrowRight /></a></div>
+                <div><Badge>{selected.type}</Badge><h2>{selected.name}</h2><p><MapPin /> {selected.location}</p><strong>{selected.price} сум</strong><Link href="/complex/bogishamol">Открыть комплекс <ArrowRight /></Link></div>
               </div>
               <div className="map-controls"><button type="button">+</button><button type="button">−</button></div>
             </div>
@@ -158,7 +159,7 @@ export default function CatalogPage() {
 
       {filtersOpen && <button type="button" className="filter-backdrop" aria-label="Закрыть фильтры" onClick={() => setFiltersOpen(false)} />}
       <nav className="mobile-bottom-nav" aria-label="Мобильная навигация">
-        <a href="/"><Home /><span>Главная</span></a><a className="active" href="/catalog"><Search /><span>Поиск</span></a><a href="/profile"><Heart /><span>Избранное</span></a><a href="/profile"><MessageCircle /><span>Сообщения</span></a><a href="/profile"><UserRound /><span>Профиль</span></a>
+        <Link href="/"><Home /><span>Главная</span></Link><Link className="active" href="/catalog"><Search /><span>Поиск</span></Link><Link href="/profile"><Heart /><span>Избранное</span></Link><Link href="/profile"><MessageCircle /><span>Сообщения</span></Link><Link href="/profile"><UserRound /><span>Профиль</span></Link>
       </nav>
     </main>
   );
