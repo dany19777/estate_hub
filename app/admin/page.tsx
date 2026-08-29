@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   BarChart3,
@@ -15,7 +15,6 @@ import {
   Landmark,
   ListChecks,
   Menu,
-  MoreHorizontal,
   Search,
   Settings,
   ShieldCheck,
@@ -46,46 +45,126 @@ const adminNav = [
   { label: 'Настройки системы', icon: Settings },
 ];
 
-const verificationRows = [
-  { name: 'Imorat Invest LLC', type: 'Застройщик', subject: 'Компания и полномочия', date: '29 авг, 01:42', risk: 'Низкий', status: 'Новая' },
-  { name: 'Zarafshan Realty', type: 'Агентство', subject: 'Компания + объект A-097', date: '29 авг, 00:18', risk: 'Средний', status: 'В работе' },
-  { name: 'Икром Рахмонов', type: 'Собственник', subject: 'Право собственности', date: '28 авг, 22:51', risk: 'Низкий', status: 'Новая' },
-  { name: 'Orient House', type: 'Застройщик', subject: 'Связь с ЖК Silk Road', date: '28 авг, 19:32', risk: 'Высокий', status: 'Эскалация' },
-  { name: 'Самарканд Уйлар', type: 'Агентство', subject: 'Доверенность владельца', date: '28 авг, 17:04', risk: 'Средний', status: 'Изменения' },
-];
+type VerificationCase = {
+  id: string;
+  subject_type: 'organization' | 'owner' | 'listing' | 'complex';
+  subject_id: string;
+  applicant: string;
+  organization_type: string | null;
+  status: string;
+  risk_level: string;
+  created_at: string;
+};
+
+type AdminDashboardData = {
+  session: { user: { fullName: string }; platformRoles: string[] };
+  queue: VerificationCase[];
+  stats: { users: number; activeComplexes: number; pendingVerifications: number; publishedListings: number };
+};
+
+const riskLabels: Record<string, string> = { low: 'Низкий', medium: 'Средний', high: 'Высокий' };
+const queueLabels: Record<string, string> = { submitted: 'Новая', in_review: 'В работе' };
 
 export default function AdminDashboard() {
   const [mobileNav, setMobileNav] = useState(false);
   const [queue, setQueue] = useState('Все');
+  const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [query, setQuery] = useState('');
+  const [processing, setProcessing] = useState('');
+  const [feedback, setFeedback] = useState('');
+
+  async function loadDashboard() {
+    setLoadError('');
+    try {
+      const response = await fetch('/api/admin/verifications', { cache: 'no-store' });
+      const payload = await response.json() as AdminDashboardData & { message?: string };
+      if (!response.ok) throw new Error(payload.message || 'Не удалось загрузить административный кабинет.');
+      setDashboard(payload);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Не удалось загрузить административный кабинет.');
+    }
+  }
+
+  useEffect(() => {
+    const task = window.setTimeout(() => { void loadDashboard(); }, 0);
+    return () => window.clearTimeout(task);
+  }, []);
+
+  const visibleCases = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return (dashboard?.queue ?? []).filter((item) => {
+      const status = queueLabels[item.status] ?? item.status;
+      const matchesTab = queue === 'Все' || queue === 'Новые' && status === 'Новая' || queue === 'В работе' && status === 'В работе' || queue === 'Эскалации' && item.risk_level === 'high';
+      return matchesTab && (!normalizedQuery || `${item.applicant} ${item.subject_id}`.toLowerCase().includes(normalizedQuery));
+    });
+  }, [dashboard, query, queue]);
+
+  async function decide(caseId: string, decision: 'approve' | 'reject') {
+    if (decision === 'reject' && !window.confirm('Отклонить эту заявку? Проект не попадёт в каталог.')) return;
+    setProcessing(caseId);
+    setFeedback('');
+    try {
+      const response = await fetch('/api/admin/verifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseId, decision }) });
+      const payload = await response.json() as { message?: string; nextStep?: string | null };
+      if (!response.ok) throw new Error(payload.message || 'Не удалось сохранить решение.');
+      setFeedback(decision === 'approve' ? payload.nextStep === 'pending_moderation' ? 'Проверка пройдена: ЖК передан на модерацию.' : 'Заявка одобрена.' : 'Заявка отклонена.');
+      await loadDashboard();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : 'Не удалось сохранить решение.');
+    } finally {
+      setProcessing('');
+    }
+  }
+
+  const userInitials = (dashboard?.session.user.fullName ?? 'Администратор').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  const highRiskCount = dashboard?.queue.filter((item) => item.risk_level === 'high').length ?? 0;
 
   return (
     <main className="platform-admin dark">
       <aside className={`admin-sidebar ${mobileNav ? 'open' : ''}`}>
         <div className="admin-brand"><span><ShieldCheck /></span><div><strong>Estate<em>Hub</em></strong><small>Platform Admin</small></div><button type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню"><X /></button></div>
-        <div className="admin-user"><span>МА</span><div><strong>Мухаммадали А.</strong><small>Superadmin</small></div><ChevronDown /></div>
-        <nav>{adminNav.map((item) => <button type="button" className={item.active ? 'active' : ''} key={item.label}><item.icon /><span>{item.label}</span>{item.count && <em>{item.count}</em>}</button>)}</nav>
+        <div className="admin-user"><span>{userInitials}</span><div><strong>{dashboard?.session.user.fullName ?? 'Администратор'}</strong><small>{dashboard?.session.platformRoles[0] ?? 'Platform Admin'}</small></div><ChevronDown /></div>
+        <nav>{adminNav.map((item) => {
+          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.count;
+          return <button type="button" className={item.active ? 'active' : ''} key={item.label}><item.icon /><span>{item.label}</span>{Boolean(count) && <em>{count}</em>}</button>;
+        })}</nav>
         <div className="system-status"><span><i/> Все системы работают</span><small>Последняя проверка: сейчас</small></div>
       </aside>
       {mobileNav && <button className="developer-sidebar-backdrop" type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню" />}
 
       <section className="admin-workspace">
-        <header className="admin-topbar"><div><button type="button" onClick={() => setMobileNav(true)} aria-label="Открыть меню"><Menu /></button><strong>Операционный центр</strong></div><div className="admin-global-search"><Search /><Input aria-label="Глобальный поиск" placeholder="Пользователь, объект, платёж…" /></div><div><button type="button" aria-label="Уведомления"><Bell /><span>6</span></button><span>МА</span></div></header>
+        <header className="admin-topbar"><div><button type="button" onClick={() => setMobileNav(true)} aria-label="Открыть меню"><Menu /></button><strong>Операционный центр</strong></div><div className="admin-global-search"><Search /><Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Глобальный поиск" placeholder="Компания или объект…" /></div><div><button type="button" aria-label="Уведомления"><Bell />{Boolean(dashboard?.stats.pendingVerifications) && <span>{dashboard?.stats.pendingVerifications}</span>}</button><span>{userInitials}</span></div></header>
         <div className="admin-content">
           <div className="admin-heading"><div><span>29 августа 2026 · Самарканд</span><h1>Контроль платформы</h1><p>Верификация, модерация, бронирования и финансовые операции.</p></div><Button variant="outline"><SlidersHorizontal /> Настроить дашборд</Button></div>
 
+          {loadError && <div className="admin-operation-state error"><AlertTriangle /><span>{loadError}</span><button type="button" onClick={() => void loadDashboard()}>Повторить</button></div>}
+          {feedback && <div className="admin-operation-state success"><Check /><span>{feedback}</span></div>}
+
           <div className="admin-kpis">
-            <article><span className="ak-blue"><Users /></span><div><small>Пользователи</small><strong>24 821</strong><em>+184 за неделю</em></div></article>
-            <article><span className="ak-green"><Building2 /></span><div><small>Активные ЖК</small><strong>42</strong><em>347 объявлений</em></div></article>
-            <article><span className="ak-orange"><FileCheck2 /></span><div><small>На верификации</small><strong>17</strong><em>5 просрочено</em></div></article>
-            <article><span className="ak-violet"><WalletCards /></span><div><small>Активные брони</small><strong>31</strong><em>3,8 млрд сум</em></div></article>
-            <article><span className="ak-red"><AlertTriangle /></span><div><small>Требует решения</small><strong>12</strong><em>3 финансовых спора</em></div></article>
+            <article><span className="ak-blue"><Users /></span><div><small>Пользователи</small><strong>{dashboard?.stats.users ?? '—'}</strong><em>активные профили</em></div></article>
+            <article><span className="ak-green"><Building2 /></span><div><small>Активные ЖК</small><strong>{dashboard?.stats.activeComplexes ?? '—'}</strong><em>{dashboard?.stats.publishedListings ?? 0} объявлений</em></div></article>
+            <article><span className="ak-orange"><FileCheck2 /></span><div><small>На верификации</small><strong>{dashboard?.stats.pendingVerifications ?? '—'}</strong><em>в текущей очереди</em></div></article>
+            <article><span className="ak-violet"><WalletCards /></span><div><small>Опубликовано</small><strong>{dashboard?.stats.publishedListings ?? '—'}</strong><em>активных объявлений</em></div></article>
+            <article><span className="ak-red"><AlertTriangle /></span><div><small>Высокий риск</small><strong>{highRiskCount}</strong><em>требуют внимания</em></div></article>
           </div>
 
           <div className="admin-main-grid">
             <section className="admin-panel verification-queue">
-              <div className="admin-panel-heading"><div><h2>Очередь верификации</h2><p>Компании, продавцы и документы объектов</p></div><a href="#all">Открыть всю очередь</a></div>
-              <div className="admin-queue-toolbar"><div>{['Все', 'Новые', 'В работе', 'Эскалации'].map((item) => <button className={queue === item ? 'active' : ''} type="button" onClick={() => setQueue(item)} key={item}>{item}</button>)}</div><div><Search /><Input aria-label="Поиск заявки" placeholder="Поиск заявки" /></div></div>
-              <Table className="admin-table"><TableHeader><TableRow><TableHead>Заявитель</TableHead><TableHead>Тип</TableHead><TableHead>Предмет проверки</TableHead><TableHead>Получено</TableHead><TableHead>Риск</TableHead><TableHead>Статус</TableHead><TableHead /></TableRow></TableHeader><TableBody>{verificationRows.filter((row) => queue === 'Все' || queue === 'Новые' && row.status === 'Новая' || queue === 'В работе' && row.status === 'В работе' || queue === 'Эскалации' && row.status === 'Эскалация').map((row) => <TableRow key={row.name}><TableCell><div className="admin-applicant"><span>{row.name.slice(0,2).toUpperCase()}</span><strong>{row.name}</strong></div></TableCell><TableCell>{row.type}</TableCell><TableCell>{row.subject}</TableCell><TableCell>{row.date}</TableCell><TableCell><Badge className={`risk-badge ${row.risk.toLowerCase()}`}>{row.risk}</Badge></TableCell><TableCell><Badge className={`queue-status ${row.status === 'Новая' ? 'new' : row.status === 'В работе' ? 'working' : row.status === 'Эскалация' ? 'escalated' : 'changes'}`}>{row.status}</Badge></TableCell><TableCell><button type="button"><MoreHorizontal /></button></TableCell></TableRow>)}</TableBody></Table>
+              <div className="admin-panel-heading"><div><h2>Очередь верификации</h2><p>Компании и жилые комплексы перед публикацией</p></div><span className="queue-total">{dashboard?.stats.pendingVerifications ?? 0} заявок</span></div>
+              <div className="admin-queue-toolbar"><div>{['Все', 'Новые', 'В работе', 'Эскалации'].map((item) => <button className={queue === item ? 'active' : ''} type="button" onClick={() => setQueue(item)} key={item}>{item}</button>)}</div><div><Search /><Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Поиск заявки" placeholder="Поиск заявки" /></div></div>
+              <Table className="admin-table"><TableHeader><TableRow><TableHead>Заявитель</TableHead><TableHead>Тип</TableHead><TableHead>Предмет проверки</TableHead><TableHead>Получено</TableHead><TableHead>Риск</TableHead><TableHead>Статус</TableHead><TableHead>Решение</TableHead></TableRow></TableHeader><TableBody>
+                {!dashboard && !loadError && <TableRow><TableCell colSpan={7}><div className="table-empty-state">Загружаем очередь…</div></TableCell></TableRow>}
+                {dashboard && visibleCases.length === 0 && <TableRow><TableCell colSpan={7}><div className="table-empty-state">В этой части очереди заявок нет.</div></TableCell></TableRow>}
+                {visibleCases.map((item) => {
+                  const risk = riskLabels[item.risk_level] ?? item.risk_level;
+                  const status = queueLabels[item.status] ?? item.status;
+                  const type = item.subject_type === 'complex' ? 'Жилой комплекс' : item.organization_type === 'agency' ? 'Агентство' : item.subject_type === 'organization' ? 'Застройщик' : 'Пользователь';
+                  const subject = item.subject_type === 'complex' ? 'Объект и связь с застройщиком' : 'Компания и полномочия';
+                  const date = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(item.created_at.replace(' ', 'T') + 'Z'));
+                  return <TableRow key={item.id}><TableCell><div className="admin-applicant"><span>{item.applicant.slice(0,2).toUpperCase()}</span><strong>{item.applicant}</strong></div></TableCell><TableCell>{type}</TableCell><TableCell>{subject}</TableCell><TableCell>{date}</TableCell><TableCell><Badge className={`risk-badge ${risk.toLowerCase()}`}>{risk}</Badge></TableCell><TableCell><Badge className={`queue-status ${status === 'Новая' ? 'new' : 'working'}`}>{status}</Badge></TableCell><TableCell><div className="verification-actions"><button type="button" className="approve" onClick={() => void decide(item.id, 'approve')} disabled={processing === item.id} aria-label={`Одобрить ${item.applicant}`} title="Одобрить"><Check /></button><button type="button" className="reject" onClick={() => void decide(item.id, 'reject')} disabled={processing === item.id} aria-label={`Отклонить ${item.applicant}`} title="Отклонить"><X /></button></div></TableCell></TableRow>;
+                })}
+              </TableBody></Table>
             </section>
 
             <aside className="admin-side-stack">

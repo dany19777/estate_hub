@@ -35,6 +35,29 @@ export const schemaStatements = [
     verified_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    external_user_id TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'blocked', 'deleted')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS platform_role_assignments (
+    user_id TEXT NOT NULL REFERENCES users(id),
+    role TEXT NOT NULL CHECK (role IN ('SUPERADMIN', 'PLATFORM_ADMIN', 'MODERATOR', 'VERIFICATION_SPECIALIST', 'FINANCE_OPERATOR', 'SUPPORT', 'CONTENT_MANAGER')),
+    assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(user_id, role)
+  )`,
+  `CREATE TABLE IF NOT EXISTS organization_memberships (
+    organization_id TEXT NOT NULL REFERENCES organizations(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    role TEXT NOT NULL CHECK (role IN ('OWNER', 'ADMIN', 'HEAD_OF_SALES', 'MANAGER', 'CONTENT_MANAGER', 'FINANCE', 'ANALYST')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('invited', 'active', 'suspended', 'removed')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(organization_id, user_id)
+  )`,
   `CREATE TABLE IF NOT EXISTS verification_cases (
     id TEXT PRIMARY KEY,
     subject_type TEXT NOT NULL CHECK (subject_type IN ('organization', 'owner', 'listing', 'complex')),
@@ -62,6 +85,13 @@ export const schemaStatements = [
     map_x REAL NOT NULL,
     map_y REAL NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS complex_publication_workflows (
+    complex_id TEXT PRIMARY KEY REFERENCES complexes(id),
+    status TEXT NOT NULL CHECK (status IN ('draft', 'submitted', 'in_verification', 'pending_moderation', 'published', 'rejected', 'archived')),
+    submitted_at TEXT,
+    reviewed_at TEXT,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE IF NOT EXISTS buildings (
@@ -154,6 +184,9 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_districts_city_id ON districts(city_id)`,
   `CREATE INDEX IF NOT EXISTS idx_complexes_district_status ON complexes(district_id, completion_status)`,
   `CREATE INDEX IF NOT EXISTS idx_complexes_developer_org_id ON complexes(developer_org_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_memberships_user_status ON organization_memberships(user_id, status)`,
+  `CREATE INDEX IF NOT EXISTS idx_platform_roles_role ON platform_role_assignments(role)`,
+  `CREATE INDEX IF NOT EXISTS idx_complex_workflow_status ON complex_publication_workflows(status, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_units_complex_availability ON units(complex_id, availability_status)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_complex_status ON listings(complex_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_market_price ON listings(market_type, price_uzs) WHERE status = 'published'`,

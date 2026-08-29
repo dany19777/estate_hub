@@ -77,6 +77,8 @@ async function seedMarketplace(database: D1Database) {
     statements.push(database.prepare(`INSERT OR IGNORE INTO verification_cases (id, subject_type, subject_id, status, risk_level, reviewed_by, reviewed_at) VALUES (?, 'organization', ?, 'approved', 'low', 'system-seed', CURRENT_TIMESTAMP)`)
       .bind(`verification-${organization[0]}`, organization[0]));
   }
+  statements.push(database.prepare(`INSERT OR IGNORE INTO organizations (id, slug, name, organization_type, verification_status) VALUES ('org-nurafshon-build', 'nurafshon-build', 'Nurafshon Build', 'developer', 'pending')`));
+  statements.push(database.prepare(`INSERT OR IGNORE INTO verification_cases (id, subject_type, subject_id, status, risk_level) VALUES ('verification-org-nurafshon-build', 'organization', 'org-nurafshon-build', 'submitted', 'medium')`));
   for (const complex of complexSeeds) {
     statements.push(database.prepare(`INSERT OR IGNORE INTO complexes (
       id, slug, district_id, developer_org_id, name, address, description, completion_status,
@@ -85,6 +87,8 @@ async function seedMarketplace(database: D1Database) {
       .bind(complex.id, complex.slug, complex.districtId, complex.developerId, complex.name, complex.address, complex.description, complex.completionStatus, complex.completionLabel, complex.image, complex.featured, complex.rating, complex.mapX, complex.mapY));
     statements.push(database.prepare(`INSERT OR IGNORE INTO verification_cases (id, subject_type, subject_id, status, risk_level, reviewed_by, reviewed_at) VALUES (?, 'complex', ?, 'approved', 'low', 'system-seed', CURRENT_TIMESTAMP)`)
       .bind(`verification-${complex.id}`, complex.id));
+    statements.push(database.prepare(`INSERT OR IGNORE INTO complex_publication_workflows (complex_id, status, submitted_at, reviewed_at) VALUES (?, 'published', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`)
+      .bind(complex.id));
 
     const buildingId = `building-${complex.id}`;
     const sectionId = `section-${complex.id}`;
@@ -161,6 +165,7 @@ export async function readMarketplaceData() {
       JOIN districts d ON d.id = c.district_id
       JOIN cities city ON city.id = d.city_id
       JOIN organizations o ON o.id = c.developer_org_id
+      JOIN complex_publication_workflows workflow ON workflow.complex_id = c.id AND workflow.status = 'published'
       ORDER BY c.featured DESC, c.rating DESC, c.name ASC`).all<ComplexRow>(),
     database.prepare(`SELECT
       l.id, l.complex_id, u.unit_number, u.rooms, u.area_sqm, u.floor_number,

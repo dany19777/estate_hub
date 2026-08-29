@@ -1162,3 +1162,41 @@ a { color: inherit; text-decoration: none; }
   .admin-queue-toolbar > div:first-child { overflow-x: auto; }
   .admin-queue-toolbar > div:last-child { width: 100%; }
 }
+
+/* Persistent developer and admin workflows */
+.dashboard-operation-state, .admin-operation-state { display: flex; min-height: 40px; align-items: center; gap: 9px; margin-bottom: 12px; padding: 9px 12px; border: 1px solid #29405a; border-radius: 9px; color: #afbed0; background: #0f1c2b; font-size: 8px; }
+.dashboard-operation-state svg, .admin-operation-state svg { width: 15px; flex: 0 0 auto; }
+.dashboard-operation-state.error, .admin-operation-state.error { border-color: #5a2b36; color: #f09aa3; background: #24151d; }
+.admin-operation-state.success { border-color: #24543f; color: #6fd0a0; background: #10271f; }
+.dashboard-operation-state > button, .admin-operation-state > button { margin-left: auto; padding: 5px 9px; border: 1px solid currentColor; border-radius: 6px; color: inherit; background: transparent; font-size: 7px; cursor: pointer; }
+.table-empty-state { display: flex; min-height: 70px; align-items: center; justify-content: center; padding: 18px; color: #718197; text-align: center; }
+.project-status.rejected { color: #ef8993; background: #3b202a; }
+.quick-actions button:disabled, .company-profile-card > button:disabled { opacity: .45; cursor: not-allowed; }
+
+.developer-dialog { width: min(510px, calc(100vw - 28px)); max-width: 510px; gap: 18px; border: 1px solid #2a3a50; color: #edf4fd; background: #0d1928; box-shadow: 0 24px 90px rgba(0,0,0,.5); }
+.developer-dialog [data-slot="dialog-title"] { font-size: 18px; }
+.developer-dialog [data-slot="dialog-description"] { color: #8494a9; line-height: 1.5; }
+.developer-dialog [data-slot="dialog-close"] { color: #8292a6; }
+.developer-dialog-form { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.developer-dialog-form label { display: flex; flex-direction: column; gap: 6px; color: #9babbd; font-size: 12px; font-weight: 650; }
+.developer-dialog-form label:nth-child(1), .developer-dialog-form label:nth-child(2), .developer-dialog-form label:nth-child(5), .developer-dialog-form > p { grid-column: 1 / -1; }
+.developer-dialog-form input, .developer-dialog-form select { width: 100%; height: 40px; border: 1px solid #2b3b50; border-radius: 8px; color: #eaf1fa; background: #0a1522; padding: 0 11px; font-size: 12px; outline: none; }
+.developer-dialog-form input:focus, .developer-dialog-form select:focus { border-color: #4f7cf1; box-shadow: 0 0 0 3px rgba(79,124,241,.12); }
+.developer-dialog-form > p { margin: 0; padding: 9px 10px; border-radius: 7px; font-size: 11px; }
+.developer-dialog-form > p.success { color: #70d2a1; background: #102a21; }
+.developer-dialog-form > p.error { color: #f0939d; background: #2b1820; }
+.developer-dialog [data-slot="dialog-footer"] { border-color: #26364a; background: #0a1522; }
+.developer-dialog [data-slot="dialog-footer"] button { min-width: 105px; }
+
+.queue-total { color: #7699ff; font-size: 7px; font-weight: 650; }
+.verification-actions { display: flex; gap: 5px; }
+.admin-table td .verification-actions > button { width: 25px; height: 25px; cursor: pointer; }
+.admin-table td .verification-actions > button.approve { border-color: #285941; color: #5fcd95; background: #122c22; }
+.admin-table td .verification-actions > button.reject { border-color: #60313b; color: #ed8590; background: #2d1921; }
+.admin-table td .verification-actions > button:hover:not(:disabled) { filter: brightness(1.25); }
+.admin-table td .verification-actions > button:disabled { opacity: .45; cursor: wait; }
+
+@media (max-width: 560px) {
+  .developer-dialog-form { grid-template-columns: 1fr; }
+  .developer-dialog-form label { grid-column: 1 !important; }
+}
