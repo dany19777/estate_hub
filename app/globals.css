@@ -325,6 +325,7 @@ a { color: inherit; text-decoration: none; }
 .active-ai-filter div { display: flex; flex-direction: column; gap: 3px; }
 .active-ai-filter span { font-size: 9px; font-weight: 650; }
 .active-ai-filter strong { font-size: 10px; line-height: 1.4; }
+.active-ai-filter small { color: #7a6021; font-size: 8px; line-height: 1.4; }
 .price-filter { padding: 16px 0 20px; border-top: 1px solid #edf0f4; }
 .price-filter-label, .filter-group legend { display: block; margin-bottom: 10px; color: #344054; font-size: 11px; font-weight: 700; }
 .price-filter > div { display: flex; gap: 6px; }
@@ -339,6 +340,7 @@ a { color: inherit; text-decoration: none; }
 .filter-check { display: flex; align-items: center; gap: 8px; margin: 12px 0; color: #445168; font-size: 10px; cursor: pointer; }
 .filter-check input { position: absolute; opacity: 0; }
 .filter-check > span { display: grid; width: 17px; height: 17px; place-items: center; border: 1px solid #9cbcff; border-radius: 5px; color: white; background: var(--blue); }
+.filter-check input:not(:checked) + span { color: transparent; background: white; }
 .filter-check svg { width: 11px; }
 .apply-filters { width: 100%; height: 38px !important; margin-top: 17px; font-size: 11px !important; }
 .clear-filters { width: 100%; margin-top: 10px; border: 0; color: #667085; background: transparent; font-size: 10px; cursor: pointer; }
@@ -346,6 +348,19 @@ a { color: inherit; text-decoration: none; }
 .catalog-results-heading { display: flex; align-items: end; justify-content: space-between; margin-bottom: 18px; }
 .catalog-results-heading span { color: #1756d1; font-size: 10px; font-weight: 720; text-transform: uppercase; letter-spacing: .09em; }
 .catalog-results-heading h1 { margin: 4px 0 0; font-size: 23px; letter-spacing: -.6px; }
+.catalog-sort select { height: 34px; padding: 0 30px 0 10px; border: 1px solid #dfe5ed; border-radius: 9px; color: #5f6b7c; background: white; font: inherit; font-size: 10px; cursor: pointer; }
+.catalog-state { display: flex; min-height: 230px; align-items: center; justify-content: center; gap: 14px; padding: 30px; border: 1px dashed #ced9e8; border-radius: 14px; color: #344054; background: white; text-align: left; }
+.catalog-state > div { display: flex; flex-direction: column; gap: 4px; }
+.catalog-state > span:not(.catalog-loader) { display: flex; flex-direction: column; gap: 4px; }
+.catalog-state strong { font-size: 13px; }
+.catalog-state p { margin: 0; color: #758195; font-size: 10px; }
+.catalog-state small { color: #758195; font-size: 10px; }
+.catalog-state > button { margin-left: 8px; font-size: 9px; }
+.catalog-loader { width: 24px; height: 24px; flex: 0 0 auto; border: 3px solid #dce7fb; border-top-color: var(--blue); border-radius: 50%; animation: catalog-spin .8s linear infinite; }
+.error-state { border-color: #f1cfd2; background: #fffafa; }
+.empty-state { border-color: #d7e2f2; background: #fbfcff; }
+@keyframes catalog-spin { to { transform: rotate(360deg); } }
+.detail-state { margin-top: 54px; }
 .catalog-results-heading > button { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border: 1px solid #dfe5ed; border-radius: 9px; color: #5f6b7c; background: white; font-size: 10px; cursor: pointer; }
 .catalog-results-heading > button svg { width: 13px; }
 .market-context-card { display: grid; grid-template-columns: minmax(220px, .9fr) minmax(360px, 1.25fr); align-items: center; gap: 22px; margin-bottom: 18px; padding: 17px; border: 1px solid #d9e4f5; border-radius: 14px; background: linear-gradient(135deg, #f5f8ff, #fff); }

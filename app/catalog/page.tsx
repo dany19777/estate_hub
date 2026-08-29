@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import {
   ArrowRight,
   Bot,
   Building2,
   Check,
-  ChevronDown,
   Heart,
   Home,
   ListFilter,
@@ -25,112 +25,91 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InternalLink as Link } from '@/components/internal-link';
 import { MarketplaceHeader } from '@/components/marketplace-header';
-
-const results = [
-  { id: 1, name: 'Bog‘ishamol Residence', location: 'Боғишамол', price: 'от 620 млн', units: 28, rooms: '1–4', status: 'Сдан', type: 'Первичный', verified: true, reserve: true, x: 54, y: 44, image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=86' },
-  { id: 2, name: 'Registan Gardens', location: 'Регистан', price: 'от 745 млн', units: 16, rooms: '2–4', status: 'IV кв. 2026', type: 'Первичный', verified: true, reserve: true, x: 37, y: 55, image: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=900&q=86' },
-  { id: 3, name: 'Silk Road Avenue', location: 'Сиёб', price: 'от 540 млн', units: 41, rooms: '1–3', status: 'II кв. 2027', type: 'Оба рынка', verified: true, reserve: false, x: 68, y: 27, image: 'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=900&q=86' },
-  { id: 4, name: 'Afrasiyob Park', location: 'Саттепо', price: 'от 810 млн', units: 12, rooms: '2–5', status: 'Сдан', type: 'Первичный', verified: true, reserve: true, x: 24, y: 34, image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=900&q=86' },
-  { id: 5, name: 'Samarkand City', location: 'Центр', price: 'от 930 млн', units: 19, rooms: '2–4', status: 'I кв. 2026', type: 'Оба рынка', verified: true, reserve: true, x: 47, y: 69, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=86' },
-  { id: 6, name: 'Zarafshan Riverside', location: 'Конигил', price: 'от 575 млн', units: 22, rooms: '1–4', status: 'III кв. 2026', type: 'Вторичный', verified: true, reserve: false, x: 78, y: 62, image: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=900&q=86' },
-];
-
-const filterGroups = [
-  { title: 'Тип рынка', options: ['Все', 'Первичный', 'Вторичный'] },
-  { title: 'Комнаты', options: ['1', '2', '3', '4+'] },
-  { title: 'Состояние', options: ['Сдан', 'Строится'] },
-  { title: 'Продавец', options: ['Застройщик', 'Владелец', 'Агентство'] },
-];
+import { useComplexes } from '@/hooks/use-complexes';
+import type { ComplexSummary, SellerType } from '@/lib/marketplace';
+import { formatPriceMillions, marketLabel } from '@/lib/marketplace';
 
 const marketContext = {
   'Все': {
     label: 'Купить',
     title: 'Все варианты покупки в одном каталоге',
     description: 'Новостройки от проверенных застройщиков и квартиры собственников на вторичном рынке.',
-    examples: [1, 6],
   },
   'Первичный': {
     label: 'Новостройки',
     title: 'Квартиры напрямую от застройщиков',
     description: 'Смотрите готовые и строящиеся комплексы, сроки сдачи и возможность онлайн-бронирования.',
-    examples: [1, 2],
   },
   'Вторичный': {
     label: 'Вторичный рынок',
     title: 'Готовые квартиры от владельцев и агентств',
     description: 'Сравнивайте предложения в сданных домах, состояние квартиры и историю актуальной цены.',
-    examples: [6, 3],
   },
 } as const;
 
-export default function CatalogPage() {
-  const [view, setView] = useState<'list' | 'map'>('list');
-  const [activeMarket, setActiveMarket] = useState('Все');
-  const [favorites, setFavorites] = useState<number[]>([3]);
-  const [selected, setSelected] = useState(results[0]);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [search, setSearch] = useState('');
+const marketValue = (market: string): 'all' | 'primary' | 'secondary' => market === 'Первичный' ? 'primary' : market === 'Вторичный' ? 'secondary' : 'all';
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const market = params.get('market');
-    const query = params.get('q');
-    if (market === 'primary') setActiveMarket('Первичный');
-    if (market === 'secondary') setActiveMarket('Вторичный');
-    if (market === 'all') setActiveMarket('Все');
-    if (query) setSearch(query);
-  }, []);
+export default function CatalogPage() {
+  const searchParams = useSearchParams();
+  const initialMarket = searchParams.get('market');
+  const [view, setView] = useState<'list' | 'map'>('list');
+  const [activeMarket, setActiveMarket] = useState(() => initialMarket === 'primary' ? 'Первичный' : initialMarket === 'secondary' ? 'Вторичный' : 'Все');
+  const [favorites, setFavorites] = useState<string[]>(['complex-silk-road']);
+  const [selected, setSelected] = useState<ComplexSummary | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
+  const [rooms, setRooms] = useState<number | undefined>();
+  const [status, setStatus] = useState<'completed' | 'under_construction' | undefined>();
+  const [seller, setSeller] = useState<SellerType | undefined>();
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [verified, setVerified] = useState(true);
+  const [reservable, setReservable] = useState(false);
+  const [sort, setSort] = useState<'recommended' | 'price_asc' | 'price_desc' | 'newest'>('recommended');
+
+  const request = useMemo(() => ({
+    market: marketValue(activeMarket),
+    q: search.trim() || undefined,
+    rooms,
+    status,
+    seller,
+    minPrice: minPrice ? Number(minPrice) * 1_000_000 : undefined,
+    maxPrice: maxPrice ? Number(maxPrice) * 1_000_000 : undefined,
+    verified,
+    reservable,
+    sort,
+  }), [activeMarket, maxPrice, minPrice, reservable, rooms, search, seller, sort, status, verified]);
+  const { data: catalog, loading, error, retry } = useComplexes(request);
+  const filtered = catalog.items;
+
+  const activeSelection = filtered.find((item) => item.id === selected?.id) ?? filtered[0] ?? null;
 
   const selectMarket = (nextMarket: string) => {
     setActiveMarket(nextMarket);
-    const value = nextMarket === 'Первичный' ? 'primary' : nextMarket === 'Вторичный' ? 'secondary' : 'all';
-    window.history.replaceState({}, '', `/catalog?market=${value}`);
+    const params = new URLSearchParams(window.location.search);
+    params.set('market', marketValue(nextMarket));
+    if (search.trim()) params.set('q', search.trim()); else params.delete('q');
+    window.history.replaceState({}, '', `/catalog?${params.toString()}`);
   };
 
-  const parsedFilters = useMemo(() => {
-    const normalized = search.toLowerCase();
-    const filters: string[] = [];
-    if (/двуш|2[ -]?комнат/.test(normalized)) filters.push('2 комнаты');
-    if (/до\s*900|900\s*млн/.test(normalized)) filters.push('до 900 млн');
-    if (/сдан|готов/.test(normalized)) filters.push('сдан');
-    if (/не\s+на\s+перв|не\s+перв/.test(normalized)) filters.push('не первый этаж');
-    if (/онлайн[- ]?брон/.test(normalized)) filters.push('онлайн-бронь');
-    return filters;
-  }, [search]);
-
-  const filtered = useMemo(() => {
-    const normalized = search.toLowerCase().trim();
-    const naturalLanguageSearch = parsedFilters.length > 0;
-    const wantsTwoRooms = parsedFilters.includes('2 комнаты');
-    const wantsCompleted = parsedFilters.includes('сдан');
-    const wantsBudget = parsedFilters.includes('до 900 млн');
-    const wantsReservation = parsedFilters.includes('онлайн-бронь');
-
-    return results.filter((item) => {
-      const marketMatch = activeMarket === 'Все' || item.type.includes(activeMarket) || item.type === 'Оба рынка';
-      if (!marketMatch) return false;
-      if (!normalized) return true;
-
-      if (naturalLanguageSearch) {
-        const price = Number(item.price.match(/\d+/)?.[0] ?? Number.POSITIVE_INFINITY);
-        const roomMatch = !wantsTwoRooms || item.rooms.includes('2');
-        const statusMatch = !wantsCompleted || item.status === 'Сдан';
-        const budgetMatch = !wantsBudget || price <= 900;
-        const reservationMatch = !wantsReservation || item.reserve;
-        return roomMatch && statusMatch && budgetMatch && reservationMatch;
-      }
-
-      return `${item.name} ${item.location}`.toLowerCase().includes(normalized);
-    });
-  }, [activeMarket, parsedFilters, search]);
-
-  const toggleFavorite = (id: number) => {
+  const toggleFavorite = (id: string) => {
     setFavorites((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   };
 
+  const resetFilters = () => {
+    setRooms(undefined);
+    setStatus(undefined);
+    setSeller(undefined);
+    setMinPrice('');
+    setMaxPrice('');
+    setVerified(true);
+    setReservable(false);
+    setSort('recommended');
+  };
+
   const context = marketContext[activeMarket as keyof typeof marketContext];
-  const examples = context.examples.map((id) => results.find((item) => item.id === id)).filter(Boolean) as typeof results;
-  const activeHeaderSection = activeMarket === 'Первичный' ? 'primary' : activeMarket === 'Вторичный' ? 'secondary' : 'all';
+  const examples = filtered.slice(0, 2);
+  const activeHeaderSection = marketValue(activeMarket);
 
   return (
     <main className="catalog-page">
@@ -158,30 +137,34 @@ export default function CatalogPage() {
             <div><ListFilter /><strong>Фильтры</strong></div>
             <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Закрыть фильтры"><X /></button>
           </div>
-          <div className="active-ai-filter"><Bot /><div><span>{search ? 'AI понял ваш запрос' : 'AI-поиск готов'}</span><strong>{search ? (parsedFilters.join(' · ') || `Поиск: ${search}`) : 'Опишите квартиру обычным языком'}</strong></div></div>
+          <div className="active-ai-filter"><Bot /><div><span>{search ? 'AI понял ваш запрос' : 'AI-поиск готов'}</span><strong>{search ? (catalog.parsedFilters.map((filter) => filter.label).join(' · ') || `Поиск: ${search}`) : 'Опишите квартиру обычным языком'}</strong>{catalog.unsupportedCriteria.length > 0 && <small>Пока не учитываем: {catalog.unsupportedCriteria.join(', ')}</small>}</div></div>
           <div className="price-filter">
             <span className="price-filter-label">Цена, сум</span>
-            <div><Input defaultValue="450 млн" aria-label="Минимальная цена" /><Input defaultValue="900 млн" aria-label="Максимальная цена" /></div>
+            <div><Input inputMode="numeric" value={minPrice} onChange={(event) => setMinPrice(event.target.value.replace(/\D/g, ''))} placeholder="от 450 млн" aria-label="Минимальная цена в миллионах сум" /><Input inputMode="numeric" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value.replace(/\D/g, ''))} placeholder="до 900 млн" aria-label="Максимальная цена в миллионах сум" /></div>
             <span><i /><i /></span>
           </div>
-          {filterGroups.map((group) => (
-            <fieldset className="filter-group" key={group.title}>
-              <legend>{group.title}</legend>
-              <div>
-                {group.options.map((option, index) => <button className={index === 0 && group.title !== 'Продавец' ? 'active' : ''} type="button" key={option}>{option}</button>)}
-              </div>
-            </fieldset>
-          ))}
-          <label className="filter-check"><input defaultChecked type="checkbox" /><span><Check /></span> Только проверенные</label>
-          <label className="filter-check"><input defaultChecked type="checkbox" /><span><Check /></span> Онлайн-бронирование</label>
-          <Button className="apply-filters" onClick={() => setFiltersOpen(false)}>Показать {filtered.length} комплексов</Button>
-          <button className="clear-filters" type="button">Сбросить фильтры</button>
+          <fieldset className="filter-group">
+            <legend>Комнаты</legend>
+            <div><button className={rooms === undefined ? 'active' : ''} type="button" onClick={() => setRooms(undefined)}>Все</button>{[1, 2, 3, 4].map((option) => <button className={rooms === option ? 'active' : ''} type="button" key={option} onClick={() => setRooms(option)}>{option === 4 ? '4+' : option}</button>)}</div>
+          </fieldset>
+          <fieldset className="filter-group">
+            <legend>Состояние</legend>
+            <div><button className={status === undefined ? 'active' : ''} type="button" onClick={() => setStatus(undefined)}>Все</button><button className={status === 'completed' ? 'active' : ''} type="button" onClick={() => setStatus('completed')}>Сдан</button><button className={status === 'under_construction' ? 'active' : ''} type="button" onClick={() => setStatus('under_construction')}>Строится</button></div>
+          </fieldset>
+          <fieldset className="filter-group">
+            <legend>Продавец</legend>
+            <div><button className={seller === undefined ? 'active' : ''} type="button" onClick={() => setSeller(undefined)}>Все</button><button className={seller === 'developer' ? 'active' : ''} type="button" onClick={() => setSeller('developer')}>Застройщик</button><button className={seller === 'owner' ? 'active' : ''} type="button" onClick={() => setSeller('owner')}>Владелец</button><button className={seller === 'agency' ? 'active' : ''} type="button" onClick={() => setSeller('agency')}>Агентство</button></div>
+          </fieldset>
+          <label className="filter-check"><input checked={verified} onChange={(event) => setVerified(event.target.checked)} type="checkbox" /><span><Check /></span> Только проверенные</label>
+          <label className="filter-check"><input checked={reservable} onChange={(event) => setReservable(event.target.checked)} type="checkbox" /><span><Check /></span> Онлайн-бронирование</label>
+          <Button className="apply-filters" onClick={() => setFiltersOpen(false)}>Показать {catalog.total} комплексов</Button>
+          <button className="clear-filters" type="button" onClick={resetFilters}>Сбросить фильтры</button>
         </aside>
 
         <section className="catalog-results">
           <div className="catalog-results-heading">
-            <div><span>Самарканд</span><h1>{filtered.length} жилых комплексов</h1></div>
-            <button type="button">Сначала рекомендуемые <ChevronDown /></button>
+            <div><span>Самарканд</span><h1>{loading ? 'Ищем предложения…' : `${catalog.total} жилых комплексов`}</h1></div>
+            <label className="catalog-sort"><span className="sr-only">Сортировка</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="recommended">Сначала рекомендуемые</option><option value="price_asc">Сначала дешевле</option><option value="price_desc">Сначала дороже</option><option value="newest">Сначала новые</option></select></label>
           </div>
 
           <section className="market-context-card" aria-label={`Примеры раздела ${context.label}`}>
@@ -194,27 +177,27 @@ export default function CatalogPage() {
               {examples.map((item, index) => (
                 <article key={item.id}>
                   <img src={item.image} alt="" />
-                  <div><small>Пример {index + 1}</small><strong>{item.name}</strong><span>{item.type} · {item.price} сум</span></div>
+                  <div><small>Пример {index + 1}</small><strong>{item.name}</strong><span>{marketLabel(item.marketTypes)} · от {formatPriceMillions(item.priceFrom)} сум</span></div>
                 </article>
               ))}
             </div>
           </section>
 
-          {view === 'list' ? (
+          {loading ? <output className="catalog-state"><span className="catalog-loader" /><span><strong>Проверяем актуальные объявления</strong><small>Применяем выбранные фильтры к опубликованным квартирам.</small></span></output> : error ? <div className="catalog-state error-state"><div><strong>Не удалось загрузить результаты</strong><p>{error}</p></div><Button variant="outline" onClick={retry}>Попробовать снова</Button></div> : filtered.length === 0 ? <div className="catalog-state empty-state"><div><strong>Точных совпадений нет</strong><p>Сбросьте часть фильтров или измените формулировку запроса.</p></div><Button variant="outline" onClick={resetFilters}>Сбросить фильтры</Button></div> : view === 'list' ? (
             <div className="result-grid">
               {filtered.map((item) => (
                 <article className="result-card" key={item.id}>
                   <div className="result-card-image">
                     <img src={item.image} alt={item.name} />
-                    <Badge>{item.type}</Badge>
+                    <Badge>{marketLabel(item.marketTypes)}</Badge>
                     <button className={favorites.includes(item.id) ? 'active' : ''} onClick={() => toggleFavorite(item.id)} type="button" aria-label="Добавить в избранное"><Heart /></button>
                   </div>
                   <div className="result-card-body">
-                    <div className="result-title-row"><div><h2>{item.name}</h2><p><MapPin /> Самарканд, {item.location}</p></div><span>4.8 ★</span></div>
+                    <div className="result-title-row"><div><h2>{item.name}</h2><p><MapPin /> {item.city}, {item.district}</p></div><span>{item.rating.toFixed(1)} ★</span></div>
                     <p className="verified-line"><ShieldCheck /> Проверенный застройщик</p>
-                    <div className="result-facts"><span>{item.rooms} комн.</span><span>{item.units} квартир</span><span>{item.status}</span></div>
-                    {item.reserve && <p className="reservation-available"><Check /> Доступно онлайн-бронирование</p>}
-                    <div className="result-card-footer"><strong>{item.price} сум</strong><Link href="/complex/bogishamol">Подробнее <ArrowRight /></Link></div>
+                    <div className="result-facts"><span>{item.minRooms === item.maxRooms ? item.minRooms : `${item.minRooms}–${item.maxRooms}`} комн.</span><span>{item.availableUnits} квартир</span><span>{item.completionLabel}</span></div>
+                    {item.reservable && <p className="reservation-available"><Check /> Доступно онлайн-бронирование</p>}
+                    <div className="result-card-footer"><strong>от {formatPriceMillions(item.priceFrom)} сум</strong><Link href={`/complex/${item.slug}`}>Подробнее <ArrowRight /></Link></div>
                   </div>
                 </article>
               ))}
@@ -223,11 +206,11 @@ export default function CatalogPage() {
             <div className="map-surface">
               <div className="map-label map-label-1">САМАРКАНД</div>
               <div className="map-road road-1" /><div className="map-road road-2" /><div className="map-road road-3" /><div className="map-river" />
-              {filtered.map((item) => <button key={item.id} type="button" className={`price-marker ${selected.id === item.id ? 'selected' : ''}`} style={{ left: `${item.x}%`, top: `${item.y}%` }} onClick={() => setSelected(item)}>{item.price.replace('от ', '')}</button>)}
-              <div className="map-card">
-                <img src={selected.image} alt={selected.name} />
-                <div><Badge>{selected.type}</Badge><h2>{selected.name}</h2><p><MapPin /> {selected.location}</p><strong>{selected.price} сум</strong><Link href="/complex/bogishamol">Открыть комплекс <ArrowRight /></Link></div>
-              </div>
+              {filtered.map((item) => <button key={item.id} type="button" className={`price-marker ${activeSelection?.id === item.id ? 'selected' : ''}`} style={{ left: `${item.mapX}%`, top: `${item.mapY}%` }} onClick={() => setSelected(item)}>{formatPriceMillions(item.priceFrom)}</button>)}
+              {activeSelection && <div className="map-card">
+                <img src={activeSelection.image} alt={activeSelection.name} />
+                <div><Badge>{marketLabel(activeSelection.marketTypes)}</Badge><h2>{activeSelection.name}</h2><p><MapPin /> {activeSelection.district}</p><strong>от {formatPriceMillions(activeSelection.priceFrom)} сум</strong><Link href={`/complex/${activeSelection.slug}`}>Открыть комплекс <ArrowRight /></Link></div>
+              </div>}
               <div className="map-controls"><button type="button">+</button><button type="button">−</button></div>
             </div>
           )}

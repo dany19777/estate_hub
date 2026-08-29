@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ArrowRight,
   Bot,
@@ -23,68 +23,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InternalLink as Link } from '@/components/internal-link';
 import { MarketplaceHeader } from '@/components/marketplace-header';
-
-const complexes = [
-  {
-    id: 1,
-    name: 'Bog‘ishamol Residence',
-    district: 'Самарканд, Боғишамол',
-    developer: 'Samarkand Development',
-    price: 'от 620 млн сум',
-    units: 28,
-    readiness: 'Сдан',
-    market: 'Первичный',
-    image:
-      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=88',
-    featured: true,
-    reservable: true,
-  },
-  {
-    id: 2,
-    name: 'Registan Gardens',
-    district: 'Самарканд, Регистан',
-    developer: 'Zarafshan Group',
-    price: 'от 745 млн сум',
-    units: 16,
-    readiness: 'IV кв. 2026',
-    market: 'Первичный',
-    image:
-      'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=88',
-    featured: false,
-    reservable: true,
-  },
-  {
-    id: 3,
-    name: 'Silk Road Avenue',
-    district: 'Самарканд, Сиёб',
-    developer: 'Orient House',
-    price: 'от 540 млн сум',
-    units: 41,
-    readiness: 'II кв. 2027',
-    market: 'Первичный + вторичный',
-    image:
-      'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=1200&q=88',
-    featured: true,
-    reservable: false,
-  },
-  {
-    id: 4,
-    name: 'Afrasiyob Park',
-    district: 'Самарканд, Саттепо',
-    developer: 'Imorat Invest',
-    price: 'от 810 млн сум',
-    units: 12,
-    readiness: 'Сдан',
-    market: 'Первичный',
-    image:
-      'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=88',
-    featured: false,
-    reservable: true,
-  },
-];
+import { useComplexes } from '@/hooks/use-complexes';
+import type { ComplexSummary } from '@/lib/marketplace';
+import { formatPriceMillions, marketLabel } from '@/lib/marketplace';
 
 function ComplexCard({ complex, favorite, onFavorite }: {
-  complex: (typeof complexes)[number];
+  complex: ComplexSummary;
   favorite: boolean;
   onFavorite: () => void;
 }) {
@@ -94,7 +38,7 @@ function ComplexCard({ complex, favorite, onFavorite }: {
         <img src={complex.image} alt={`Жилой комплекс ${complex.name}`} />
         <div className="image-badges">
           {complex.featured && <Badge className="featured-badge"><Sparkles /> Выбор EstateHub</Badge>}
-          <Badge className="market-badge" variant="secondary">{complex.market}</Badge>
+          <Badge className="market-badge" variant="secondary">{marketLabel(complex.marketTypes)}</Badge>
         </div>
         <button
           type="button"
@@ -111,7 +55,7 @@ function ComplexCard({ complex, favorite, onFavorite }: {
         <div className="card-heading-row">
           <div>
             <h3>{complex.name}</h3>
-            <p><MapPin /> {complex.district}</p>
+            <p><MapPin /> {complex.city}, {complex.district}</p>
           </div>
           <span className="rating">4.8 <span>★</span></span>
         </div>
@@ -121,13 +65,13 @@ function ComplexCard({ complex, favorite, onFavorite }: {
           <small>проверен</small>
         </div>
         <div className="card-meta">
-          <span>{complex.readiness}</span>
-          <span>{complex.units} квартир</span>
+          <span>{complex.completionLabel}</span>
+          <span>{complex.availableUnits} квартир</span>
           {complex.reservable && <span className="reserve-meta"><Check /> Онлайн-бронь</span>}
         </div>
         <div className="card-bottom">
-          <strong>{complex.price}</strong>
-          <Link href="/complex/bogishamol" aria-label={`Открыть ${complex.name}`}><ArrowRight /></Link>
+          <strong>от {formatPriceMillions(complex.priceFrom)} сум</strong>
+          <Link href={`/complex/${complex.slug}`} aria-label={`Открыть ${complex.name}`}><ArrowRight /></Link>
         </div>
       </div>
     </article>
@@ -149,13 +93,10 @@ function MobileNavigation() {
 export default function HomePage() {
   const [market, setMarket] = useState<'all' | 'primary' | 'secondary'>('all');
   const [query, setQuery] = useState('');
-  const [favorites, setFavorites] = useState<number[]>([1]);
+  const [favorites, setFavorites] = useState<string[]>(['complex-bogishamol']);
 
-  const visibleComplexes = useMemo(() => {
-    if (market === 'primary') return complexes.filter((item) => item.market.includes('Первичный'));
-    if (market === 'secondary') return complexes.filter((item) => item.market.includes('вторичный'));
-    return complexes;
-  }, [market]);
+  const { data: catalog, loading, error, retry } = useComplexes({ market, verified: true, limit: 4 });
+  const visibleComplexes = catalog.items;
 
   const handleSearch = (event: { preventDefault: () => void }) => {
     event.preventDefault();
@@ -166,7 +107,7 @@ export default function HomePage() {
     window.location.assign(`/catalog?${params.toString()}`);
   };
 
-  const toggleFavorite = (id: number) => {
+  const toggleFavorite = (id: string) => {
     setFavorites((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   };
 
@@ -245,7 +186,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="complex-grid">
+        {loading ? <output className="catalog-state"><span className="catalog-loader" /><span><strong>Загружаем проверенные комплексы</strong><small>Получаем актуальные цены и доступность квартир.</small></span></output> : error ? <div className="catalog-state error-state"><div><strong>Каталог временно недоступен</strong><p>{error}</p></div><Button variant="outline" onClick={retry}>Попробовать снова</Button></div> : visibleComplexes.length === 0 ? <div className="catalog-state"><div><strong>Подходящих комплексов пока нет</strong><p>Измените тип рынка или перейдите в полный каталог.</p></div></div> : <div className="complex-grid">
           {visibleComplexes.map((complex) => (
             <ComplexCard
               key={complex.id}
@@ -254,10 +195,10 @@ export default function HomePage() {
               onFavorite={() => toggleFavorite(complex.id)}
             />
           ))}
-        </div>
+        </div>}
 
         <div className="section-cta">
-          <p><strong>42 жилых комплекса</strong><span>и 347 проверенных квартир в Самарканде</span></p>
+          <p><strong>{catalog.total} жилых комплексов</strong><span>с актуальными предложениями в Самарканде</span></p>
           <Button nativeButton={false} render={<Link href="/catalog" />} className="all-complexes-button" size="lg">Смотреть все комплексы <ArrowRight /></Button>
         </div>
       </section>

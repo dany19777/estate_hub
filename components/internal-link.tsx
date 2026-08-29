@@ -6,7 +6,7 @@ type InternalLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> &
   href: string;
 };
 
-export function InternalLink({ href, onClick, ...props }: InternalLinkProps) {
+export function InternalLink({ href, onClick, children, ...props }: InternalLinkProps) {
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event);
     if (event.defaultPrevented) return;
@@ -15,5 +15,5 @@ export function InternalLink({ href, onClick, ...props }: InternalLinkProps) {
     window.location.assign(href);
   };
 
-  return <a href={href} onClick={handleClick} {...props} />;
+  return <a href={href} onClick={handleClick} {...props}>{children}</a>;
 }
