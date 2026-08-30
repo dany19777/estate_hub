@@ -1,5 +1,6 @@
 import { authorizationResponse, requirePermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { paymentProvider } from '@/lib/payment-provider';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,7 @@ type ReservationRow = {
   unit_id: string;
   listing_id: string;
   lead_id: string;
+  reservation_fee_uzs: number;
 };
 
 const allowedActions = new Set(['visit_completed', 'deal_in_progress', 'extend', 'buyer_refused', 'developer_refused']);
@@ -89,7 +91,7 @@ export async function PATCH(request: Request) {
 
     const database = await ensureMarketplaceDatabase();
     const reservation = await database.prepare(`SELECT reservation.id, reservation.status, reservation.payment_status,
-      COALESCE(outcome.outcome_status, 'active') AS outcome_status, reservation.unit_id, reservation.listing_id, reservation.lead_id
+      COALESCE(outcome.outcome_status, 'active') AS outcome_status, reservation.unit_id, reservation.listing_id, reservation.lead_id, reservation.reservation_fee_uzs
       FROM reservation_transactions reservation
       LEFT JOIN reservation_outcomes outcome ON outcome.reservation_id = reservation.id
       WHERE reservation.id = ? AND reservation.organization_id = ? LIMIT 1`).bind(reservationId, session.organization.id).first<ReservationRow>();
@@ -99,6 +101,17 @@ export async function PATCH(request: Request) {
 
     const activityMetadata = action === 'extend' ? { reason, newExpiry } : { previousOutcome: reservation.outcome_status };
     const statements: D1PreparedStatement[] = [];
+    let refundMetadata: Record<string, unknown> = {};
+    if (action === 'developer_refused') {
+      const refundKey = `developer-refund:${reservation.id}`;
+      const refund = await paymentProvider().refundReservation({ reservationId: reservation.id, amountUzs: reservation.reservation_fee_uzs, idempotencyKey: refundKey });
+      const refundOperationId = crypto.randomUUID();
+      statements.push(database.prepare(`INSERT OR IGNORE INTO payment_operations
+        (id, reservation_id, operation_type, provider, provider_reference, amount_uzs, status, idempotency_key, metadata_json)
+        VALUES (?, ?, 'refund', ?, ?, ?, 'succeeded', ?, ?)`)
+        .bind(refundOperationId, reservation.id, refund.provider, refund.reference, reservation.reservation_fee_uzs, refundKey, JSON.stringify({ reason: 'developer_refused' })));
+      refundMetadata = { refundOperationId, refundReference: refund.reference, provider: refund.provider, amountUzs: reservation.reservation_fee_uzs };
+    }
     if (action === 'extend') {
       statements.push(database.prepare(`UPDATE reservation_transactions SET reservation_expires_at = datetime(?), updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(newExpiry, reservation.id));
       statements.push(database.prepare(`INSERT INTO reservation_outcomes (reservation_id, outcome_status, extension_reason, extended_by, extended_at)
@@ -118,12 +131,13 @@ export async function PATCH(request: Request) {
       statements.push(database.prepare(`UPDATE listings SET status = 'published', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'reserved'`).bind(reservation.listing_id));
       statements.push(database.prepare(`UPDATE leads SET status = 'lost', lost_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(action, reservation.lead_id));
     }
+    const actionMetadata = { ...activityMetadata, ...refundMetadata };
     statements.push(database.prepare(`INSERT INTO lead_activities (id, lead_id, actor_type, actor_id, activity_type, metadata_json) VALUES (?, ?, 'user', ?, ?, ?)`)
-      .bind(crypto.randomUUID(), reservation.lead_id, session.user.id, `reservation.${action}`, JSON.stringify(activityMetadata)));
+      .bind(crypto.randomUUID(), reservation.lead_id, session.user.id, `reservation.${action}`, JSON.stringify(actionMetadata)));
     statements.push(database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, ?, 'reservation', ?, ?)`)
-      .bind(crypto.randomUUID(), session.user.id, `reservation.${action}`, reservation.id, JSON.stringify(activityMetadata)));
+      .bind(crypto.randomUUID(), session.user.id, `reservation.${action}`, reservation.id, JSON.stringify(actionMetadata)));
     await database.batch(statements);
-    const messages: Record<string, string> = { visit_completed: 'Визит отмечен завершённым.', deal_in_progress: 'Бронь переведена в сделку.', extend: 'Срок брони продлён.', buyer_refused: 'Отказ покупателя зарегистрирован.', developer_refused: 'Отмена застройщика зарегистрирована, возврат отмечен.' };
+    const messages: Record<string, string> = { visit_completed: 'Визит отмечен завершённым.', deal_in_progress: 'Бронь переведена в сделку.', extend: 'Срок брони продлён.', buyer_refused: 'Отказ покупателя зарегистрирован.', developer_refused: 'Отмена застройщика зарегистрирована, возврат проведён через платёжный контур.' };
     return Response.json({ reservationId, action, message: messages[action] });
   } catch (error) {
     const response = authorizationResponse(error);

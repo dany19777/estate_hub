@@ -25,12 +25,14 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { AdminFinancePanel } from '@/components/admin-finance-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useAdminFinance } from '@/hooks/use-admin-finance';
 
 const adminNav = [
-  { label: 'Обзор', icon: Gauge, active: true },
+  { label: 'Обзор', icon: Gauge },
   { label: 'Пользователи', icon: Users },
   { label: 'Застройщики', icon: Building2 },
   { label: 'Агентства и владельцы', icon: Landmark },
@@ -67,6 +69,12 @@ type AdminDashboardData = {
 const riskLabels: Record<string, string> = { low: 'Низкий', medium: 'Средний', high: 'Высокий' };
 const queueLabels: Record<string, string> = { submitted: 'Новая', in_review: 'В работе' };
 
+function formatAdminMoney(value: number) {
+  return value >= 1_000_000
+    ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум`
+    : `${new Intl.NumberFormat('ru-RU').format(value)} сум`;
+}
+
 export default function AdminDashboard() {
   const [mobileNav, setMobileNav] = useState(false);
   const [queue, setQueue] = useState('Все');
@@ -75,6 +83,8 @@ export default function AdminDashboard() {
   const [query, setQuery] = useState('');
   const [processing, setProcessing] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [activeNav, setActiveNav] = useState('Обзор');
+  const finance = useAdminFinance();
 
   async function loadDashboard() {
     setLoadError('');
@@ -147,6 +157,18 @@ export default function AdminDashboard() {
 
   const userInitials = (dashboard?.session.user.fullName ?? 'Администратор').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   const highRiskCount = dashboard?.queue.filter((item) => item.risk_level === 'high').length ?? 0;
+  const refundCount = finance.operations.filter((item) => item.operation_type === 'refund').length;
+
+  function navigateAdmin(label: string) {
+    const targets: Record<string, string> = {
+      Обзор: 'admin-overview', Пользователи: 'admin-overview', Застройщики: 'moderation', 'Агентства и владельцы': 'verification',
+      'Жилые комплексы': 'moderation', Верификация: 'verification', Модерация: 'moderation', 'Брони и платежи': 'finance',
+      'Споры и возвраты': 'finance', 'Тарифы и биллинг': 'finance', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
+    };
+    setActiveNav(label);
+    setMobileNav(false);
+    document.getElementById(targets[label] ?? 'admin-overview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   return (
     <main className="platform-admin dark">
@@ -154,16 +176,16 @@ export default function AdminDashboard() {
         <div className="admin-brand"><span><ShieldCheck /></span><div><strong>Estate<em>Hub</em></strong><small>Platform Admin</small></div><button type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню"><X /></button></div>
         <div className="admin-user"><span>{userInitials}</span><div><strong>{dashboard?.session.user.fullName ?? 'Администратор'}</strong><small>{dashboard?.session.platformRoles[0] ?? 'Platform Admin'}</small></div><ChevronDown /></div>
         <nav>{adminNav.map((item) => {
-          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.count;
-          return <button type="button" className={item.active ? 'active' : ''} key={item.label}><item.icon /><span>{item.label}</span>{Boolean(count) && <em>{count}</em>}</button>;
+          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? finance.stats.reviewCount : item.count;
+          return <button type="button" className={activeNav === item.label ? 'active' : ''} onClick={() => navigateAdmin(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{Boolean(count) && <em>{count}</em>}</button>;
         })}</nav>
         <div className="system-status"><span><i/> Все системы работают</span><small>Последняя проверка: сейчас</small></div>
       </aside>
       {mobileNav && <button className="developer-sidebar-backdrop" type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню" />}
 
       <section className="admin-workspace">
-        <header className="admin-topbar"><div><button type="button" onClick={() => setMobileNav(true)} aria-label="Открыть меню"><Menu /></button><strong>Операционный центр</strong></div><div className="admin-global-search"><Search /><Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Глобальный поиск" placeholder="Компания или объект…" /></div><div><button type="button" aria-label="Уведомления"><Bell />{Boolean(dashboard?.stats.pendingVerifications) && <span>{dashboard?.stats.pendingVerifications}</span>}</button><span>{userInitials}</span></div></header>
-        <div className="admin-content">
+        <header className="admin-topbar"><div><button type="button" onClick={() => setMobileNav(true)} aria-label="Открыть меню"><Menu /></button><strong>{activeNav}</strong></div><div className="admin-global-search"><Search /><Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Глобальный поиск" placeholder="Компания или объект…" /></div><div><button type="button" aria-label="Уведомления"><Bell />{Boolean(dashboard?.stats.pendingVerifications) && <span>{dashboard?.stats.pendingVerifications}</span>}</button><span>{userInitials}</span></div></header>
+        <div className="admin-content" id="admin-overview">
           <div className="admin-heading"><div><span>29 августа 2026 · Самарканд</span><h1>Контроль платформы</h1><p>Верификация, модерация, бронирования и финансовые операции.</p></div><Button variant="outline"><SlidersHorizontal /> Настроить дашборд</Button></div>
 
           {loadError && <div className="admin-operation-state error"><AlertTriangle /><span>{loadError}</span><button type="button" onClick={() => void loadDashboard()}>Повторить</button></div>}
@@ -178,7 +200,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="admin-main-grid">
-            <section className="admin-panel verification-queue">
+            <section className="admin-panel verification-queue" id="verification">
               <div className="admin-panel-heading"><div><h2>Очередь верификации</h2><p>Покупатели, компании и жилые комплексы</p></div><span className="queue-total">{dashboard?.stats.pendingVerifications ?? 0} заявок</span></div>
               <div className="admin-queue-toolbar"><div>{['Все', 'Новые', 'В работе', 'Эскалации'].map((item) => <button className={queue === item ? 'active' : ''} type="button" onClick={() => setQueue(item)} key={item}>{item}</button>)}</div><div><Search /><Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Поиск заявки" placeholder="Поиск заявки" /></div></div>
               <Table className="admin-table"><TableHeader><TableRow><TableHead>Заявитель</TableHead><TableHead>Тип</TableHead><TableHead>Предмет проверки</TableHead><TableHead>Получено</TableHead><TableHead>Риск</TableHead><TableHead>Статус</TableHead><TableHead>Решение</TableHead></TableRow></TableHeader><TableBody>
@@ -196,12 +218,12 @@ export default function AdminDashboard() {
             </section>
 
             <aside className="admin-side-stack">
-              <section className="admin-panel attention-panel"><div className="admin-panel-heading"><div><h2>Требует внимания</h2><p>По уровню риска и SLA</p></div></div><article><span className="danger"><AlertTriangle /></span><div><strong>3 спора по бронированию</strong><small>2 требуют решения Finance Operator</small></div><ChevronDown /></article><article><span className="warning"><FileCheck2 /></span><div><strong>5 нарушений SLA проверки</strong><small>Старше 24 часов</small></div><ChevronDown /></article><article><span className="info"><WalletCards /></span><div><strong>2 ошибки сверки платежей</strong><small>Провайдер и резерв не совпали</small></div><ChevronDown /></article></section>
-              <section className="admin-panel finance-summary"><div className="admin-panel-heading"><div><h2>Финансовый контур</h2><p>Сегодня</p></div></div><div><span><small>Платежи броней</small><strong>87,5 млн сум</strong></span><span><small>К возврату</small><strong>5 млн сум</strong></span><span><small>На сверке</small><strong>2 операции</strong></span></div><a href="#finance">Открыть операции</a></section>
+              <section className="admin-panel attention-panel"><div className="admin-panel-heading"><div><h2>Требует внимания</h2><p>По уровню риска и SLA</p></div></div><article><span className="danger"><AlertTriangle /></span><div><strong>{refundCount} возвратов по бронированиям</strong><small>Отказы застройщика проходят через провайдера</small></div><ChevronDown /></article><article><span className="warning"><FileCheck2 /></span><div><strong>{highRiskCount} проверок высокого риска</strong><small>Требуют приоритетного решения</small></div><ChevronDown /></article><article><span className="info"><WalletCards /></span><div><strong>{finance.stats.reviewCount} операций на сверке</strong><small>Провайдер и резерв должны совпадать</small></div><ChevronDown /></article></section>
+              <section className="admin-panel finance-summary"><div className="admin-panel-heading"><div><h2>Финансовый контур</h2><p>Весь журнал</p></div></div><div><span><small>Оплаты броней</small><strong>{formatAdminMoney(finance.stats.totalPaid)}</strong></span><span><small>Возвращено</small><strong>{formatAdminMoney(finance.stats.totalRefunded)}</strong></span><span><small>На сверке</small><strong>{finance.stats.reviewCount} операций</strong></span></div><button type="button" onClick={() => navigateAdmin('Брони и платежи')}>Открыть операции</button></section>
             </aside>
           </div>
 
-          <section className="admin-panel moderation-queue-panel">
+          <section className="admin-panel moderation-queue-panel" id="moderation">
             <div className="admin-panel-heading"><div><h2>Очередь модерации публикаций</h2><p>Проверенные ЖК и новые объявления перед выходом в каталог</p></div><span className="queue-total">{dashboard?.moderation.length ?? 0} заявок</span></div>
             <Table className="admin-table"><TableHeader><TableRow><TableHead>Жилой комплекс</TableHead><TableHead>Застройщик</TableHead><TableHead>Этап</TableHead><TableHead>Новых объявлений</TableHead><TableHead>Решение</TableHead></TableRow></TableHeader><TableBody>
               {!dashboard && !loadError && <TableRow><TableCell colSpan={5}><div className="table-empty-state">Загружаем очередь…</div></TableCell></TableRow>}
@@ -210,9 +232,18 @@ export default function AdminDashboard() {
             </TableBody></Table>
           </section>
 
+          <AdminFinancePanel
+            operations={finance.operations}
+            loading={finance.loading}
+            error={finance.error}
+            processing={finance.processing}
+            onRetry={() => void finance.refresh()}
+            onReconcile={async (operationId) => { const message = await finance.reconcile(operationId); setFeedback(message); }}
+          />
+
           <div className="admin-lower-grid">
-            <section className="admin-panel admin-activity"><div className="admin-panel-heading"><div><h2>Последние критические действия</h2><p>Неизменяемый журнал аудита</p></div><a href="#audit">Весь аудит</a></div><div><article><span><Check /></span><p><strong>Одобрен застройщик Imorat Invest</strong><small>Verification Specialist · request 9f32…c181</small></p><time>02:18</time></article><article><span><ShieldCheck /></span><p><strong>Изменена цена квартиры A-142</strong><small>Samarkand Development · 680 → 685 млн сум</small></p><time>01:54</time></article><article><span><WalletCards /></span><p><strong>Инициирован возврат по резерву R-2814</strong><small>Finance Operator · причина: отказ застройщика</small></p><time>00:41</time></article></div></section>
-            <section className="admin-panel system-health"><div className="admin-panel-heading"><div><h2>Состояние системы</h2><p>Ключевые сервисы</p></div></div><div><p><span><i/> API</span><strong>99,99%</strong></p><p><span><i/> Поиск</span><strong>182 ms</strong></p><p><span><i/> Платежи</span><strong>Работает</strong></p><p><span><i/> Очереди</span><strong>24 задачи</strong></p></div></section>
+            <section className="admin-panel admin-activity" id="audit"><div className="admin-panel-heading"><div><h2>Последние критические действия</h2><p>Неизменяемый журнал аудита</p></div><button type="button" onClick={() => navigateAdmin('Аудит')}>Весь аудит</button></div><div><article><span><Check /></span><p><strong>Одобрен застройщик Imorat Invest</strong><small>Verification Specialist · request 9f32…c181</small></p><time>02:18</time></article><article><span><ShieldCheck /></span><p><strong>Изменена цена квартиры A-142</strong><small>Samarkand Development · 680 → 685 млн сум</small></p><time>01:54</time></article><article><span><WalletCards /></span><p><strong>{refundCount ? 'Последний возврат зарегистрирован' : 'Возвраты ожидают операций'}</strong><small>Платёжный журнал · причина фиксируется в аудите</small></p><time>сейчас</time></article></div></section>
+            <section className="admin-panel system-health" id="system-health"><div className="admin-panel-heading"><div><h2>Состояние системы</h2><p>Ключевые сервисы</p></div></div><div><p><span><i/> API</span><strong>99,99%</strong></p><p><span><i/> Поиск</span><strong>182 ms</strong></p><p><span><i/> Платежи</span><strong>{finance.error ? 'Проверить' : 'Работает'}</strong></p><p><span><i/> Финоперации</span><strong>{finance.stats.operationsCount}</strong></p></div></section>
           </div>
         </div>
       </section>
