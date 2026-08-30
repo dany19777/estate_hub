@@ -1206,7 +1206,27 @@ a { color: inherit; text-decoration: none; }
 
 .queue-total { color: #7699ff; font-size: 7px; font-weight: 650; }
 .moderation-queue-panel { margin-top: 12px; overflow: hidden; }
-.verification-queue, .moderation-queue-panel, .finance-operations-panel, .admin-activity, .system-health { scroll-margin-top: 82px; }
+.verification-queue, .moderation-queue-panel, .admin-disputes-panel, .finance-operations-panel, .admin-activity, .system-health { scroll-margin-top: 82px; }
+.admin-disputes-panel { margin-top: 12px; overflow: hidden; }
+.admin-disputes-panel > .admin-operation-state { margin: 10px 12px; }
+.dispute-reason { display: flex; max-width: 190px; flex-direction: column; gap: 3px; }
+.dispute-reason strong { color: #dce6f2; font-size: 7px; }
+.dispute-reason small { overflow: hidden; color: #66778d; font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }
+.dispute-priority, .dispute-status { display: inline-flex; height: 19px; align-items: center; gap: 3px; font-size: 6px; }
+.dispute-status svg { width: 9px; }
+.dispute-priority.normal { color: #7c93af; background: #19283a; }
+.dispute-priority.high { color: #ef8993; background: #3b202a; }
+.dispute-status.open { color: #7da0ff; background: #1a2e55; }
+.dispute-status.in_review { color: #e1af52; background: #392c1d; }
+.dispute-status.resolved_refund { color: #5ec995; background: #15372d; }
+.dispute-status.resolved_no_refund, .dispute-status.cancelled { color: #8998aa; background: #1c2938; }
+.admin-table td > button.dispute-start { display: inline-flex; width: auto; height: 25px; align-items: center; padding: 0 8px; border-color: #365aa1; color: #7ea1ff; background: #16284b; font-size: 6px; cursor: pointer; }
+.dispute-actions { display: flex; gap: 5px; }
+.admin-table td .dispute-actions > button { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid; border-radius: 6px; cursor: pointer; }
+.admin-table td .dispute-actions > button svg { width: 11px; }
+.admin-table td .dispute-actions > button.refund { border-color: #285941; color: #5fcd95; background: #122c22; }
+.admin-table td .dispute-actions > button.reject { border-color: #60313b; color: #ed8590; background: #2d1921; }
+.dispute-actions button:disabled, .dispute-start:disabled { opacity: .45; cursor: wait; }
 .finance-operations-panel { margin-top: 12px; overflow: hidden; }
 .finance-toolbar { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 12px; border-top: 1px solid #19283b; border-bottom: 1px solid #19283b; background: #0a1522; }
 .finance-toolbar > div { display: flex; gap: 4px; }
@@ -1292,6 +1312,43 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 560px) {
   .buyer-verification-form { grid-template-columns: 1fr; }
   .buyer-verification-form > * { grid-column: 1 !important; }
+}
+
+/* Reservation disputes */
+.reservation-dispute-dialog { width: min(540px, calc(100vw - 28px)); max-width: 540px; gap: 17px; padding: 22px; color: #172033; background: #fff; box-shadow: 0 24px 90px rgba(20,32,54,.24); }
+.reservation-dispute-dialog [data-slot="dialog-header"] > span { align-self: start; height: 24px; color: #bd4a56; background: #fff0f2; font-size: 9px; }
+.reservation-dispute-dialog [data-slot="dialog-header"] > span svg { width: 12px; }
+.reservation-dispute-dialog [data-slot="dialog-title"] { font-size: 20px; }
+.reservation-dispute-dialog [data-slot="dialog-description"] { color: #6f7b8d; line-height: 1.5; }
+.reservation-dispute-dialog [data-slot="dialog-footer"] { margin-right: -22px; margin-bottom: -22px; margin-left: -22px; border-color: #e3e8ee; background: #f7f9fb; }
+.reservation-dispute-form { display: grid; gap: 12px; }
+.reservation-dispute-form > label { display: grid; gap: 6px; color: #566276; font-size: 10px; font-weight: 650; }
+.reservation-dispute-form select, .reservation-dispute-form textarea { width: 100%; border: 1px solid #dce3eb; border-radius: 8px; color: #1d2738; background: white; font-size: 11px; outline: none; }
+.reservation-dispute-form select { height: 40px; padding: 0 10px; }
+.reservation-dispute-form textarea { min-height: 105px; padding: 10px; resize: vertical; }
+.reservation-dispute-form select:focus, .reservation-dispute-form textarea:focus { border-color: #6e96f2; box-shadow: 0 0 0 3px rgba(43,102,232,.1); }
+.reservation-dispute-form .lead-consent { display: flex; align-items: center; font-weight: 500; }
+.reservation-dispute-form .lead-consent input { width: 15px; height: 15px; flex: 0 0 auto; accent-color: #2865e8; }
+.dispute-process-note { display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid #ecdfe2; border-radius: 9px; color: #bd4a56; background: #fff8f9; }
+.dispute-process-note > svg { width: 18px; flex: 0 0 auto; }
+.dispute-process-note p { display: grid; gap: 3px; margin: 0; }
+.dispute-process-note strong { color: #35445b; font-size: 9px; }
+.dispute-process-note small { color: #758399; font-size: 8px; }
+.buyer-dispute-list { display: grid; gap: 7px; }
+.buyer-dispute-list article { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e1e7f1; border-radius: 9px; background: white; }
+.buyer-dispute-state { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 8px; color: #c36a43; background: #fff1e8; }
+.buyer-dispute-state.resolved_refund { color: #21825e; background: #eaf8f2; }
+.buyer-dispute-state.resolved_no_refund, .buyer-dispute-state.cancelled { color: #788597; background: #eef1f5; }
+.buyer-dispute-state svg { width: 15px; }
+.buyer-dispute-list article > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.buyer-dispute-list strong { color: #263750; font-size: 10px; }
+.buyer-dispute-list small { color: #748196; font-size: 8px; text-transform: none; }
+.buyer-dispute-list p { margin: 3px 0 0; color: #59677b; font-size: 8px; }
+.buyer-dispute-list [data-slot="badge"] { font-size: 7px; }
+
+@media (max-width: 560px) {
+  .buyer-dispute-list article { grid-template-columns: 34px 1fr; }
+  .buyer-dispute-list [data-slot="badge"] { grid-column: 2; justify-self: start; }
 }
 
 /* Listing chat */

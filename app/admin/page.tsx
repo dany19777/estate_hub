@@ -26,10 +26,12 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { AdminFinancePanel } from '@/components/admin-finance-panel';
+import { AdminDisputesPanel } from '@/components/admin-disputes-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAdminFinance } from '@/hooks/use-admin-finance';
+import { useAdminDisputes } from '@/hooks/use-admin-disputes';
 
 const adminNav = [
   { label: 'Обзор', icon: Gauge },
@@ -85,6 +87,7 @@ export default function AdminDashboard() {
   const [feedback, setFeedback] = useState('');
   const [activeNav, setActiveNav] = useState('Обзор');
   const finance = useAdminFinance();
+  const disputes = useAdminDisputes();
 
   async function loadDashboard() {
     setLoadError('');
@@ -163,7 +166,7 @@ export default function AdminDashboard() {
     const targets: Record<string, string> = {
       Обзор: 'admin-overview', Пользователи: 'admin-overview', Застройщики: 'moderation', 'Агентства и владельцы': 'verification',
       'Жилые комплексы': 'moderation', Верификация: 'verification', Модерация: 'moderation', 'Брони и платежи': 'finance',
-      'Споры и возвраты': 'finance', 'Тарифы и биллинг': 'finance', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
+      'Споры и возвраты': 'disputes', 'Тарифы и биллинг': 'finance', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
     };
     setActiveNav(label);
     setMobileNav(false);
@@ -176,7 +179,7 @@ export default function AdminDashboard() {
         <div className="admin-brand"><span><ShieldCheck /></span><div><strong>Estate<em>Hub</em></strong><small>Platform Admin</small></div><button type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню"><X /></button></div>
         <div className="admin-user"><span>{userInitials}</span><div><strong>{dashboard?.session.user.fullName ?? 'Администратор'}</strong><small>{dashboard?.session.platformRoles[0] ?? 'Platform Admin'}</small></div><ChevronDown /></div>
         <nav>{adminNav.map((item) => {
-          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? finance.stats.reviewCount : item.count;
+          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? disputes.stats.active : item.count;
           return <button type="button" className={activeNav === item.label ? 'active' : ''} onClick={() => navigateAdmin(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{Boolean(count) && <em>{count}</em>}</button>;
         })}</nav>
         <div className="system-status"><span><i/> Все системы работают</span><small>Последняя проверка: сейчас</small></div>
@@ -218,7 +221,7 @@ export default function AdminDashboard() {
             </section>
 
             <aside className="admin-side-stack">
-              <section className="admin-panel attention-panel"><div className="admin-panel-heading"><div><h2>Требует внимания</h2><p>По уровню риска и SLA</p></div></div><article><span className="danger"><AlertTriangle /></span><div><strong>{refundCount} возвратов по бронированиям</strong><small>Отказы застройщика проходят через провайдера</small></div><ChevronDown /></article><article><span className="warning"><FileCheck2 /></span><div><strong>{highRiskCount} проверок высокого риска</strong><small>Требуют приоритетного решения</small></div><ChevronDown /></article><article><span className="info"><WalletCards /></span><div><strong>{finance.stats.reviewCount} операций на сверке</strong><small>Провайдер и резерв должны совпадать</small></div><ChevronDown /></article></section>
+              <section className="admin-panel attention-panel"><div className="admin-panel-heading"><div><h2>Требует внимания</h2><p>По уровню риска и SLA</p></div></div><article><span className="danger"><AlertTriangle /></span><div><strong>{disputes.stats.active} активных споров</strong><small>{disputes.stats.highPriority} с высоким приоритетом</small></div><ChevronDown /></article><article><span className="warning"><FileCheck2 /></span><div><strong>{highRiskCount} проверок высокого риска</strong><small>Требуют приоритетного решения</small></div><ChevronDown /></article><article><span className="info"><WalletCards /></span><div><strong>{finance.stats.reviewCount} операций на сверке</strong><small>Провайдер и резерв должны совпадать</small></div><ChevronDown /></article></section>
               <section className="admin-panel finance-summary"><div className="admin-panel-heading"><div><h2>Финансовый контур</h2><p>Весь журнал</p></div></div><div><span><small>Оплаты броней</small><strong>{formatAdminMoney(finance.stats.totalPaid)}</strong></span><span><small>Возвращено</small><strong>{formatAdminMoney(finance.stats.totalRefunded)}</strong></span><span><small>На сверке</small><strong>{finance.stats.reviewCount} операций</strong></span></div><button type="button" onClick={() => navigateAdmin('Брони и платежи')}>Открыть операции</button></section>
             </aside>
           </div>
@@ -231,6 +234,15 @@ export default function AdminDashboard() {
               {dashboard?.moderation.map((item) => <TableRow key={item.complex_id}><TableCell><div className="admin-applicant"><span>{item.name.slice(0, 2).toUpperCase()}</span><strong>{item.name}</strong></div></TableCell><TableCell>{item.developer}</TableCell><TableCell><Badge className="queue-status working">{item.workflow_status === 'pending_moderation' ? 'Публикация ЖК' : 'Новый инвентарь'}</Badge></TableCell><TableCell>{item.pending_listings}</TableCell><TableCell><div className="verification-actions"><button type="button" className="approve" onClick={() => void moderate(item.complex_id, 'publish')} disabled={processing === item.complex_id} aria-label={`Опубликовать ${item.name}`} title="Опубликовать"><Check /></button><button type="button" className="reject" onClick={() => void moderate(item.complex_id, 'reject')} disabled={processing === item.complex_id} aria-label={`Отклонить ${item.name}`} title="Отклонить"><X /></button></div></TableCell></TableRow>)}
             </TableBody></Table>
           </section>
+
+          <AdminDisputesPanel
+            disputes={disputes.disputes}
+            loading={disputes.loading}
+            error={disputes.error}
+            processing={disputes.processing}
+            onRetry={() => void disputes.refresh()}
+            onDecision={async (disputeId, action, note) => { const message = await disputes.decide(disputeId, action, note); setFeedback(message); if (action === 'approve_refund') await finance.refresh(); }}
+          />
 
           <AdminFinancePanel
             operations={finance.operations}
