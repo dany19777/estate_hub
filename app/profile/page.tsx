@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ChatDialog } from '@/components/chat-dialog';
+import { BuyerVerificationDialog } from '@/components/buyer-verification-dialog';
 import { InternalLink as Link } from '@/components/internal-link';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useComparisons } from '@/hooks/use-comparisons';
@@ -33,6 +34,7 @@ import { useSavedSearches } from '@/hooks/use-saved-searches';
 import { useReservations } from '@/hooks/use-reservations';
 import { useViewings } from '@/hooks/use-viewings';
 import { useMessages } from '@/hooks/use-messages';
+import { useBuyerVerification } from '@/hooks/use-buyer-verification';
 import { formatPriceMillions } from '@/lib/marketplace';
 
 const sidebar = [
@@ -55,7 +57,10 @@ export default function BuyerProfile() {
   const { reservations } = useReservations();
   const { viewings } = useViewings();
   const { conversations, reload: reloadMessages } = useMessages();
+  const { verification, loading: verificationLoading, reload: reloadVerification } = useBuyerVerification();
   const unreadMessages = conversations.reduce((total, conversation) => total + Number(conversation.unread_count), 0);
+  const verificationProgress = verification?.status === 'verified' ? 100 : verification ? 82 : 65;
+  const verificationLabel = verification?.status === 'verified' ? 'Проверенный покупатель' : verification?.status === 'rejected' ? 'Нужны новые данные' : verification ? 'На проверке' : 'Базовый аккаунт';
   const activeReservation = reservations[0];
   const reservationDate = activeReservation?.reservation_expires_at ?? activeReservation?.hold_expires_at;
   return (
@@ -85,7 +90,7 @@ export default function BuyerProfile() {
             </div>
 
             <aside className="profile-right-rail">
-              <section className="verification-card"><div><span><ShieldCheck /></span><Badge variant="secondary">Базовый аккаунт</Badge></div><h2>Подтвердите личность заранее</h2><p>Усиленная проверка потребуется перед первой платной бронью.</p><div><span>Готовность профиля <strong>65%</strong></span><Progress value={65} /></div><Button>Пройти проверку</Button></section>
+              <section className={`verification-card verification-${verification?.status ?? 'new'}`}><div><span><ShieldCheck /></span><Badge variant="secondary">{verificationLoading ? 'Загружаем…' : verificationLabel}</Badge></div><h2>{verification?.status === 'verified' ? 'Личность подтверждена' : verification?.status === 'rejected' ? 'Проверка не пройдена' : verification ? 'Проверяем ваши данные' : 'Подтвердите личность заранее'}</h2><p>{verification?.status === 'verified' ? 'Вы можете пользоваться платным онлайн-бронированием.' : verification?.status === 'rejected' ? verification.rejection_reason ?? 'Исправьте данные и отправьте заявку повторно.' : verification ? 'Решение специалиста появится здесь. Обычно это занимает до одного рабочего дня.' : 'Проверка обязательна перед первой платной бронью.'}</p><div><span>Готовность профиля <strong>{verificationProgress}%</strong></span><Progress value={verificationProgress} /></div>{verificationLoading ? <Button disabled>Загружаем статус…</Button> : verification?.status === 'verified' ? <Button disabled><Check /> Подтверждено</Button> : verification && ['submitted', 'in_review'].includes(verification.status) ? <Button disabled>Заявка на проверке</Button> : <BuyerVerificationDialog onSubmitted={() => void reloadVerification()} trigger={<Button>{verification?.status === 'rejected' ? 'Подать заново' : 'Пройти проверку'}</Button>} />}</section>
               <section className="profile-card-section" id="viewings"><div className="profile-section-heading"><div><span>Ближайшие события</span><h2>Мои просмотры</h2></div></div>{viewings.length ? viewings.slice(0, 3).map((viewing) => { const date = new Date(`${viewing.requested_date}T00:00:00Z`); return <article className="viewing-item" key={viewing.id}><div><strong>{new Intl.DateTimeFormat('ru-RU', { day: '2-digit' }).format(date)}</strong><span>{new Intl.DateTimeFormat('ru-RU', { month: 'short' }).format(date).replace('.', '')}</span></div><p><strong>{viewing.complex_name}{viewing.unit_number ? ` · № ${viewing.unit_number}` : ''}</strong><span>{viewing.requested_date} · {viewing.time_slot}</span><small>{viewing.status === 'confirmed' ? 'Менеджер подтвердил встречу' : viewing.status === 'rescheduled' ? 'Требуется согласовать новое время' : 'Ожидает подтверждения'}</small></p><Badge variant={viewing.status === 'confirmed' ? 'default' : 'secondary'}>{viewing.status === 'confirmed' ? 'Подтверждено' : viewing.status === 'rescheduled' ? 'Перенос' : 'Ожидает'}</Badge></article>; }) : <p className="profile-empty">Запишитесь на просмотр на странице ЖК — здесь появятся время и статус подтверждения.</p>}</section>
               <section className="preference-card"><span>Ваш поиск</span><h2>2-комнатная в сданном ЖК</h2><p>Самарканд · до 900 млн · не первый этаж · онлайн-бронь</p><div><span><Bell /></span><p><strong>Уведомления включены</strong><small>Сообщим о новых совпадениях</small></p></div><Link href="/catalog">Показать 18 вариантов <ChevronRight /></Link></section>
             </aside>

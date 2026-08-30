@@ -33,6 +33,9 @@ export async function POST(request: Request) {
     const session = await getAppSession(request);
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
     if (!validIdempotencyKey(idempotencyKey)) return Response.json({ error: 'idempotency_required', message: 'Обновите страницу и повторите бронирование.' }, { status: 400 });
+    const database = await ensureMarketplaceDatabase();
+    const identity = await database.prepare(`SELECT status FROM buyer_identity_verifications WHERE user_id = ? LIMIT 1`).bind(session.user.id).first<{ status: string }>();
+    if (identity?.status !== 'verified') return Response.json({ error: 'verification_required', verificationStatus: identity?.status ?? 'not_started', message: 'Перед платным бронированием подтвердите личность в профиле.' }, { status: 409 });
     const body = await request.json() as Record<string, unknown>;
     const listingId = typeof body.listingId === 'string' ? body.listingId : '';
     const fullName = typeof body.fullName === 'string' ? body.fullName.trim() : '';
@@ -41,7 +44,6 @@ export async function POST(request: Request) {
       return Response.json({ error: 'validation_failed', message: 'Укажите имя и номер телефона в формате +998.' }, { status: 400 });
     }
 
-    const database = await ensureMarketplaceDatabase();
     const existing = await database.prepare(`SELECT id, status, payment_status, hold_expires_at, reservation_expires_at
       FROM reservation_transactions WHERE idempotency_key = ? AND buyer_user_id = ? LIMIT 1`).bind(idempotencyKey, session.user.id).first<ReservationRow>();
     if (existing) return responseForReservation(existing, true);

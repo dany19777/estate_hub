@@ -47,10 +47,11 @@ const adminNav = [
 
 type VerificationCase = {
   id: string;
-  subject_type: 'organization' | 'owner' | 'listing' | 'complex';
+  subject_type: 'organization' | 'owner' | 'listing' | 'complex' | 'buyer';
   subject_id: string;
   applicant: string;
   organization_type: string | null;
+  document_type: string | null;
   status: string;
   risk_level: string;
   created_at: string;
@@ -106,12 +107,16 @@ export default function AdminDashboard() {
     });
   }, [dashboard, query, queue]);
 
-  async function decide(caseId: string, decision: 'approve' | 'reject') {
-    if (decision === 'reject' && !window.confirm('Отклонить эту заявку? Проект не попадёт в каталог.')) return;
-    setProcessing(caseId);
+  async function decide(verification: VerificationCase, decision: 'approve' | 'reject') {
+    let reason = '';
+    if (decision === 'reject' && verification.subject_type === 'buyer') {
+      reason = window.prompt('Укажите причину отказа покупателю')?.trim() ?? '';
+      if (!reason) return;
+    } else if (decision === 'reject' && !window.confirm('Отклонить эту заявку? Проект не попадёт в каталог.')) return;
+    setProcessing(verification.id);
     setFeedback('');
     try {
-      const response = await fetch('/api/admin/verifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseId, decision }) });
+      const response = await fetch('/api/admin/verifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseId: verification.id, decision, reason }) });
       const payload = await response.json() as { message?: string; nextStep?: string | null };
       if (!response.ok) throw new Error(payload.message || 'Не удалось сохранить решение.');
       setFeedback(decision === 'approve' ? payload.nextStep === 'pending_moderation' ? 'Проверка пройдена: ЖК передан на модерацию.' : 'Заявка одобрена.' : 'Заявка отклонена.');
@@ -174,7 +179,7 @@ export default function AdminDashboard() {
 
           <div className="admin-main-grid">
             <section className="admin-panel verification-queue">
-              <div className="admin-panel-heading"><div><h2>Очередь верификации</h2><p>Компании и жилые комплексы перед публикацией</p></div><span className="queue-total">{dashboard?.stats.pendingVerifications ?? 0} заявок</span></div>
+              <div className="admin-panel-heading"><div><h2>Очередь верификации</h2><p>Покупатели, компании и жилые комплексы</p></div><span className="queue-total">{dashboard?.stats.pendingVerifications ?? 0} заявок</span></div>
               <div className="admin-queue-toolbar"><div>{['Все', 'Новые', 'В работе', 'Эскалации'].map((item) => <button className={queue === item ? 'active' : ''} type="button" onClick={() => setQueue(item)} key={item}>{item}</button>)}</div><div><Search /><Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Поиск заявки" placeholder="Поиск заявки" /></div></div>
               <Table className="admin-table"><TableHeader><TableRow><TableHead>Заявитель</TableHead><TableHead>Тип</TableHead><TableHead>Предмет проверки</TableHead><TableHead>Получено</TableHead><TableHead>Риск</TableHead><TableHead>Статус</TableHead><TableHead>Решение</TableHead></TableRow></TableHeader><TableBody>
                 {!dashboard && !loadError && <TableRow><TableCell colSpan={7}><div className="table-empty-state">Загружаем очередь…</div></TableCell></TableRow>}
@@ -182,10 +187,10 @@ export default function AdminDashboard() {
                 {visibleCases.map((item) => {
                   const risk = riskLabels[item.risk_level] ?? item.risk_level;
                   const status = queueLabels[item.status] ?? item.status;
-                  const type = item.subject_type === 'complex' ? 'Жилой комплекс' : item.organization_type === 'agency' ? 'Агентство' : item.subject_type === 'organization' ? 'Застройщик' : 'Пользователь';
-                  const subject = item.subject_type === 'complex' ? 'Объект и связь с застройщиком' : 'Компания и полномочия';
+                  const type = item.subject_type === 'buyer' ? 'Покупатель' : item.subject_type === 'complex' ? 'Жилой комплекс' : item.organization_type === 'agency' ? 'Агентство' : item.subject_type === 'organization' ? 'Застройщик' : 'Пользователь';
+                  const subject = item.subject_type === 'buyer' ? `${item.document_type === 'passport' ? 'Паспорт' : 'ID-карта'} и возраст` : item.subject_type === 'complex' ? 'Объект и связь с застройщиком' : 'Компания и полномочия';
                   const date = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(item.created_at.replace(' ', 'T') + 'Z'));
-                  return <TableRow key={item.id}><TableCell><div className="admin-applicant"><span>{item.applicant.slice(0,2).toUpperCase()}</span><strong>{item.applicant}</strong></div></TableCell><TableCell>{type}</TableCell><TableCell>{subject}</TableCell><TableCell>{date}</TableCell><TableCell><Badge className={`risk-badge ${risk.toLowerCase()}`}>{risk}</Badge></TableCell><TableCell><Badge className={`queue-status ${status === 'Новая' ? 'new' : 'working'}`}>{status}</Badge></TableCell><TableCell><div className="verification-actions"><button type="button" className="approve" onClick={() => void decide(item.id, 'approve')} disabled={processing === item.id} aria-label={`Одобрить ${item.applicant}`} title="Одобрить"><Check /></button><button type="button" className="reject" onClick={() => void decide(item.id, 'reject')} disabled={processing === item.id} aria-label={`Отклонить ${item.applicant}`} title="Отклонить"><X /></button></div></TableCell></TableRow>;
+                  return <TableRow key={item.id}><TableCell><div className="admin-applicant"><span>{item.applicant.slice(0,2).toUpperCase()}</span><strong>{item.applicant}</strong></div></TableCell><TableCell>{type}</TableCell><TableCell>{subject}</TableCell><TableCell>{date}</TableCell><TableCell><Badge className={`risk-badge ${risk.toLowerCase()}`}>{risk}</Badge></TableCell><TableCell><Badge className={`queue-status ${status === 'Новая' ? 'new' : 'working'}`}>{status}</Badge></TableCell><TableCell><div className="verification-actions"><button type="button" className="approve" onClick={() => void decide(item, 'approve')} disabled={processing === item.id} aria-label={`Одобрить ${item.applicant}`} title="Одобрить"><Check /></button><button type="button" className="reject" onClick={() => void decide(item, 'reject')} disabled={processing === item.id} aria-label={`Отклонить ${item.applicant}`} title="Отклонить"><X /></button></div></TableCell></TableRow>;
                 })}
               </TableBody></Table>
             </section>
