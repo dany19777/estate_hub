@@ -40,10 +40,12 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { InternalLink as Link } from '@/components/internal-link';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DeveloperMessagesPanel } from '@/components/developer-messages-panel';
+import { useDeveloperMessages } from '@/hooks/use-developer-messages';
 
 const navGroups: Array<{ label: string; items: Array<{ icon: LucideIcon; label: string; active?: boolean; count?: number }> }> = [
   { label: 'Главное', items: [{ icon: LayoutDashboard, label: 'Дашборд', active: true }] },
-  { label: 'Управление', items: [{ icon: Building2, label: 'Жилые комплексы' }, { icon: Home, label: 'Квартиры' }, { icon: CalendarDays, label: 'Бронирования', count: 8 }, { icon: Users, label: 'Клиенты и лиды', count: 24 }, { icon: ListChecks, label: 'Просмотры' }, { icon: MessageCircle, label: 'Сообщения', count: 12 }, { icon: Handshake, label: 'Сделки' }, { icon: FileText, label: 'Документы' }] },
+  { label: 'Управление', items: [{ icon: Building2, label: 'Жилые комплексы' }, { icon: Home, label: 'Квартиры' }, { icon: CalendarDays, label: 'Бронирования', count: 8 }, { icon: Users, label: 'Клиенты и лиды', count: 24 }, { icon: ListChecks, label: 'Просмотры' }, { icon: MessageCircle, label: 'Сообщения' }, { icon: Handshake, label: 'Сделки' }, { icon: FileText, label: 'Документы' }] },
   { label: 'Рост', items: [{ icon: Sparkles, label: 'Продвижение' }, { icon: ImageIcon, label: 'Медиа' }, { icon: BarChart3, label: 'Аналитика' }] },
   { label: 'Организация', items: [{ icon: Users, label: 'Команда' }, { icon: CreditCard, label: 'Тариф и оплата' }, { icon: Settings, label: 'Настройки' }] },
 ];
@@ -120,6 +122,7 @@ const leadStatus: Record<string, string> = {
 
 export default function DeveloperDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeNav, setActiveNav] = useState('Дашборд');
   const [period, setPeriod] = useState('Последние 7 дней');
   const [dashboard, setDashboard] = useState<DeveloperDashboardData | null>(null);
   const [loadError, setLoadError] = useState('');
@@ -137,6 +140,24 @@ export default function DeveloperDashboard() {
   const [leadError, setLeadError] = useState('');
   const [leadProcessing, setLeadProcessing] = useState('');
   const [leadFeedback, setLeadFeedback] = useState('');
+  const developerMessages = useDeveloperMessages();
+  const unreadDeveloperMessages = developerMessages.conversations.reduce((total, conversation) => total + Number(conversation.unread_count), 0);
+
+  function navigateSection(label: string) {
+    const target: Record<string, string> = {
+      'Дашборд': 'developer-dashboard-top',
+      'Жилые комплексы': 'developer-projects',
+      'Квартиры': 'developer-projects',
+      'Клиенты и лиды': 'developer-leads',
+      'Просмотры': 'developer-leads',
+      'Сообщения': 'developer-messages',
+    };
+    const id = target[label];
+    if (!id) return;
+    setActiveNav(label);
+    setSidebarOpen(false);
+    window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  }
 
   async function loadDashboard() {
     setLoadError('');
@@ -261,8 +282,8 @@ export default function DeveloperDashboard() {
         <div className="company-mini-card"><span>SD</span><div><strong>{dashboard?.organization?.name ?? 'Компания'}</strong><small><ShieldCheck /> Рабочий кабинет</small></div><ChevronDown /></div>
         <nav>
           {navGroups.map((group) => <div className="developer-nav-group" key={group.label}><span>{group.label}</span>{group.items.map((item) => {
-            const count = item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.count;
-            return <button className={item.active ? 'active' : ''} type="button" key={item.label}><item.icon /> <strong>{item.label}</strong>{Boolean(count) && <em>{count}</em>}</button>;
+            const count = item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.label === 'Сообщения' ? (unreadDeveloperMessages || developerMessages.conversations.length) : item.count;
+            return <button className={activeNav === item.label ? 'active' : ''} type="button" key={item.label} onClick={() => navigateSection(item.label)}><item.icon /> <strong>{item.label}</strong>{Boolean(count) && <em>{count}</em>}</button>;
           })}</div>)}
         </nav>
         <Link className="public-site-link" href="/"><span><ArrowUpRight /></span><div><strong>Публичный сайт</strong><small>Открыть маркетплейс</small></div></Link>
@@ -271,11 +292,11 @@ export default function DeveloperDashboard() {
 
       <section className="developer-workspace">
         <header className="developer-topbar">
-          <div><button type="button" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню"><Menu /></button><span>Дашборд</span></div>
+          <div><button type="button" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню"><Menu /></button><span>{activeNav}</span></div>
           <div><Link href="/">Посмотреть профиль <ArrowUpRight /></Link><button type="button" className="topbar-notification" aria-label="Уведомления"><Bell /></button><div className="topbar-company"><span>SD</span><div><strong>{dashboard?.organization?.name ?? 'Компания'}</strong><small>Застройщик</small></div><ChevronDown /></div></div>
         </header>
 
-        <div className="developer-content">
+        <div className="developer-content" id="developer-dashboard-top">
           <div className="dashboard-heading"><div><h1>Добро пожаловать, {dashboard?.organization?.name ?? dashboard?.session.user.fullName ?? 'застройщик'} 👋</h1><p>Здесь проекты проходят путь от заявки до публикации в каталоге.</p></div><div className="dashboard-heading-actions"><button type="button" onClick={() => setPeriod(period === 'Последние 7 дней' ? 'Этот месяц' : 'Последние 7 дней')}><CalendarDays /> {period} <ChevronDown /></button><Button onClick={() => setCreateOpen(true)}><Plus /> Добавить объект</Button></div></div>
 
           {loadError && <div className="dashboard-operation-state error"><AlertCircle /><span>{loadError}</span><button type="button" onClick={() => void loadDashboard()}>Повторить</button></div>}
@@ -286,7 +307,7 @@ export default function DeveloperDashboard() {
             <div className="dashboard-main">
               <div className="kpi-grid">{kpis.map((kpi) => <article className="kpi-card" key={kpi.label}><div><span>{kpi.label}</span><strong>{kpi.value}</strong><small>{kpi.change}</small></div><i className={kpi.tone}><kpi.icon /></i></article>)}</div>
 
-              <section className="dashboard-panel projects-panel">
+              <section className="dashboard-panel projects-panel" id="developer-projects">
                 <div className="panel-heading"><div><h2>Мои жилые комплексы</h2><p>Реальные данные компании и статус публикации</p></div><div className="panel-search"><Search /><Input value={projectSearch} onChange={(event) => setProjectSearch(event.target.value)} aria-label="Поиск по проектам" placeholder="Найти проект" /></div></div>
                 <div className="project-tabs">
                   <button className={projectFilter === 'all' ? 'active' : ''} type="button" onClick={() => setProjectFilter('all')}>Все {dashboard?.projects.length ?? 0}</button>
@@ -307,6 +328,8 @@ export default function DeveloperDashboard() {
                 </Table>
                 <div className="table-footer"><span>Показано {projects.length} из {dashboard?.projects.length ?? 0} проектов</span><div><button type="button" className="active">1</button></div></div>
               </section>
+
+              <DeveloperMessagesPanel {...developerMessages} />
 
               <section className="dashboard-panel developer-leads-panel" id="developer-leads">
                 <div className="panel-heading"><div><h2>Новые обращения</h2><p>Консультации и просмотры из публичного каталога</p></div><Badge className="project-status pending">{leadData?.stats.new ?? 0} требуют ответа</Badge></div>
