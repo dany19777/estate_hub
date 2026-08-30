@@ -25,12 +25,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { ChatDialog } from '@/components/chat-dialog';
 import { InternalLink as Link } from '@/components/internal-link';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useSavedSearches } from '@/hooks/use-saved-searches';
 import { useReservations } from '@/hooks/use-reservations';
 import { useViewings } from '@/hooks/use-viewings';
+import { useMessages } from '@/hooks/use-messages';
 import { formatPriceMillions } from '@/lib/marketplace';
 
 const sidebar = [
@@ -39,8 +41,8 @@ const sidebar = [
   { icon: Scale, label: 'Сравнения' },
   { icon: BookmarkCheck, label: 'Сохранённые поиски' },
   { icon: CalendarDays, label: 'Мои просмотры' },
-  { icon: WalletCards, label: 'Бронирования', count: 1 },
-  { icon: MessageCircle, label: 'Сообщения', count: 3 },
+  { icon: WalletCards, label: 'Бронирования' },
+  { icon: MessageCircle, label: 'Сообщения' },
   { icon: Bell, label: 'Уведомления', count: 5 },
   { icon: Settings, label: 'Профиль и безопасность' },
 ];
@@ -52,24 +54,27 @@ export default function BuyerProfile() {
   const { searches } = useSavedSearches();
   const { reservations } = useReservations();
   const { viewings } = useViewings();
+  const { conversations, reload: reloadMessages } = useMessages();
+  const unreadMessages = conversations.reduce((total, conversation) => total + Number(conversation.unread_count), 0);
   const activeReservation = reservations[0];
   const reservationDate = activeReservation?.reservation_expires_at ?? activeReservation?.hold_expires_at;
   return (
     <main className="buyer-profile-page">
       <header className="profile-header"><Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link><nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav><div><button type="button"><Bell /></button><span>ИИ</span><div><strong>Иван Иванов</strong><small>+998 90 123 45 67</small></div></div></header>
       <div className="profile-layout">
-        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.label === 'Сравнения' ? comparisons.length : item.label === 'Сохранённые поиски' ? searches.length : item.label === 'Мои просмотры' ? viewings.length : item.label === 'Бронирования' ? reservations.length : item.count; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
+        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small><ShieldCheck /> Телефон подтверждён</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.label === 'Сравнения' ? comparisons.length : item.label === 'Сохранённые поиски' ? searches.length : item.label === 'Мои просмотры' ? viewings.length : item.label === 'Бронирования' ? reservations.length : item.label === 'Сообщения' ? (unreadMessages || conversations.length) : item.count; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
         <section className="profile-content">
           <div className="profile-welcome"><div><span>Личный кабинет</span><h1>Добрый день, Иван 👋</h1><p>Ваши объекты, встречи и бронирования — в одном месте.</p></div><Button variant="outline"><Settings /> Настроить профиль</Button></div>
 
           {active === 'Сравнения' && <section className="profile-feature-panel"><div><span><Scale /></span><div><small>Подбор квартир</small><h2>Сравнения</h2><p>{comparisons.length ? `В сравнении ${comparisons.length} из 4 квартир.` : 'Добавьте квартиры со страниц ЖК, чтобы увидеть их параметры рядом.'}</p></div></div>{comparisons.length ? <div className="profile-feature-list">{comparisons.map((item) => <Link key={item.id} href={`/complex/${item.slug}`}>{item.complex_name} · № {item.unit_number}<ChevronRight /></Link>)}</div> : null}<Button nativeButton={false} render={<Link href={comparisons.length ? '/compare' : '/catalog'} />}>{comparisons.length ? 'Открыть сравнение' : 'Перейти в каталог'}</Button></section>}
           {active === 'Сохранённые поиски' && <section className="profile-feature-panel"><div><span><BookmarkCheck /></span><div><small>Ваши предпочтения</small><h2>Сохранённые поиски</h2><p>{searches.length ? 'Откройте поиск — фильтры можно уточнить в каталоге.' : 'Сохраните текущие фильтры в каталоге, чтобы быстро вернуться к подборке.'}</p></div></div>{searches.length ? <div className="profile-feature-list">{searches.map((item) => <Link key={item.id} href={`/catalog?${new URLSearchParams(Object.entries(item.filters).map(([key, value]) => [key, String(value)])).toString()}`}>{item.name}<ChevronRight /></Link>)}</div> : null}<Button nativeButton={false} render={<Link href="/catalog" />}>Открыть каталог</Button></section>}
+          {active === 'Сообщения' && <section className="profile-feature-panel profile-messages-panel" id="messages"><div><span><MessageCircle /></span><div><small>Прямой контакт</small><h2>Сообщения продавцам</h2><p>{conversations.length ? `${conversations.length} ${conversations.length === 1 ? 'диалог' : 'диалога'} с контекстом квартиры и продавца.` : 'Напишите продавцу со страницы квартиры — диалог сохранится здесь.'}</p></div></div>{conversations.length ? <div className="profile-message-list">{conversations.map((conversation) => <ChatDialog key={conversation.id} listingId={conversation.listing_id} complexName={conversation.complex_name} unitNumber={conversation.unit_number} seller={conversation.seller} onMessageSent={() => void reloadMessages()} trigger={<button type="button"><img src={conversation.image} alt={conversation.complex_name}/><span><strong>{conversation.seller}</strong><small>{conversation.complex_name} · № {conversation.unit_number}</small><em>{conversation.last_message ?? 'Диалог создан'}</em></span>{Number(conversation.unread_count) > 0 ? <b>{conversation.unread_count}</b> : <ChevronRight />}</button>} />)}</div> : <Button nativeButton={false} render={<Link href="/catalog" />}>Найти квартиру</Button>}</section>}
 
           <div className="profile-status-grid">
             <article><span className="profile-stat-icon blue"><Heart /></span><div><strong>{favorites.length}</strong><small>в избранном</small></div><a href="#favorites"><ChevronRight /></a></article>
             <article><span className="profile-stat-icon orange"><CalendarDays /></span><div><strong>{viewings.length}</strong><small>записей на просмотр</small></div><a href="#viewings"><ChevronRight /></a></article>
             <article><span className="profile-stat-icon green"><WalletCards /></span><div><strong>{reservations.length}</strong><small>активных броней</small></div><a href="#reservation"><ChevronRight /></a></article>
-            <article><span className="profile-stat-icon violet"><MessageCircle /></span><div><strong>3</strong><small>новых сообщения</small></div><a href="#messages"><ChevronRight /></a></article>
+            <article><span className="profile-stat-icon violet"><MessageCircle /></span><div><strong>{conversations.length}</strong><small>диалогов с продавцами</small></div><button type="button" aria-label="Открыть сообщения" onClick={() => setActive('Сообщения')}><ChevronRight /></button></article>
           </div>
 
           <div className="profile-main-grid">
