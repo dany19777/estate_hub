@@ -65,6 +65,13 @@ export default function CatalogPage() {
   const [seller, setSeller] = useState<SellerType | undefined>();
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [minArea, setMinArea] = useState('');
+  const [maxArea, setMaxArea] = useState('');
+  const [minFloor, setMinFloor] = useState('');
+  const [maxFloor, setMaxFloor] = useState('');
+  const [district, setDistrict] = useState('');
+  const [finish, setFinish] = useState('');
+  const [removedAiFilters, setRemovedAiFilters] = useState<string[]>([]);
   const [verified, setVerified] = useState(true);
   const [reservable, setReservable] = useState(false);
   const [sort, setSort] = useState<'recommended' | 'price_asc' | 'price_desc' | 'newest'>('recommended');
@@ -78,11 +85,18 @@ export default function CatalogPage() {
     seller,
     minPrice: minPrice ? Number(minPrice) * 1_000_000 : undefined,
     maxPrice: maxPrice ? Number(maxPrice) * 1_000_000 : undefined,
+    minArea: minArea ? Number(minArea) : undefined,
+    maxArea: maxArea ? Number(maxArea) : undefined,
+    minFloor: minFloor ? Number(minFloor) : undefined,
+    maxFloor: maxFloor ? Number(maxFloor) : undefined,
+    district: district || undefined,
+    finish: finish || undefined,
+    excludeParsed: removedAiFilters.join(',') || undefined,
     verified,
     reservable,
     sort,
     surface: 'search',
-  }), [activeMarket, maxPrice, minPrice, reservable, rooms, search, seller, sort, status, verified]);
+  }), [activeMarket, district, finish, maxArea, maxFloor, maxPrice, minArea, minFloor, minPrice, removedAiFilters, reservable, rooms, search, seller, sort, status, verified]);
   const { data: catalog, loading, error, retry } = useComplexes(request);
   const filtered = catalog.items;
 
@@ -110,6 +124,13 @@ export default function CatalogPage() {
     setSeller(undefined);
     setMinPrice('');
     setMaxPrice('');
+    setMinArea('');
+    setMaxArea('');
+    setMinFloor('');
+    setMaxFloor('');
+    setDistrict('');
+    setFinish('');
+    setRemovedAiFilters([]);
     setVerified(true);
     setReservable(false);
     setSort('recommended');
@@ -126,7 +147,7 @@ export default function CatalogPage() {
       <section className="catalog-toolbar">
         <div className="catalog-search">
           <Search />
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ЖК, район или запрос на обычном языке" aria-label="Поиск по каталогу" />
+          <Input value={search} onChange={(event) => { setSearch(event.target.value); setRemovedAiFilters([]); }} placeholder="ЖК, район или запрос на обычном языке" aria-label="Поиск по каталогу" />
           <span><Bot /> AI</span>
         </div>
         <div className="market-quick-tabs" aria-label="Тип рынка">
@@ -145,7 +166,7 @@ export default function CatalogPage() {
             <div><ListFilter /><strong>Фильтры</strong></div>
             <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Закрыть фильтры"><X /></button>
           </div>
-          <div className="active-ai-filter"><Bot /><div><span>{search ? 'AI понял ваш запрос' : 'AI-поиск готов'}</span><strong>{search ? (catalog.parsedFilters.map((filter) => filter.label).join(' · ') || `Поиск: ${search}`) : 'Опишите квартиру обычным языком'}</strong>{catalog.unsupportedCriteria.length > 0 && <small>Пока не учитываем: {catalog.unsupportedCriteria.join(', ')}</small>}</div></div>
+          <div className="active-ai-filter"><Bot /><div><span>{search ? 'AI понял ваш запрос' : 'AI-поиск готов'}</span>{search ? <div className="ai-filter-chips">{catalog.parsedFilters.length ? catalog.parsedFilters.map((filter) => <button type="button" key={filter.key} onClick={() => setRemovedAiFilters((current) => [...current, filter.key])}>{filter.label}<X /></button>) : <strong>Поиск: {search}</strong>}</div> : <strong>Опишите квартиру обычным языком</strong>}{catalog.unsupportedCriteria.length > 0 && <small>Пока не учитываем: {catalog.unsupportedCriteria.join(', ')}</small>}{catalog.validationWarnings.map((warning) => <small className="ai-validation-warning" key={warning}>{warning}</small>)}</div></div>
           <div className="price-filter">
             <span className="price-filter-label">Цена, сум</span>
             <div><Input inputMode="numeric" value={minPrice} onChange={(event) => setMinPrice(event.target.value.replace(/\D/g, ''))} placeholder="от 450 млн" aria-label="Минимальная цена в миллионах сум" /><Input inputMode="numeric" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value.replace(/\D/g, ''))} placeholder="до 900 млн" aria-label="Максимальная цена в миллионах сум" /></div>
@@ -162,6 +183,17 @@ export default function CatalogPage() {
           <fieldset className="filter-group">
             <legend>Продавец</legend>
             <div><button className={seller === undefined ? 'active' : ''} type="button" onClick={() => setSeller(undefined)}>Все</button><button className={seller === 'developer' ? 'active' : ''} type="button" onClick={() => setSeller('developer')}>Застройщик</button><button className={seller === 'owner' ? 'active' : ''} type="button" onClick={() => setSeller('owner')}>Владелец</button><button className={seller === 'agency' ? 'active' : ''} type="button" onClick={() => setSeller('agency')}>Агентство</button></div>
+          </fieldset>
+          <fieldset className="filter-group filter-input-group">
+            <legend>Район и отделка</legend>
+            <select value={district} onChange={(event) => setDistrict(event.target.value)} aria-label="Район"><option value="">Все районы</option>{['Боғишамол', 'Регистан', 'Сиёб', 'Саттепо', 'Центр', 'Конигил'].map((item) => <option key={item}>{item}</option>)}</select>
+            <select value={finish} onChange={(event) => setFinish(event.target.value)} aria-label="Отделка"><option value="">Любая отделка</option><option>С ремонтом</option><option>Чистовая</option><option>Предчистовая</option></select>
+          </fieldset>
+          <fieldset className="filter-group filter-input-group">
+            <legend>Площадь, м²</legend><div><Input inputMode="decimal" value={minArea} onChange={(event) => setMinArea(event.target.value.replace(/[^\d.]/g, ''))} placeholder="от" /><Input inputMode="decimal" value={maxArea} onChange={(event) => setMaxArea(event.target.value.replace(/[^\d.]/g, ''))} placeholder="до" /></div>
+          </fieldset>
+          <fieldset className="filter-group filter-input-group">
+            <legend>Этаж</legend><div><Input inputMode="numeric" value={minFloor} onChange={(event) => setMinFloor(event.target.value.replace(/\D/g, ''))} placeholder="от" /><Input inputMode="numeric" value={maxFloor} onChange={(event) => setMaxFloor(event.target.value.replace(/\D/g, ''))} placeholder="до" /></div>
           </fieldset>
           <label className="filter-check"><input checked={verified} onChange={(event) => setVerified(event.target.checked)} type="checkbox" /><span><Check /></span> Только проверенные</label>
           <label className="filter-check"><input checked={reservable} onChange={(event) => setReservable(event.target.checked)} type="checkbox" /><span><Check /></span> Онлайн-бронирование</label>
@@ -192,7 +224,7 @@ export default function CatalogPage() {
             </div>
           </section>
 
-          {loading ? <output className="catalog-state"><span className="catalog-loader" /><span><strong>Проверяем актуальные объявления</strong><small>Применяем выбранные фильтры к опубликованным квартирам.</small></span></output> : error ? <div className="catalog-state error-state"><div><strong>Не удалось загрузить результаты</strong><p>{error}</p></div><Button variant="outline" onClick={retry}>Попробовать снова</Button></div> : filtered.length === 0 ? <div className="catalog-state empty-state"><div><strong>Точных совпадений нет</strong><p>Сбросьте часть фильтров или измените формулировку запроса.</p></div><Button variant="outline" onClick={resetFilters}>Сбросить фильтры</Button></div> : view === 'list' ? (
+          {loading ? <output className="catalog-state"><span className="catalog-loader" /><span><strong>Проверяем актуальные объявления</strong><small>Применяем выбранные фильтры к опубликованным квартирам.</small></span></output> : error ? <div className="catalog-state error-state"><div><strong>Не удалось загрузить результаты</strong><p>{error}</p></div><Button variant="outline" onClick={retry}>Попробовать снова</Button></div> : filtered.length === 0 ? <section className="ai-alternatives"><div className="ai-alternatives-heading"><span><Sparkles /></span><div><strong>Точных совпадений нет</strong><p>{catalog.alternativeReason ?? 'Сбросьте часть фильтров или измените формулировку запроса.'}</p></div><Button variant="outline" size="sm" onClick={resetFilters}>Сбросить</Button></div>{catalog.alternatives.length > 0 && <div>{catalog.alternatives.map((item) => <Link href={`/complex/${item.slug}`} key={item.id}><img src={item.image} alt=""/><span><strong>{item.name}</strong><small>{item.district} · от {formatPriceMillions(item.priceFrom)} сум</small></span><ArrowRight /></Link>)}</div>}</section> : view === 'list' ? (
             <div className="result-grid">
               {filtered.map((item) => (
                 <article className="result-card" key={item.id}>

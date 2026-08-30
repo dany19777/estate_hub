@@ -3,7 +3,7 @@ export type MarketType = 'PRIMARY_DEVELOPER' | 'SECONDARY_OWNER' | 'SECONDARY_AG
 export type SellerType = 'developer' | 'owner' | 'agency';
 
 export type ParsedFilter = {
-  key: 'rooms' | 'maxPrice' | 'completed' | 'notFirstFloor' | 'reservable';
+  key: 'rooms' | 'minPrice' | 'maxPrice' | 'completed' | 'notFirstFloor' | 'minFloor' | 'maxFloor' | 'minArea' | 'maxArea' | 'reservable' | 'market' | 'seller' | 'district' | 'finish';
   label: string;
   value: string | number | boolean;
 };
@@ -42,6 +42,9 @@ export type CatalogResponse = {
   total: number;
   parsedFilters: ParsedFilter[];
   unsupportedCriteria: string[];
+  validationWarnings: string[];
+  alternatives: ComplexSummary[];
+  alternativeReason: string | null;
 };
 
 export type CatalogQuery = {
@@ -52,10 +55,17 @@ export type CatalogQuery = {
   seller?: SellerType;
   minPrice?: number;
   maxPrice?: number;
+  minArea?: number;
+  maxArea?: number;
+  minFloor?: number;
+  maxFloor?: number;
+  district?: string;
+  finish?: string;
   verified?: boolean;
   reservable?: boolean;
   sort?: 'recommended' | 'price_asc' | 'price_desc' | 'newest';
   surface?: 'search' | 'homepage';
+  excludeParsed?: string[];
   limit?: number;
 };
 

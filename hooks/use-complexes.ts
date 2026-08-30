@@ -11,6 +11,9 @@ const emptyCatalog: CatalogResponse = {
   total: 0,
   parsedFilters: [],
   unsupportedCriteria: [],
+  validationWarnings: [],
+  alternatives: [],
+  alternativeReason: null,
 };
 
 export function useComplexes(parameters: Record<string, QueryValue>) {

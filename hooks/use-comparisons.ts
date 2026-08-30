@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type ComparisonItem = { id: string; slug: string; complex_name: string; image: string; unit_number: string; rooms: number; area_sqm: number; floor_number: number; total_floors: number; finish: string; price_uzs: number; market_type: string; reserve_enabled: number; completion_label: string };
+export type ComparisonItem = { id: string; slug: string; complex_name: string; image: string; unit_number: string; rooms: number; area_sqm: number; floor_number: number; total_floors: number; finish: string; price_uzs: number; price_per_sqm: number; market_type: string; seller_type: string; seller_verification: string; listing_status: string; reserve_enabled: number; completion_status: string; completion_label: string; price_history_count: number };
 
 export function useComparisons() {
   const [items, setItems] = useState<ComparisonItem[]>([]);

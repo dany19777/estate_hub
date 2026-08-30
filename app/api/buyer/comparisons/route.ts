@@ -1,5 +1,6 @@
 import { authorizationResponse, getAppSession } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { comparisonSelect } from '@/lib/comparison-analysis';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,12 +8,7 @@ export async function GET(request: Request) {
   try {
     const session = await getAppSession(request);
     const database = await ensureMarketplaceDatabase();
-    const result = await database.prepare(`SELECT l.id, c.slug, c.name AS complex_name, c.hero_image_url AS image, u.unit_number, u.rooms, u.area_sqm, u.floor_number, u.total_floors, u.finish, l.price_uzs, l.market_type, l.reserve_enabled, c.completion_label
-      FROM buyer_comparisons comparison
-      JOIN listings l ON l.id = comparison.listing_id
-      JOIN units u ON u.id = l.unit_id
-      JOIN complexes c ON c.id = l.complex_id
-      WHERE comparison.user_id = ? ORDER BY comparison.created_at ASC`).bind(session.user.id).all();
+    const result = await database.prepare(comparisonSelect).bind(session.user.id).all();
     return Response.json({ items: result.results ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return authorizationResponse(error) ?? Response.json({ error: 'comparison_unavailable', message: 'Не удалось загрузить сравнение.' }, { status: 500 });

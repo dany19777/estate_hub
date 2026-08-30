@@ -1,4 +1,5 @@
 import { authorizationResponse, getAppSession } from '@/lib/auth';
+import { parseNaturalLanguageQuery } from '@/lib/catalog-service';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
@@ -6,11 +7,19 @@ export const dynamic = 'force-dynamic';
 function sanitizeFilters(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const source = value as Record<string, unknown>;
-  const allowed = ['market', 'q', 'rooms', 'status', 'seller', 'minPrice', 'maxPrice', 'verified', 'reservable'];
+  const allowed = ['market', 'rooms', 'status', 'seller', 'minPrice', 'maxPrice', 'minArea', 'maxArea', 'minFloor', 'maxFloor', 'district', 'finish', 'verified', 'reservable'];
   const result: Record<string, string | number | boolean> = {};
   for (const key of allowed) {
     const item = source[key];
     if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') result[key] = item;
+  }
+  if (typeof source.q === 'string' && source.q.trim()) {
+    const parsed = parseNaturalLanguageQuery(source.q);
+    for (const filter of parsed.filters) {
+      if (filter.key === 'completed' && result.status === undefined) result.status = 'completed';
+      else if (filter.key === 'notFirstFloor' && result.minFloor === undefined) result.minFloor = 2;
+      else if (filter.key !== 'completed' && filter.key !== 'notFirstFloor' && result[filter.key] === undefined) result[filter.key] = filter.value;
+    }
   }
   return Object.keys(result).length > 0 ? result : null;
 }
