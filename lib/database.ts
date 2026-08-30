@@ -4,6 +4,7 @@ import { complexes as complexSeeds, districts, organizations, units } from '@/db
 import { indexStatements, schemaStatements } from '@/db/schema';
 import { buildCatalog } from '@/lib/catalog-service';
 import { expireBillingPeriods } from '@/lib/billing';
+import { expirePromotions } from '@/lib/promotions';
 import type { ComplexDetail, ComplexListing, ComplexRecord, ListingRecord, MarketType, SellerType } from '@/lib/marketplace';
 
 type MarketplaceEnv = Cloudflare.Env & { DB: D1Database };
@@ -50,7 +51,11 @@ type ComplexDetailRow = {
 
 type ComplexListingRow = ListingRow & {
   seller: string | null;
+  promoted: number;
+  sponsored_label: string | null;
 };
+
+type PromotionSignalRow = { complex_id: string; surface: string; boost_weight: number };
 
 let initialization: Promise<void> | null = null;
 
@@ -81,6 +86,19 @@ async function seedMarketplace(database: D1Database) {
   }
   statements.push(database.prepare(`INSERT OR IGNORE INTO platform_billing_config
     (id, secondary_listing_fee_uzs, secondary_period_days) VALUES ('default', 350000, 30)`));
+  const promotionProducts = [
+    ['promotion-featured-complex', 'FEATURED_COMPLEX', 'Featured ЖК', 'Приоритетная позиция ЖК в рекомендательной выдаче.', 'complex', 'search_homepage', 7, 1_800_000, 70, 10],
+    ['promotion-featured-listing', 'FEATURED_LISTING', 'Featured квартира', 'Выделение отдельной квартиры внутри ЖК и в результатах.', 'listing', 'search', 7, 600_000, 50, 20],
+    ['promotion-search', 'SEARCH_PROMOTION', 'Продвижение в поиске', 'Повышенный приоритет в рекомендуемой сортировке каталога.', 'complex', 'search', 7, 1_200_000, 90, 30],
+    ['promotion-homepage', 'HOMEPAGE_PROMOTION', 'Продвижение на главной', 'Размещение в верхней части подборки на главной странице.', 'complex', 'homepage', 7, 2_500_000, 100, 40],
+    ['promotion-special', 'SPECIAL_CAMPAIGN', 'Специальная кампания', 'Расширенное размещение на главной и в поиске.', 'complex', 'special', 14, 5_000_000, 120, 50],
+  ] as const;
+  for (const product of promotionProducts) {
+    statements.push(database.prepare(`INSERT OR IGNORE INTO promotion_products
+      (id, code, name, description, target_type, surface, duration_days, price_uzs, boost_weight, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(...product));
+  }
 
   for (const district of districts) {
     statements.push(database.prepare(`INSERT OR IGNORE INTO districts (id, city_id, slug, name_ru, name_uz, name_en) VALUES (?, ?, ?, ?, ?, ?)`)
@@ -158,6 +176,10 @@ async function seedMarketplace(database: D1Database) {
       .bind(`price-${listingId}-initial`, listingId, priceUzs));
   }
 
+  statements.push(database.prepare(`INSERT OR IGNORE INTO promotions
+    (id, product_id, organization_id, complex_id, status, starts_at, ends_at, amount_uzs, provider, provider_reference, idempotency_key, sponsored_label)
+    VALUES ('promotion-demo-bogishamol', 'promotion-featured-complex', 'org-samarkand-development', 'complex-bogishamol', 'active', CURRENT_TIMESTAMP, datetime('now', '+14 days'), 0, 'demo', 'demo:featured-bogishamol', 'demo-featured-bogishamol', 'Реклама')`));
+
   statements.push(database.prepare(`INSERT OR IGNORE INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES ('audit-marketplace-seed', 'system', 'system-seed', 'marketplace.seeded', 'catalog', 'samarkand', '{"source":"mvp-seed"}')`));
   await database.batch(statements);
 }
@@ -181,8 +203,8 @@ export async function ensureMarketplaceDatabase() {
 
 export async function readMarketplaceData() {
   const database = await ensureMarketplaceDatabase();
-  await expireBillingPeriods(database);
-  const [complexResult, listingResult] = await Promise.all([
+  await Promise.all([expireBillingPeriods(database), expirePromotions(database)]);
+  const [complexResult, listingResult, promotionResult] = await Promise.all([
     database.prepare(`SELECT
       c.id, c.slug, c.name, city.name_ru AS city, d.name_ru AS district, c.address,
       o.name AS developer, o.verification_status AS developer_verification,
@@ -202,7 +224,21 @@ export async function readMarketplaceData() {
       JOIN units u ON u.id = l.unit_id
       WHERE l.status = 'published' AND u.availability_status = 'available'
       ORDER BY l.published_at DESC`).all<ListingRow>(),
+    database.prepare(`SELECT COALESCE(promotion.complex_id, listing.complex_id) AS complex_id,
+      product.surface, MAX(product.boost_weight) AS boost_weight
+      FROM promotions promotion JOIN promotion_products product ON product.id = promotion.product_id
+      LEFT JOIN listings listing ON listing.id = promotion.listing_id
+      WHERE promotion.status = 'active' AND promotion.starts_at <= CURRENT_TIMESTAMP AND promotion.ends_at > CURRENT_TIMESTAMP
+      GROUP BY COALESCE(promotion.complex_id, listing.complex_id), product.surface`).all<PromotionSignalRow>(),
   ]);
+
+  const promotionSignals = new Map<string, { search: number; homepage: number }>();
+  for (const signal of promotionResult.results ?? []) {
+    const current = promotionSignals.get(signal.complex_id) ?? { search: 0, homepage: 0 };
+    if (['search', 'search_homepage', 'special'].includes(signal.surface)) current.search = Math.max(current.search, Number(signal.boost_weight));
+    if (['homepage', 'search_homepage', 'special'].includes(signal.surface)) current.homepage = Math.max(current.homepage, Number(signal.boost_weight));
+    promotionSignals.set(signal.complex_id, current);
+  }
 
   const complexes: ComplexRecord[] = (complexResult.results ?? []).map((row) => ({
     id: row.id,
@@ -221,6 +257,8 @@ export async function readMarketplaceData() {
     rating: row.rating,
     mapX: row.map_x,
     mapY: row.map_y,
+    promotionSearchWeight: promotionSignals.get(row.id)?.search ?? 0,
+    promotionHomepageWeight: promotionSignals.get(row.id)?.homepage ?? 0,
   }));
   const listings: ListingRecord[] = (listingResult.results ?? []).map((row) => ({
     id: row.id,
@@ -256,6 +294,10 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
       u.total_floors, u.finish, l.price_uzs, l.market_type, l.seller_type,
       l.reserve_enabled, l.published_at,
       COALESCE(o.name, CASE WHEN l.seller_type = 'owner' THEN 'Проверенный собственник' ELSE 'Проверенный продавец' END) AS seller
+      , EXISTS(SELECT 1 FROM promotions promotion JOIN promotion_products product ON product.id = promotion.product_id
+        WHERE promotion.listing_id = l.id AND promotion.status = 'active' AND promotion.starts_at <= CURRENT_TIMESTAMP AND promotion.ends_at > CURRENT_TIMESTAMP) AS promoted
+      , (SELECT promotion.sponsored_label FROM promotions promotion WHERE promotion.listing_id = l.id AND promotion.status = 'active'
+        AND promotion.starts_at <= CURRENT_TIMESTAMP AND promotion.ends_at > CURRENT_TIMESTAMP ORDER BY promotion.ends_at DESC LIMIT 1) AS sponsored_label
       FROM listings l
       JOIN units u ON u.id = l.unit_id
       LEFT JOIN organizations o ON o.id = l.seller_org_id
@@ -279,6 +321,8 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
     reserveEnabled: Boolean(row.reserve_enabled),
     publishedAt: row.published_at,
     seller: row.seller ?? 'Проверенный продавец',
+    promoted: Boolean(row.promoted),
+    sponsoredLabel: row.sponsored_label,
   }));
 
   return {

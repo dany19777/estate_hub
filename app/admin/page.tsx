@@ -19,6 +19,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   Users,
   WalletCards,
   X,
@@ -28,12 +29,14 @@ import { Badge } from '@/components/ui/badge';
 import { AdminFinancePanel } from '@/components/admin-finance-panel';
 import { AdminDisputesPanel } from '@/components/admin-disputes-panel';
 import { AdminBillingPanel } from '@/components/admin-billing-panel';
+import { AdminPromotionsPanel } from '@/components/admin-promotions-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAdminFinance } from '@/hooks/use-admin-finance';
 import { useAdminDisputes } from '@/hooks/use-admin-disputes';
 import { useAdminBilling } from '@/hooks/use-admin-billing';
+import { useAdminPromotions } from '@/hooks/use-admin-promotions';
 
 const adminNav = [
   { label: 'Обзор', icon: Gauge },
@@ -46,6 +49,7 @@ const adminNav = [
   { label: 'Брони и платежи', icon: WalletCards },
   { label: 'Споры и возвраты', icon: AlertTriangle, count: 3 },
   { label: 'Тарифы и биллинг', icon: CircleDollarSign },
+  { label: 'Продвижение', icon: Sparkles },
   { label: 'Аудит', icon: FileSearch },
   { label: 'Аналитика', icon: BarChart3 },
   { label: 'Настройки системы', icon: Settings },
@@ -91,6 +95,7 @@ export default function AdminDashboard() {
   const finance = useAdminFinance();
   const disputes = useAdminDisputes();
   const billing = useAdminBilling();
+  const promotions = useAdminPromotions();
 
   async function loadDashboard() {
     setLoadError('');
@@ -169,7 +174,7 @@ export default function AdminDashboard() {
     const targets: Record<string, string> = {
       Обзор: 'admin-overview', Пользователи: 'admin-overview', Застройщики: 'moderation', 'Агентства и владельцы': 'verification',
       'Жилые комплексы': 'moderation', Верификация: 'verification', Модерация: 'moderation', 'Брони и платежи': 'finance',
-      'Споры и возвраты': 'disputes', 'Тарифы и биллинг': 'billing', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
+      'Споры и возвраты': 'disputes', 'Тарифы и биллинг': 'billing', Продвижение: 'promotions', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
     };
     setActiveNav(label);
     setMobileNav(false);
@@ -183,7 +188,7 @@ export default function AdminDashboard() {
         <div className="admin-brand"><span><ShieldCheck /></span><div><strong>Estate<em>Hub</em></strong><small>Platform Admin</small></div><button type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню"><X /></button></div>
         <div className="admin-user"><span>{userInitials}</span><div><strong>{dashboard?.session.user.fullName ?? 'Администратор'}</strong><small>{dashboard?.session.platformRoles[0] ?? 'Platform Admin'}</small></div><ChevronDown /></div>
         <nav>{adminNav.map((item) => {
-          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? disputes.stats.active : item.label === 'Тарифы и биллинг' ? billing.stats.activeSubscriptions : item.count;
+          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? disputes.stats.active : item.label === 'Тарифы и биллинг' ? billing.stats.activeSubscriptions : item.label === 'Продвижение' ? promotions.stats.active + promotions.stats.scheduled : item.count;
           return <button type="button" className={activeNav === item.label ? 'active' : ''} onClick={() => navigateAdmin(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{Boolean(count) && <em>{count}</em>}</button>;
         })}</nav>
         <div className="system-status"><span><i/> Все системы работают</span><small>Последняя проверка: сейчас</small></div>
@@ -262,6 +267,18 @@ export default function AdminDashboard() {
             onUpdatePlan={async (plan) => { const message = await billing.updatePlan(plan); setFeedback(message); }}
             onUpdateConfig={async (feeUzs, periodDays) => { const message = await billing.updateConfig(feeUzs, periodDays); setFeedback(message); }}
             onActivateSecondary={async (listingId) => { const message = await billing.activateSecondary(listingId); setFeedback(message); }}
+          />
+
+          <AdminPromotionsPanel
+            products={promotions.products}
+            placements={promotions.placements}
+            stats={promotions.stats}
+            loading={promotions.loading}
+            error={promotions.error}
+            processing={promotions.processing}
+            onRetry={() => void promotions.refresh()}
+            onUpdateProduct={async (product) => { const message = await promotions.updateProduct(product); setFeedback(message); }}
+            onCancel={async (promotionId) => { const message = await promotions.cancel(promotionId); setFeedback(message); }}
           />
 
           <AdminFinancePanel

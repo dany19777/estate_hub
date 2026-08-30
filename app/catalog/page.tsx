@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Search,
   ShieldCheck,
+  Sparkles,
   SlidersHorizontal,
   UserRound,
   X,
@@ -80,6 +81,7 @@ export default function CatalogPage() {
     verified,
     reservable,
     sort,
+    surface: 'search',
   }), [activeMarket, maxPrice, minPrice, reservable, rooms, search, seller, sort, status, verified]);
   const { data: catalog, loading, error, retry } = useComplexes(request);
   const filtered = catalog.items;
@@ -196,7 +198,7 @@ export default function CatalogPage() {
                 <article className="result-card" key={item.id}>
                   <div className="result-card-image">
                     <img src={item.image} alt={item.name} />
-                    <Badge>{marketLabel(item.marketTypes)}</Badge>
+                    {item.sponsored ? <Badge className="sponsored-badge"><Sparkles /> {item.sponsoredLabel}</Badge> : <Badge>{marketLabel(item.marketTypes)}</Badge>}
                     <button className={isFavorite(item.id) ? 'active' : ''} onClick={() => void toggleFavorite({ id: item.id, slug: item.slug, name: item.name, image: item.image, price_from: item.priceFrom, available_units: item.availableUnits, completion_label: item.completionLabel })} type="button" aria-label="Добавить в избранное"><Heart /></button>
                   </div>
                   <div className="result-card-body">

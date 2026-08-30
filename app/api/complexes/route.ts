@@ -32,6 +32,7 @@ export async function GET(request: Request) {
       verified: booleanValue(searchParams.get('verified')),
       reservable: booleanValue(searchParams.get('reservable')),
       sort: sortParam === 'price_asc' || sortParam === 'price_desc' || sortParam === 'newest' ? sortParam : 'recommended',
+      surface: searchParams.get('surface') === 'homepage' ? 'homepage' : 'search',
       limit: positiveNumber(searchParams.get('limit')),
     };
     const { complexes, listings } = await readMarketplaceData();

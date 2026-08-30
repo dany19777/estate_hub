@@ -8,7 +8,7 @@ export interface PaymentProvider {
   confirmReservation(input: { reservationId: string; amountUzs: number; idempotencyKey: string }): Promise<PaymentOperationResult>;
   refundReservation(input: { reservationId: string; amountUzs: number; idempotencyKey: string }): Promise<PaymentOperationResult>;
   reconcile(input: { operationId: string; providerReference: string }): Promise<PaymentOperationResult>;
-  chargeBilling(input: { billingId: string; amountUzs: number; idempotencyKey: string; productType: 'developer_subscription' | 'secondary_listing' }): Promise<PaymentOperationResult>;
+  chargeBilling(input: { billingId: string; amountUzs: number; idempotencyKey: string; productType: 'developer_subscription' | 'secondary_listing' | 'promotion' }): Promise<PaymentOperationResult>;
 }
 
 class SandboxPaymentProvider implements PaymentProvider {

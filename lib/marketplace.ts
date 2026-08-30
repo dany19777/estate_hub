@@ -32,6 +32,9 @@ export type ComplexSummary = {
   maxRooms: number;
   marketTypes: MarketType[];
   reservable: boolean;
+  sponsored: boolean;
+  sponsoredLabel: string | null;
+  promotionWeight: number;
 };
 
 export type CatalogResponse = {
@@ -52,13 +55,14 @@ export type CatalogQuery = {
   verified?: boolean;
   reservable?: boolean;
   sort?: 'recommended' | 'price_asc' | 'price_desc' | 'newest';
+  surface?: 'search' | 'homepage';
   limit?: number;
 };
 
 export type ComplexRecord = Omit<
   ComplexSummary,
-  'priceFrom' | 'pricePerSqmFrom' | 'availableUnits' | 'minRooms' | 'maxRooms' | 'marketTypes' | 'reservable'
->;
+  'priceFrom' | 'pricePerSqmFrom' | 'availableUnits' | 'minRooms' | 'maxRooms' | 'marketTypes' | 'reservable' | 'sponsored' | 'sponsoredLabel' | 'promotionWeight'
+> & { promotionSearchWeight: number; promotionHomepageWeight: number };
 
 export type ListingRecord = {
   id: string;
@@ -78,6 +82,8 @@ export type ListingRecord = {
 
 export type ComplexListing = ListingRecord & {
   seller: string;
+  promoted: boolean;
+  sponsoredLabel: string | null;
 };
 
 export type ComplexDetail = {

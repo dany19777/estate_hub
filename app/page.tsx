@@ -37,7 +37,7 @@ function ComplexCard({ complex, favorite, onFavorite }: {
       <div className="card-image-wrap">
         <img src={complex.image} alt={`Жилой комплекс ${complex.name}`} />
         <div className="image-badges">
-          {complex.featured && <Badge className="featured-badge"><Sparkles /> Выбор EstateHub</Badge>}
+          {complex.sponsored ? <Badge className="sponsored-badge"><Sparkles /> {complex.sponsoredLabel}</Badge> : complex.featured && <Badge className="featured-badge"><Sparkles /> Выбор EstateHub</Badge>}
           <Badge className="market-badge" variant="secondary">{marketLabel(complex.marketTypes)}</Badge>
         </div>
         <button
@@ -95,7 +95,7 @@ export default function HomePage() {
   const [query, setQuery] = useState('');
   const [favorites, setFavorites] = useState<string[]>(['complex-bogishamol']);
 
-  const { data: catalog, loading, error, retry } = useComplexes({ market, verified: true, limit: 4 });
+  const { data: catalog, loading, error, retry } = useComplexes({ market, verified: true, surface: 'homepage', limit: 4 });
   const visibleComplexes = catalog.items;
 
   const handleSearch = (event: { preventDefault: () => void }) => {

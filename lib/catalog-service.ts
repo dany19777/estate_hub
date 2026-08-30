@@ -104,8 +104,10 @@ export function buildCatalog(
     const pricesPerSqm = matchingListings.map((listing) => Math.round(listing.priceUzs / listing.areaSqm));
     const roomValues = matchingListings.map((listing) => listing.rooms);
 
+    const promotionWeight = query.surface === 'homepage' ? complex.promotionHomepageWeight : complex.promotionSearchWeight;
+    const { promotionSearchWeight: _searchWeight, promotionHomepageWeight: _homepageWeight, ...publicComplex } = complex;
     return [{
-      ...complex,
+      ...publicComplex,
       priceFrom: Math.min(...prices),
       pricePerSqmFrom: Math.min(...pricesPerSqm),
       availableUnits: matchingListings.length,
@@ -113,6 +115,9 @@ export function buildCatalog(
       maxRooms: Math.max(...roomValues),
       marketTypes: [...new Set(matchingListings.map((listing) => listing.marketType))],
       reservable: matchingListings.some((listing) => listing.reserveEnabled),
+      sponsored: promotionWeight > 0,
+      sponsoredLabel: promotionWeight > 0 ? 'Реклама' : null,
+      promotionWeight,
     }];
   });
 
@@ -120,7 +125,7 @@ export function buildCatalog(
     if (query.sort === 'price_asc') return a.priceFrom - b.priceFrom;
     if (query.sort === 'price_desc') return b.priceFrom - a.priceFrom;
     if (query.sort === 'newest') return a.completionLabel.localeCompare(b.completionLabel);
-    return Number(b.featured) - Number(a.featured) || b.rating - a.rating;
+    return b.promotionWeight - a.promotionWeight || Number(b.featured) - Number(a.featured) || b.rating - a.rating;
   });
   const limited = query.limit ? sorted.slice(0, query.limit) : sorted;
 

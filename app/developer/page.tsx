@@ -43,7 +43,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DeveloperMessagesPanel } from '@/components/developer-messages-panel';
 import { DeveloperReservationsPanel } from '@/components/developer-reservations-panel';
 import { DeveloperBillingPanel } from '@/components/developer-billing-panel';
+import { DeveloperPromotionsPanel } from '@/components/developer-promotions-panel';
 import { useDeveloperBilling } from '@/hooks/use-developer-billing';
+import { useDeveloperPromotions } from '@/hooks/use-developer-promotions';
 import { useDeveloperMessages } from '@/hooks/use-developer-messages';
 import { useDeveloperReservations } from '@/hooks/use-developer-reservations';
 
@@ -147,6 +149,7 @@ export default function DeveloperDashboard() {
   const developerMessages = useDeveloperMessages();
   const developerReservations = useDeveloperReservations();
   const developerBilling = useDeveloperBilling();
+  const developerPromotions = useDeveloperPromotions();
   const unreadDeveloperMessages = developerMessages.conversations.reduce((total, conversation) => total + Number(conversation.unread_count), 0);
 
   function navigateSection(label: string) {
@@ -158,6 +161,7 @@ export default function DeveloperDashboard() {
       'Клиенты и лиды': 'developer-leads',
       'Просмотры': 'developer-leads',
       'Сообщения': 'developer-messages',
+      'Продвижение': 'developer-promotions',
       'Тариф и оплата': 'developer-billing',
     };
     const id = target[label];
@@ -291,7 +295,7 @@ export default function DeveloperDashboard() {
         <div className="company-mini-card"><span>SD</span><div><strong>{dashboard?.organization?.name ?? 'Компания'}</strong><small><ShieldCheck /> Рабочий кабинет</small></div><ChevronDown /></div>
         <nav>
           {navGroups.map((group) => <div className="developer-nav-group" key={group.label}><span>{group.label}</span>{group.items.map((item) => {
-            const count = item.label === 'Бронирования' ? developerReservations.stats.active + developerReservations.stats.holds : item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.label === 'Сообщения' ? (unreadDeveloperMessages || developerMessages.conversations.length) : item.label === 'Тариф и оплата' ? `${developerBilling.usage.activeInventory}/${developerBilling.usage.limit}` : item.count;
+            const count = item.label === 'Бронирования' ? developerReservations.stats.active + developerReservations.stats.holds : item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.label === 'Сообщения' ? (unreadDeveloperMessages || developerMessages.conversations.length) : item.label === 'Продвижение' ? developerPromotions.promotions.filter((promotion) => ['active', 'scheduled'].includes(promotion.status)).length : item.label === 'Тариф и оплата' ? `${developerBilling.usage.activeInventory}/${developerBilling.usage.limit}` : item.count;
             return <button className={activeNav === item.label ? 'active' : ''} type="button" key={item.label} onClick={() => navigateSection(item.label)}><item.icon /> <strong>{item.label}</strong>{Boolean(count) && <em>{count}</em>}</button>;
           })}</div>)}
         </nav>
@@ -342,6 +346,19 @@ export default function DeveloperDashboard() {
 
               <DeveloperMessagesPanel {...developerMessages} />
 
+              <DeveloperPromotionsPanel
+                products={developerPromotions.products}
+                complexes={developerPromotions.complexes}
+                listings={developerPromotions.listings}
+                promotions={developerPromotions.promotions}
+                loading={developerPromotions.loading}
+                error={developerPromotions.error}
+                feedback={developerPromotions.feedback}
+                processing={developerPromotions.processing}
+                onRetry={() => void developerPromotions.refresh()}
+                onPurchase={developerPromotions.purchase}
+              />
+
               <DeveloperBillingPanel
                 plans={developerBilling.plans}
                 subscription={developerBilling.subscription}
@@ -379,7 +396,7 @@ export default function DeveloperDashboard() {
 
             <aside className="dashboard-rail">
               <section className="company-profile-card"><div className="company-cover"><span>SD</span></div><h2>{dashboard?.organization?.name ?? 'Компания'} <ShieldCheck /></h2><p>Застройщик · Самарканд</p><div><span><strong>{dashboard?.kpis.projects ?? 0}</strong>проектов</span><span><strong>{dashboard?.kpis.availableUnits ?? 0}</strong>доступно</span><span><strong>{dashboard?.kpis.publishedListings ?? 0}</strong>объявлений</span></div><div className="profile-progress"><span>Профиль заполнен <strong>70%</strong></span><Progress value={70} /></div><button type="button" disabled title="Редактирование профиля — следующий этап">Редактировать профиль</button></section>
-              <section className="quick-actions"><h2>Быстрые действия</h2><div><button type="button" onClick={() => setCreateOpen(true)}><Plus /><span>Новый комплекс</span></button><button type="button" onClick={() => setUnitOpen(true)} disabled={!dashboard?.projects.length} title={dashboard?.projects.length ? 'Добавить квартиру и объявление' : 'Сначала создайте ЖК'}><Home /><span>Добавить квартиру</span></button><button type="button" disabled title="Будет подключено следующим этапом"><Sparkles /><span>Создать акцию</span></button><button type="button" onClick={() => navigateSection('Бронирования')}><CalendarDays /><span>Бронирования</span></button><button type="button" disabled title="Будет подключено следующим этапом"><FileText /><span>Сформировать отчёт</span></button><button type="button" disabled title="Будет подключено следующим этапом"><ImageIcon /><span>Медиа</span></button></div></section>
+              <section className="quick-actions"><h2>Быстрые действия</h2><div><button type="button" onClick={() => setCreateOpen(true)}><Plus /><span>Новый комплекс</span></button><button type="button" onClick={() => setUnitOpen(true)} disabled={!dashboard?.projects.length} title={dashboard?.projects.length ? 'Добавить квартиру и объявление' : 'Сначала создайте ЖК'}><Home /><span>Добавить квартиру</span></button><button type="button" onClick={() => navigateSection('Продвижение')}><Sparkles /><span>Создать акцию</span></button><button type="button" onClick={() => navigateSection('Бронирования')}><CalendarDays /><span>Бронирования</span></button><button type="button" disabled title="Будет подключено следующим этапом"><FileText /><span>Сформировать отчёт</span></button><button type="button" disabled title="Будет подключено следующим этапом"><ImageIcon /><span>Медиа</span></button></div></section>
               <section className="attention-card"><div><h2>Требует внимания</h2><a href="#developer-leads">Смотреть заявки</a></div><article><span className="urgent"><AlertCircle /></span><div><strong>{leadData?.stats.slaBreaches ?? 0} нарушений SLA</strong><small>Порог компании — {leadData?.slaMinutes ?? 45} минут</small></div><ArrowUpRight /></article><article><span className="warning"><Clock3Icon /></span><div><strong>{leadData?.stats.viewings ?? 0} заявок на просмотр</strong><small>Новые запросы нужно подтвердить</small></div><ArrowUpRight /></article><article><span className="info"><MessageCircle /></span><div><strong>{leadData?.stats.new ?? 0} новых обращений</strong><small>Консультации и просмотры из каталога</small></div><ArrowUpRight /></article></section>
             </aside>
           </div>
