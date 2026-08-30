@@ -1285,6 +1285,33 @@ a { color: inherit; text-decoration: none; }
 /* Developer CRM queue */
 .developer-leads-panel { margin-top: 12px; overflow: hidden; }
 .developer-leads-panel .panel-heading { border-bottom: 1px solid #19283b; }
+.developer-reservations-panel { margin-top: 12px; overflow: hidden; scroll-margin-top: 82px; }
+.developer-reservations-panel > .panel-heading { border-bottom: 1px solid #19283b; }
+.reservation-kpis { display: flex; gap: 7px; }
+.reservation-kpis span { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border: 1px solid #26374c; border-radius: 7px; color: #71839a; background: #0b1725; font-size: 6px; }
+.reservation-kpis strong { color: #d7e2ef; font-size: 8px; }
+.developer-reservations-table [data-slot="table-cell"] > strong, .developer-reservations-table [data-slot="table-cell"] > small { display: block; }
+.developer-reservations-table [data-slot="table-cell"] > strong { color: #dfe8f4; font-size: 7px; }
+.developer-reservations-table [data-slot="table-cell"] > small { margin-top: 3px; color: #66788e; font-size: 6px; }
+.reservation-buyer { display: flex; min-width: 135px; align-items: center; gap: 8px; }
+.reservation-buyer > span { display: grid; width: 29px; height: 29px; flex: 0 0 auto; place-items: center; border-radius: 8px; color: #7b9efa; background: #1b2e50; }
+.reservation-buyer > span svg { width: 13px; }
+.reservation-buyer > div { display: grid; min-width: 0; gap: 3px; }
+.reservation-buyer strong { overflow: hidden; color: #e4ebf5; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.reservation-buyer small { color: #66788e; font-size: 6px; }
+.reservation-state { height: 19px; border: 1px solid #315b45; color: #5ac58f; background: #14352c; font-size: 6px; white-space: nowrap; }
+.reservation-state.payment_hold { border-color: #5b4723; color: #e5b759; background: #392d1c; }
+.reservation-state.deal_in_progress { border-color: #345ba7; color: #7ca0ff; background: #192e57; }
+.reservation-state.cancelled, .reservation-state.refunded, .reservation-state.expired, .reservation-state.buyer_refused, .reservation-state.developer_refused { border-color: #50303a; color: #d8838d; background: #2c1c24; }
+.reservation-actions { display: flex; gap: 4px; }
+.developer-table td .reservation-actions > button { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid #2c4e70; border-radius: 6px; color: #79a0f5; background: #142643; cursor: pointer; }
+.developer-table td .reservation-actions > button svg { width: 11px; }
+.developer-table td .reservation-actions > button.buyer-refuse { border-color: #574329; color: #d6a85b; background: #30261a; }
+.developer-table td .reservation-actions > button.developer-refuse { border-color: #5b303a; color: #e07d88; background: #2c1921; }
+.developer-table td .reservation-actions > button:disabled { opacity: .45; cursor: wait; }
+.reservation-feedback { display: flex; align-items: center; gap: 7px; padding: 8px 13px; border-top: 1px solid #20503b; color: #68c596; background: #10271f; font-size: 7px; }
+.reservation-feedback svg { width: 12px; }
+.reservation-feedback.error { border-color: #552d37; color: #eb8792; background: #2a1820; }
 .developer-messages-panel { margin-top: 12px; overflow: hidden; scroll-margin-top: 82px; }
 .developer-messages-panel > .panel-heading { border-bottom: 1px solid #19283b; }
 .developer-message-layout { display: grid; min-height: 410px; grid-template-columns: 230px minmax(0,1fr); }
@@ -1324,7 +1351,7 @@ a { color: inherit; text-decoration: none; }
 .developer-message-empty > div { display: grid; gap: 5px; text-align: left; }
 .developer-message-empty strong { color: #cbd6e5; font-size: 9px; }
 .developer-message-empty p { margin: 0; font-size: 7px; line-height: 1.5; }
-#developer-projects, #developer-leads { scroll-margin-top: 82px; }
+#developer-projects, #developer-leads, #developer-reservations { scroll-margin-top: 82px; }
 .developer-leads-table [data-slot="table-cell"] > strong, .developer-leads-table [data-slot="table-cell"] > small { display: block; }
 .developer-leads-table [data-slot="table-cell"] > strong { color: #dfe7f2; font-size: 7px; }
 .developer-leads-table [data-slot="table-cell"] > small { margin-top: 3px; color: #68798f; font-size: 6px; }
@@ -1347,6 +1374,7 @@ a { color: inherit; text-decoration: none; }
 .dashboard-operation-state.success { border-color: #24543f; color: #6fd0a0; background: #10271f; }
 
 @media (max-width: 760px) {
+  .reservation-kpis { display: none; }
   .developer-message-layout { grid-template-columns: 1fr; }
   .developer-conversation-list { max-height: 220px; border-right: 0; border-bottom: 1px solid #19283b; }
   .developer-thread-compose { grid-template-columns: 1fr; }
