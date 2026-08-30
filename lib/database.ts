@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers';
 import { complexes as complexSeeds, districts, organizations, units } from '@/db/seeds';
 import { indexStatements, schemaStatements } from '@/db/schema';
 import { buildCatalog } from '@/lib/catalog-service';
+import { expireBillingPeriods } from '@/lib/billing';
 import type { ComplexDetail, ComplexListing, ComplexRecord, ListingRecord, MarketType, SellerType } from '@/lib/marketplace';
 
 type MarketplaceEnv = Cloudflare.Env & { DB: D1Database };
@@ -67,6 +68,20 @@ async function seedMarketplace(database: D1Database) {
       .bind('city-samarkand', 'region-samarkand', 'samarkand', 'Самарканд', 'Samarqand', 'Samarkand'),
   ];
 
+  const plans = [
+    ['plan-start', 'START', 'Start', 5, 1_500_000, 10],
+    ['plan-business', 'BUSINESS', 'Business', 25, 4_500_000, 20],
+    ['plan-pro', 'PRO', 'Pro', 100, 12_000_000, 30],
+    ['plan-enterprise', 'ENTERPRISE', 'Enterprise', 1000, 0, 40],
+  ] as const;
+  for (const plan of plans) {
+    statements.push(database.prepare(`INSERT OR IGNORE INTO subscription_plans
+      (id, code, name, inventory_limit, monthly_price_uzs, sort_order) VALUES (?, ?, ?, ?, ?, ?)`)
+      .bind(...plan));
+  }
+  statements.push(database.prepare(`INSERT OR IGNORE INTO platform_billing_config
+    (id, secondary_listing_fee_uzs, secondary_period_days) VALUES ('default', 350000, 30)`));
+
   for (const district of districts) {
     statements.push(database.prepare(`INSERT OR IGNORE INTO districts (id, city_id, slug, name_ru, name_uz, name_en) VALUES (?, ?, ?, ?, ?, ?)`)
       .bind(district[0], 'city-samarkand', district[1], district[2], district[3], district[4]));
@@ -81,6 +96,15 @@ async function seedMarketplace(database: D1Database) {
   statements.push(database.prepare(`INSERT OR IGNORE INTO organizations (id, slug, name, organization_type, verification_status) VALUES ('org-nurafshon-build', 'nurafshon-build', 'Nurafshon Build', 'developer', 'pending')`));
   statements.push(database.prepare(`INSERT OR IGNORE INTO verification_cases (id, subject_type, subject_id, status, risk_level) VALUES ('verification-org-nurafshon-build', 'organization', 'org-nurafshon-build', 'submitted', 'medium')`));
   statements.push(database.prepare(`INSERT OR IGNORE INTO organization_sales_settings (organization_id, new_lead_sla_minutes, sticky_assignment) VALUES ('org-nurafshon-build', 45, 1)`));
+  for (const organization of organizations.filter((item) => item[3] === 'developer')) {
+    statements.push(database.prepare(`INSERT OR IGNORE INTO developer_subscriptions
+      (id, organization_id, plan_id, status, current_period_start, current_period_end)
+      VALUES (?, ?, 'plan-start', 'trialing', CURRENT_TIMESTAMP, datetime('now', '+30 days'))`)
+      .bind(`subscription-${organization[0]}`, organization[0]));
+  }
+  statements.push(database.prepare(`INSERT OR IGNORE INTO developer_subscriptions
+    (id, organization_id, plan_id, status, current_period_start, current_period_end)
+    VALUES ('subscription-org-nurafshon-build', 'org-nurafshon-build', 'plan-start', 'trialing', CURRENT_TIMESTAMP, datetime('now', '+30 days'))`));
   for (const complex of complexSeeds) {
     statements.push(database.prepare(`INSERT OR IGNORE INTO complexes (
       id, slug, district_id, developer_org_id, name, address, description, completion_status,
@@ -157,6 +181,7 @@ export async function ensureMarketplaceDatabase() {
 
 export async function readMarketplaceData() {
   const database = await ensureMarketplaceDatabase();
+  await expireBillingPeriods(database);
   const [complexResult, listingResult] = await Promise.all([
     database.prepare(`SELECT
       c.id, c.slug, c.name, city.name_ru AS city, d.name_ru AS district, c.address,

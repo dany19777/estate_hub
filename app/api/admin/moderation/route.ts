@@ -45,11 +45,28 @@ export async function PATCH(request: Request) {
     const decision = body.decision === 'publish' || body.decision === 'reject' ? body.decision : null;
     if (!complexId || !decision) return Response.json({ error: 'validation_failed', message: 'Не указано решение по модерации.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();
-    const item = await database.prepare(`SELECT complex.id, workflow.status,
-      (SELECT COUNT(*) FROM listings WHERE complex_id = complex.id AND status = 'pending_moderation') AS pending_listings
+    const item = await database.prepare(`SELECT complex.id, complex.developer_org_id, workflow.status,
+      (SELECT COUNT(*) FROM listings WHERE complex_id = complex.id AND market_type = 'PRIMARY_DEVELOPER' AND status = 'pending_moderation') AS pending_listings
       FROM complexes complex JOIN complex_publication_workflows workflow ON workflow.complex_id = complex.id
-      WHERE complex.id = ? AND complex.verification_status = 'verified' LIMIT 1`).bind(complexId).first<{ id: string; status: string; pending_listings: number }>();
+      WHERE complex.id = ? AND complex.verification_status = 'verified' LIMIT 1`).bind(complexId).first<{ id: string; developer_org_id: string; status: string; pending_listings: number }>();
     if (!item || item.status !== 'pending_moderation' && Number(item.pending_listings) === 0) return Response.json({ error: 'not_found', message: 'Заявка на модерацию не найдена.' }, { status: 404 });
+    if (decision === 'publish' && Number(item.pending_listings) > 0) {
+      const [subscription, activeUsage] = await Promise.all([
+        database.prepare(`SELECT subscription.status, subscription.current_period_end, plan.name, plan.inventory_limit
+          FROM developer_subscriptions subscription JOIN subscription_plans plan ON plan.id = subscription.plan_id
+          WHERE subscription.organization_id = ? LIMIT 1`).bind(item.developer_org_id)
+          .first<{ status: string; current_period_end: string; name: string; inventory_limit: number }>(),
+        database.prepare(`SELECT COUNT(*) AS count FROM listings
+          WHERE seller_org_id = ? AND market_type = 'PRIMARY_DEVELOPER' AND status IN ('published', 'reserved')`)
+          .bind(item.developer_org_id).first<{ count: number }>(),
+      ]);
+      const isCurrent = subscription && ['trialing', 'active'].includes(subscription.status) && new Date(`${subscription.current_period_end.replace(' ', 'T')}Z`) > new Date();
+      if (!isCurrent) return Response.json({ error: 'subscription_required', message: 'Сначала активируйте подписку застройщика.' }, { status: 409 });
+      const nextUsage = Number(activeUsage?.count ?? 0) + Number(item.pending_listings);
+      if (nextUsage > Number(subscription.inventory_limit)) {
+        return Response.json({ error: 'subscription_limit', message: `Тариф ${subscription.name}: занято ${Number(activeUsage?.count ?? 0)} из ${subscription.inventory_limit}. Для публикации ещё ${item.pending_listings} объявлений нужен тариф выше.` }, { status: 409 });
+      }
+    }
     const workflowDecision = decision === 'publish' ? 'published' : 'rejected';
     const listingDecision = decision === 'publish' ? 'published' : 'rejected';
     await database.batch([

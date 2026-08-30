@@ -8,6 +8,7 @@ export interface PaymentProvider {
   confirmReservation(input: { reservationId: string; amountUzs: number; idempotencyKey: string }): Promise<PaymentOperationResult>;
   refundReservation(input: { reservationId: string; amountUzs: number; idempotencyKey: string }): Promise<PaymentOperationResult>;
   reconcile(input: { operationId: string; providerReference: string }): Promise<PaymentOperationResult>;
+  chargeBilling(input: { billingId: string; amountUzs: number; idempotencyKey: string; productType: 'developer_subscription' | 'secondary_listing' }): Promise<PaymentOperationResult>;
 }
 
 class SandboxPaymentProvider implements PaymentProvider {
@@ -21,6 +22,10 @@ class SandboxPaymentProvider implements PaymentProvider {
 
   async reconcile(input: { providerReference: string }): Promise<PaymentOperationResult> {
     return { provider: 'sandbox', reference: input.providerReference, status: 'succeeded' };
+  }
+
+  async chargeBilling(input: { idempotencyKey: string }): Promise<PaymentOperationResult> {
+    return { provider: 'sandbox', reference: `billing:${input.idempotencyKey}`, status: 'succeeded' };
   }
 }
 

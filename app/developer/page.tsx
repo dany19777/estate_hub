@@ -42,6 +42,8 @@ import { InternalLink as Link } from '@/components/internal-link';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DeveloperMessagesPanel } from '@/components/developer-messages-panel';
 import { DeveloperReservationsPanel } from '@/components/developer-reservations-panel';
+import { DeveloperBillingPanel } from '@/components/developer-billing-panel';
+import { useDeveloperBilling } from '@/hooks/use-developer-billing';
 import { useDeveloperMessages } from '@/hooks/use-developer-messages';
 import { useDeveloperReservations } from '@/hooks/use-developer-reservations';
 
@@ -144,6 +146,7 @@ export default function DeveloperDashboard() {
   const [leadFeedback, setLeadFeedback] = useState('');
   const developerMessages = useDeveloperMessages();
   const developerReservations = useDeveloperReservations();
+  const developerBilling = useDeveloperBilling();
   const unreadDeveloperMessages = developerMessages.conversations.reduce((total, conversation) => total + Number(conversation.unread_count), 0);
 
   function navigateSection(label: string) {
@@ -155,11 +158,13 @@ export default function DeveloperDashboard() {
       'Клиенты и лиды': 'developer-leads',
       'Просмотры': 'developer-leads',
       'Сообщения': 'developer-messages',
+      'Тариф и оплата': 'developer-billing',
     };
     const id = target[label];
     if (!id) return;
     setActiveNav(label);
     setSidebarOpen(false);
+    window.history.replaceState(null, '', `#${id}`);
     window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   }
 
@@ -286,7 +291,7 @@ export default function DeveloperDashboard() {
         <div className="company-mini-card"><span>SD</span><div><strong>{dashboard?.organization?.name ?? 'Компания'}</strong><small><ShieldCheck /> Рабочий кабинет</small></div><ChevronDown /></div>
         <nav>
           {navGroups.map((group) => <div className="developer-nav-group" key={group.label}><span>{group.label}</span>{group.items.map((item) => {
-            const count = item.label === 'Бронирования' ? developerReservations.stats.active + developerReservations.stats.holds : item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.label === 'Сообщения' ? (unreadDeveloperMessages || developerMessages.conversations.length) : item.count;
+            const count = item.label === 'Бронирования' ? developerReservations.stats.active + developerReservations.stats.holds : item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.label === 'Сообщения' ? (unreadDeveloperMessages || developerMessages.conversations.length) : item.label === 'Тариф и оплата' ? `${developerBilling.usage.activeInventory}/${developerBilling.usage.limit}` : item.count;
             return <button className={activeNav === item.label ? 'active' : ''} type="button" key={item.label} onClick={() => navigateSection(item.label)}><item.icon /> <strong>{item.label}</strong>{Boolean(count) && <em>{count}</em>}</button>;
           })}</div>)}
         </nav>
@@ -336,6 +341,20 @@ export default function DeveloperDashboard() {
               <DeveloperReservationsPanel {...developerReservations} />
 
               <DeveloperMessagesPanel {...developerMessages} />
+
+              <DeveloperBillingPanel
+                plans={developerBilling.plans}
+                subscription={developerBilling.subscription}
+                usage={developerBilling.usage}
+                events={developerBilling.events}
+                loading={developerBilling.loading}
+                error={developerBilling.error}
+                feedback={developerBilling.feedback}
+                processing={developerBilling.processing}
+                onRetry={() => void developerBilling.refresh()}
+                onChangePlan={developerBilling.changePlan}
+                onRenew={developerBilling.renew}
+              />
 
               <section className="dashboard-panel developer-leads-panel" id="developer-leads">
                 <div className="panel-heading"><div><h2>Новые обращения</h2><p>Консультации и просмотры из публичного каталога</p></div><Badge className="project-status pending">{leadData?.stats.new ?? 0} требуют ответа</Badge></div>

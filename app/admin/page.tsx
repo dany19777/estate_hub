@@ -27,11 +27,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { AdminFinancePanel } from '@/components/admin-finance-panel';
 import { AdminDisputesPanel } from '@/components/admin-disputes-panel';
+import { AdminBillingPanel } from '@/components/admin-billing-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAdminFinance } from '@/hooks/use-admin-finance';
 import { useAdminDisputes } from '@/hooks/use-admin-disputes';
+import { useAdminBilling } from '@/hooks/use-admin-billing';
 
 const adminNav = [
   { label: 'Обзор', icon: Gauge },
@@ -88,6 +90,7 @@ export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState('Обзор');
   const finance = useAdminFinance();
   const disputes = useAdminDisputes();
+  const billing = useAdminBilling();
 
   async function loadDashboard() {
     setLoadError('');
@@ -166,10 +169,11 @@ export default function AdminDashboard() {
     const targets: Record<string, string> = {
       Обзор: 'admin-overview', Пользователи: 'admin-overview', Застройщики: 'moderation', 'Агентства и владельцы': 'verification',
       'Жилые комплексы': 'moderation', Верификация: 'verification', Модерация: 'moderation', 'Брони и платежи': 'finance',
-      'Споры и возвраты': 'disputes', 'Тарифы и биллинг': 'finance', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
+      'Споры и возвраты': 'disputes', 'Тарифы и биллинг': 'billing', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
     };
     setActiveNav(label);
     setMobileNav(false);
+    window.history.replaceState(null, '', `#${targets[label] ?? 'admin-overview'}`);
     document.getElementById(targets[label] ?? 'admin-overview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -179,7 +183,7 @@ export default function AdminDashboard() {
         <div className="admin-brand"><span><ShieldCheck /></span><div><strong>Estate<em>Hub</em></strong><small>Platform Admin</small></div><button type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню"><X /></button></div>
         <div className="admin-user"><span>{userInitials}</span><div><strong>{dashboard?.session.user.fullName ?? 'Администратор'}</strong><small>{dashboard?.session.platformRoles[0] ?? 'Platform Admin'}</small></div><ChevronDown /></div>
         <nav>{adminNav.map((item) => {
-          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? disputes.stats.active : item.count;
+          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? disputes.stats.active : item.label === 'Тарифы и биллинг' ? billing.stats.activeSubscriptions : item.count;
           return <button type="button" className={activeNav === item.label ? 'active' : ''} onClick={() => navigateAdmin(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{Boolean(count) && <em>{count}</em>}</button>;
         })}</nav>
         <div className="system-status"><span><i/> Все системы работают</span><small>Последняя проверка: сейчас</small></div>
@@ -242,6 +246,22 @@ export default function AdminDashboard() {
             processing={disputes.processing}
             onRetry={() => void disputes.refresh()}
             onDecision={async (disputeId, action, note) => { const message = await disputes.decide(disputeId, action, note); setFeedback(message); if (action === 'approve_refund') await finance.refresh(); }}
+          />
+
+          <AdminBillingPanel
+            plans={billing.plans}
+            subscriptions={billing.subscriptions}
+            config={billing.config}
+            secondaryListings={billing.secondaryListings}
+            events={billing.events}
+            stats={billing.stats}
+            loading={billing.loading}
+            error={billing.error}
+            processing={billing.processing}
+            onRetry={() => void billing.refresh()}
+            onUpdatePlan={async (plan) => { const message = await billing.updatePlan(plan); setFeedback(message); }}
+            onUpdateConfig={async (feeUzs, periodDays) => { const message = await billing.updateConfig(feeUzs, periodDays); setFeedback(message); }}
+            onActivateSecondary={async (listingId) => { const message = await billing.activateSecondary(listingId); setFeedback(message); }}
           />
 
           <AdminFinancePanel
