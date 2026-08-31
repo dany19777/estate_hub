@@ -130,8 +130,8 @@ export default function AdminDashboard() {
 
   async function decide(verification: VerificationCase, decision: 'approve' | 'reject') {
     let reason = '';
-    if (decision === 'reject' && verification.subject_type === 'buyer') {
-      reason = window.prompt('Укажите причину отказа покупателю')?.trim() ?? '';
+    if (decision === 'reject' && ['buyer', 'listing'].includes(verification.subject_type)) {
+      reason = window.prompt(verification.subject_type === 'listing' ? 'Укажите продавцу причину отказа' : 'Укажите причину отказа покупателю')?.trim() ?? '';
       if (!reason) return;
     } else if (decision === 'reject' && !window.confirm('Отклонить эту заявку? Проект не попадёт в каталог.')) return;
     setProcessing(verification.id);
@@ -221,8 +221,8 @@ export default function AdminDashboard() {
                 {visibleCases.map((item) => {
                   const risk = riskLabels[item.risk_level] ?? item.risk_level;
                   const status = queueLabels[item.status] ?? item.status;
-                  const type = item.subject_type === 'buyer' ? 'Покупатель' : item.subject_type === 'complex' ? 'Жилой комплекс' : item.organization_type === 'agency' ? 'Агентство' : item.subject_type === 'organization' ? 'Застройщик' : 'Пользователь';
-                  const subject = item.subject_type === 'buyer' ? `${item.document_type === 'passport' ? 'Паспорт' : 'ID-карта'} и возраст` : item.subject_type === 'complex' ? 'Объект и связь с застройщиком' : 'Компания и полномочия';
+                  const type = item.subject_type === 'buyer' ? 'Покупатель' : item.subject_type === 'listing' ? 'Продавец вторички' : item.subject_type === 'complex' ? 'Жилой комплекс' : item.organization_type === 'agency' ? 'Агентство' : item.subject_type === 'organization' ? 'Застройщик' : 'Пользователь';
+                  const subject = item.subject_type === 'buyer' ? `${item.document_type === 'passport' ? 'Паспорт' : 'ID-карта'} и возраст` : item.subject_type === 'listing' ? item.document_type === 'power_of_attorney' ? 'Доверенность и полномочия' : 'Право собственности' : item.subject_type === 'complex' ? 'Объект и связь с застройщиком' : 'Компания и полномочия';
                   const date = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(item.created_at.replace(' ', 'T') + 'Z'));
                   return <TableRow key={item.id}><TableCell><div className="admin-applicant"><span>{item.applicant.slice(0,2).toUpperCase()}</span><strong>{item.applicant}</strong></div></TableCell><TableCell>{type}</TableCell><TableCell>{subject}</TableCell><TableCell>{date}</TableCell><TableCell><Badge className={`risk-badge ${risk.toLowerCase()}`}>{risk}</Badge></TableCell><TableCell><Badge className={`queue-status ${status === 'Новая' ? 'new' : 'working'}`}>{status}</Badge></TableCell><TableCell><div className="verification-actions"><button type="button" className="approve" onClick={() => void decide(item, 'approve')} disabled={processing === item.id} aria-label={`Одобрить ${item.applicant}`} title="Одобрить"><Check /></button><button type="button" className="reject" onClick={() => void decide(item, 'reject')} disabled={processing === item.id} aria-label={`Отклонить ${item.applicant}`} title="Отклонить"><X /></button></div></TableCell></TableRow>;
                 })}

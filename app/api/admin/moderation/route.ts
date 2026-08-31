@@ -46,11 +46,18 @@ export async function PATCH(request: Request) {
     if (!complexId || !decision) return Response.json({ error: 'validation_failed', message: 'Не указано решение по модерации.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();
     const item = await database.prepare(`SELECT complex.id, complex.developer_org_id, workflow.status,
-      (SELECT COUNT(*) FROM listings WHERE complex_id = complex.id AND market_type = 'PRIMARY_DEVELOPER' AND status = 'pending_moderation') AS pending_listings
+      (SELECT COUNT(*) FROM listings WHERE complex_id = complex.id AND market_type = 'PRIMARY_DEVELOPER' AND status = 'pending_moderation') AS pending_primary,
+      (SELECT COUNT(*) FROM listings WHERE complex_id = complex.id AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY') AND status = 'pending_moderation') AS pending_secondary,
+      (SELECT COUNT(*) FROM listings listing
+        WHERE listing.complex_id = complex.id AND listing.market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY') AND listing.status = 'pending_moderation'
+          AND (NOT EXISTS (SELECT 1 FROM secondary_listing_owners owner WHERE owner.listing_id = listing.id AND owner.verification_status = 'approved')
+            OR NOT EXISTS (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP))) AS invalid_secondary
       FROM complexes complex JOIN complex_publication_workflows workflow ON workflow.complex_id = complex.id
-      WHERE complex.id = ? AND complex.verification_status = 'verified' LIMIT 1`).bind(complexId).first<{ id: string; developer_org_id: string; status: string; pending_listings: number }>();
-    if (!item || item.status !== 'pending_moderation' && Number(item.pending_listings) === 0) return Response.json({ error: 'not_found', message: 'Заявка на модерацию не найдена.' }, { status: 404 });
-    if (decision === 'publish' && Number(item.pending_listings) > 0) {
+      WHERE complex.id = ? AND complex.verification_status = 'verified' LIMIT 1`).bind(complexId).first<{ id: string; developer_org_id: string; status: string; pending_primary: number; pending_secondary: number; invalid_secondary: number }>();
+    const pendingListings = Number(item?.pending_primary ?? 0) + Number(item?.pending_secondary ?? 0);
+    if (!item || item.status !== 'pending_moderation' && pendingListings === 0) return Response.json({ error: 'not_found', message: 'Заявка на модерацию не найдена.' }, { status: 404 });
+    if (decision === 'publish' && Number(item.invalid_secondary) > 0) return Response.json({ error: 'secondary_not_eligible', message: 'У объявления вторичного рынка нет подтверждённых документов или активной оплаты.' }, { status: 409 });
+    if (decision === 'publish' && Number(item.pending_primary) > 0) {
       const [subscription, activeUsage] = await Promise.all([
         database.prepare(`SELECT subscription.status, subscription.current_period_end, plan.name, plan.inventory_limit
           FROM developer_subscriptions subscription JOIN subscription_plans plan ON plan.id = subscription.plan_id
@@ -62,9 +69,9 @@ export async function PATCH(request: Request) {
       ]);
       const isCurrent = subscription && ['trialing', 'active'].includes(subscription.status) && new Date(`${subscription.current_period_end.replace(' ', 'T')}Z`) > new Date();
       if (!isCurrent) return Response.json({ error: 'subscription_required', message: 'Сначала активируйте подписку застройщика.' }, { status: 409 });
-      const nextUsage = Number(activeUsage?.count ?? 0) + Number(item.pending_listings);
+      const nextUsage = Number(activeUsage?.count ?? 0) + Number(item.pending_primary);
       if (nextUsage > Number(subscription.inventory_limit)) {
-        return Response.json({ error: 'subscription_limit', message: `Тариф ${subscription.name}: занято ${Number(activeUsage?.count ?? 0)} из ${subscription.inventory_limit}. Для публикации ещё ${item.pending_listings} объявлений нужен тариф выше.` }, { status: 409 });
+        return Response.json({ error: 'subscription_limit', message: `Тариф ${subscription.name}: занято ${Number(activeUsage?.count ?? 0)} из ${subscription.inventory_limit}. Для публикации ещё ${item.pending_primary} объявлений нужен тариф выше.` }, { status: 409 });
       }
     }
     const workflowDecision = decision === 'publish' ? 'published' : 'rejected';
@@ -73,10 +80,13 @@ export async function PATCH(request: Request) {
       database.prepare(`UPDATE complex_publication_workflows SET
         status = CASE WHEN status = 'pending_moderation' THEN ? ELSE status END,
         reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE complex_id = ?`).bind(workflowDecision, complexId),
-      database.prepare(`UPDATE listings SET status = ?, published_at = CASE WHEN ? = 'published' THEN CURRENT_TIMESTAMP ELSE published_at END, updated_at = CURRENT_TIMESTAMP WHERE complex_id = ? AND status = 'pending_moderation'`)
-        .bind(listingDecision, listingDecision, complexId),
+      database.prepare(`UPDATE listings SET status = ?, published_at = CASE WHEN ? = 'published' THEN CURRENT_TIMESTAMP ELSE published_at END,
+        expires_at = CASE WHEN ? = 'published' AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY') THEN
+          (SELECT purchase.period_end FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listings.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP ORDER BY purchase.period_end DESC LIMIT 1)
+          ELSE expires_at END, updated_at = CURRENT_TIMESTAMP WHERE complex_id = ? AND status = 'pending_moderation'`)
+        .bind(listingDecision, listingDecision, listingDecision, complexId),
       database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, ?, 'complex', ?, ?)`)
-        .bind(crypto.randomUUID(), session.user.id, decision === 'publish' ? 'moderation.published' : 'moderation.rejected', complexId, JSON.stringify({ pendingListings: Number(item.pending_listings) })),
+        .bind(crypto.randomUUID(), session.user.id, decision === 'publish' ? 'moderation.published' : 'moderation.rejected', complexId, JSON.stringify({ pendingListings, pendingPrimary: Number(item.pending_primary), pendingSecondary: Number(item.pending_secondary) })),
     ]);
     return Response.json({ complexId, status: workflowDecision, listings: listingDecision, message: decision === 'publish' ? 'ЖК и объявления опубликованы.' : 'Материалы отклонены на модерации.' });
   } catch (error) {

@@ -5,7 +5,7 @@ import { Bell, Building2, ChevronDown, Heart, Menu, UserRound } from 'lucide-rea
 import { InternalLink as Link } from '@/components/internal-link';
 
 type MarketplaceHeaderProps = {
-  active?: 'all' | 'primary' | 'secondary';
+  active?: 'all' | 'primary' | 'secondary' | 'seller';
 };
 
 export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
@@ -20,6 +20,7 @@ export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
           <Link className={active === 'all' ? 'active' : undefined} href="/catalog?market=all">Купить</Link>
           <Link className={active === 'primary' ? 'active' : undefined} href="/catalog?market=primary">Новостройки</Link>
           <Link className={active === 'secondary' ? 'active' : undefined} href="/catalog?market=secondary">Вторичный рынок</Link>
+          <Link className={active === 'seller' ? 'active' : undefined} href="/seller">Продать квартиру</Link>
           <Link href="/#how-it-works">Как это работает</Link>
           <Link href="/developer">Для застройщиков</Link>
         </nav>
