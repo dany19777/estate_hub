@@ -92,6 +92,8 @@ export type ListingRecord = {
 
 export type ComplexListing = ListingRecord & {
   seller: string;
+  sellerVerified: boolean;
+  contactPhone: string | null;
   promoted: boolean;
   sponsoredLabel: string | null;
 };
@@ -101,6 +103,22 @@ export type ComplexDetail = {
   description: string;
   gallery: string[];
   listings: ComplexListing[];
+};
+
+export type ListingPriceHistoryEntry = {
+  id: string;
+  oldPriceUzs: number | null;
+  newPriceUzs: number;
+  reason: string;
+  changedAt: string;
+};
+
+export type ListingDetail = {
+  listing: ComplexListing & { expiresAt: string | null; availabilityStatus: string; buildingName: string };
+  complex: Pick<ComplexSummary, 'id' | 'slug' | 'name' | 'city' | 'district' | 'address' | 'image' | 'completionLabel' | 'complexVerified'>;
+  description: string;
+  gallery: string[];
+  priceHistory: ListingPriceHistoryEntry[];
 };
 
 export function formatPriceMillions(priceUzs: number) {

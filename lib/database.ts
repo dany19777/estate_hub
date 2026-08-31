@@ -5,7 +5,7 @@ import { indexStatements, schemaStatements } from '@/db/schema';
 import { buildCatalog } from '@/lib/catalog-service';
 import { expireBillingPeriods } from '@/lib/billing';
 import { expirePromotions } from '@/lib/promotions';
-import type { ComplexDetail, ComplexListing, ComplexRecord, ListingRecord, MarketType, SellerType } from '@/lib/marketplace';
+import type { ComplexDetail, ComplexListing, ComplexRecord, ListingDetail, ListingPriceHistoryEntry, ListingRecord, MarketType, SellerType } from '@/lib/marketplace';
 
 type MarketplaceEnv = Cloudflare.Env & { DB: D1Database };
 
@@ -51,9 +51,28 @@ type ComplexDetailRow = {
 
 type ComplexListingRow = ListingRow & {
   seller: string | null;
+  seller_verification: string | null;
+  contact_phone: string | null;
   promoted: number;
   sponsored_label: string | null;
 };
+
+type ListingDetailRow = ComplexListingRow & {
+  expires_at: string | null;
+  availability_status: string;
+  building_name: string;
+  complex_slug: string;
+  complex_name: string;
+  city: string;
+  district: string;
+  address: string;
+  hero_image_url: string;
+  completion_label: string;
+  complex_verification: string;
+  description: string;
+};
+
+type PriceHistoryRow = { id: string; old_price_uzs: number | null; new_price_uzs: number; reason: string; changed_at: string };
 
 type PromotionSignalRow = { complex_id: string; surface: string; boost_weight: number };
 
@@ -293,7 +312,9 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
       l.id, l.complex_id, u.unit_number, u.rooms, u.area_sqm, u.floor_number,
       u.total_floors, u.finish, l.price_uzs, l.market_type, l.seller_type,
       l.reserve_enabled, l.published_at,
-      COALESCE(o.name, CASE WHEN l.seller_type = 'owner' THEN 'Проверенный собственник' ELSE 'Проверенный продавец' END) AS seller
+      COALESCE(o.name, seller_user.full_name, CASE WHEN l.seller_type = 'owner' THEN 'Проверенный собственник' ELSE 'Проверенный продавец' END) AS seller,
+      COALESCE(o.verification_status, secondary_owner.verification_status, CASE WHEN l.status = 'published' THEN 'approved' END) AS seller_verification,
+      secondary_owner.contact_phone
       , EXISTS(SELECT 1 FROM promotions promotion JOIN promotion_products product ON product.id = promotion.product_id
         WHERE promotion.listing_id = l.id AND promotion.status = 'active' AND promotion.starts_at <= CURRENT_TIMESTAMP AND promotion.ends_at > CURRENT_TIMESTAMP) AS promoted
       , (SELECT promotion.sponsored_label FROM promotions promotion WHERE promotion.listing_id = l.id AND promotion.status = 'active'
@@ -301,6 +322,8 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
       FROM listings l
       JOIN units u ON u.id = l.unit_id
       LEFT JOIN organizations o ON o.id = l.seller_org_id
+      LEFT JOIN secondary_listing_owners secondary_owner ON secondary_owner.listing_id = l.id
+      LEFT JOIN users seller_user ON seller_user.id = secondary_owner.seller_user_id
       WHERE l.complex_id = ? AND l.status = 'published' AND u.availability_status = 'available'
       ORDER BY l.price_uzs ASC`).bind(record.id).all<ComplexListingRow>(),
     database.prepare(`SELECT url FROM media_assets WHERE entity_type = 'complex' AND entity_id = ? AND media_type = 'image' ORDER BY sort_order ASC`).bind(record.id).all<{ url: string }>(),
@@ -321,6 +344,8 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
     reserveEnabled: Boolean(row.reserve_enabled),
     publishedAt: row.published_at,
     seller: row.seller ?? 'Проверенный продавец',
+    sellerVerified: ['verified', 'approved'].includes(row.seller_verification ?? ''),
+    contactPhone: row.contact_phone,
     promoted: Boolean(row.promoted),
     sponsoredLabel: row.sponsored_label,
   }));
@@ -330,5 +355,53 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
     description: record.description,
     gallery: (mediaResult.results ?? []).map((item) => item.url),
     listings: detailListings,
+  };
+}
+
+export async function readListingDetail(id: string): Promise<ListingDetail | null> {
+  const database = await ensureMarketplaceDatabase();
+  await expireBillingPeriods(database);
+  const row = await database.prepare(`SELECT
+    listing.id, listing.complex_id, unit.unit_number, unit.rooms, unit.area_sqm, unit.floor_number, unit.total_floors, unit.finish,
+    listing.price_uzs, listing.market_type, listing.seller_type, listing.reserve_enabled, listing.published_at, listing.expires_at,
+    unit.availability_status, building.name AS building_name,
+    COALESCE(organization.name, seller_user.full_name, CASE WHEN listing.seller_type = 'owner' THEN 'Проверенный собственник' ELSE 'Проверенный продавец' END) AS seller,
+    COALESCE(organization.verification_status, secondary_owner.verification_status, CASE WHEN listing.status = 'published' THEN 'approved' END) AS seller_verification,
+    secondary_owner.contact_phone,
+    EXISTS(SELECT 1 FROM promotions promotion WHERE promotion.listing_id = listing.id AND promotion.status = 'active' AND promotion.starts_at <= CURRENT_TIMESTAMP AND promotion.ends_at > CURRENT_TIMESTAMP) AS promoted,
+    (SELECT promotion.sponsored_label FROM promotions promotion WHERE promotion.listing_id = listing.id AND promotion.status = 'active' AND promotion.starts_at <= CURRENT_TIMESTAMP AND promotion.ends_at > CURRENT_TIMESTAMP ORDER BY promotion.ends_at DESC LIMIT 1) AS sponsored_label,
+    complex.slug AS complex_slug, complex.name AS complex_name, city.name_ru AS city, district.name_ru AS district, complex.address,
+    complex.hero_image_url, complex.completion_label, complex.verification_status AS complex_verification, complex.description
+    FROM listings listing
+    JOIN units unit ON unit.id = listing.unit_id
+    JOIN buildings building ON building.id = unit.building_id
+    JOIN complexes complex ON complex.id = listing.complex_id
+    JOIN complex_publication_workflows workflow ON workflow.complex_id = complex.id AND workflow.status = 'published'
+    JOIN districts district ON district.id = complex.district_id JOIN cities city ON city.id = district.city_id
+    LEFT JOIN organizations organization ON organization.id = listing.seller_org_id
+    LEFT JOIN secondary_listing_owners secondary_owner ON secondary_owner.listing_id = listing.id
+    LEFT JOIN users seller_user ON seller_user.id = secondary_owner.seller_user_id
+    WHERE listing.id = ? AND listing.status = 'published' AND unit.availability_status = 'available' LIMIT 1`).bind(id).first<ListingDetailRow>();
+  if (!row) return null;
+  const [historyResult, mediaResult] = await Promise.all([
+    database.prepare(`SELECT id, old_price_uzs, new_price_uzs, reason, changed_at FROM listing_price_history WHERE listing_id = ? ORDER BY changed_at ASC, id ASC`).bind(id).all<PriceHistoryRow>(),
+    database.prepare(`SELECT url FROM media_assets WHERE
+      ((entity_type = 'listing' AND entity_id = ?) OR (entity_type = 'unit' AND entity_id = (SELECT unit_id FROM listings WHERE id = ?)) OR (entity_type = 'complex' AND entity_id = ?))
+      AND media_type IN ('image', 'floor_plan')
+      ORDER BY CASE entity_type WHEN 'listing' THEN 1 WHEN 'unit' THEN 2 ELSE 3 END, sort_order ASC`).bind(id, id, row.complex_id).all<{ url: string }>(),
+  ]);
+  const priceHistory: ListingPriceHistoryEntry[] = (historyResult.results ?? []).map((item) => ({ id: item.id, oldPriceUzs: item.old_price_uzs, newPriceUzs: item.new_price_uzs, reason: item.reason, changedAt: item.changed_at }));
+  return {
+    listing: {
+      id: row.id, complexId: row.complex_id, unitNumber: row.unit_number, rooms: row.rooms, areaSqm: row.area_sqm,
+      floorNumber: row.floor_number, totalFloors: row.total_floors, finish: row.finish, priceUzs: row.price_uzs,
+      marketType: row.market_type, sellerType: row.seller_type, reserveEnabled: Boolean(row.reserve_enabled), publishedAt: row.published_at,
+      seller: row.seller ?? 'Проверенный продавец', sellerVerified: ['verified', 'approved'].includes(row.seller_verification ?? ''), contactPhone: row.contact_phone,
+      promoted: Boolean(row.promoted), sponsoredLabel: row.sponsored_label, expiresAt: row.expires_at, availabilityStatus: row.availability_status, buildingName: row.building_name,
+    },
+    complex: { id: row.complex_id, slug: row.complex_slug, name: row.complex_name, city: row.city, district: row.district, address: row.address, image: row.hero_image_url, completionLabel: row.completion_label, complexVerified: row.complex_verification === 'verified' },
+    description: row.description,
+    gallery: (mediaResult.results ?? []).map((item) => item.url),
+    priceHistory,
   };
 }
