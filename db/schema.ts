@@ -44,6 +44,24 @@ export const schemaStatements = [
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS buyer_phone_verifications (
+    user_id TEXT PRIMARY KEY REFERENCES users(id),
+    phone_e164 TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'verified', 'blocked')),
+    verified_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS phone_verification_challenges (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    phone_e164 TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+    expires_at TEXT NOT NULL,
+    consumed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE TABLE IF NOT EXISTS platform_role_assignments (
     user_id TEXT NOT NULL REFERENCES users(id),
     role TEXT NOT NULL CHECK (role IN ('SUPERADMIN', 'PLATFORM_ADMIN', 'MODERATOR', 'VERIFICATION_SPECIALIST', 'FINANCE_OPERATOR', 'SUPPORT', 'CONTENT_MANAGER')),
@@ -449,6 +467,8 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_complexes_developer_org_id ON complexes(developer_org_id)`,
   `CREATE INDEX IF NOT EXISTS idx_memberships_user_status ON organization_memberships(user_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_platform_roles_role ON platform_role_assignments(role)`,
+  `CREATE INDEX IF NOT EXISTS idx_phone_challenges_user_created ON phone_verification_challenges(user_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_phone_challenges_expiry ON phone_verification_challenges(expires_at) WHERE consumed_at IS NULL`,
   `CREATE INDEX IF NOT EXISTS idx_complex_workflow_status ON complex_publication_workflows(status, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_units_complex_availability ON units(complex_id, availability_status)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_complex_status ON listings(complex_id, status)`,

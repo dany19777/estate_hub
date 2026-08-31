@@ -1,4 +1,4 @@
-import { authorizationResponse, getAppSession } from '@/lib/auth';
+import { authorizationResponse, requireVerifiedPhone } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +19,7 @@ const conversationSelect = `SELECT conversation.id, conversation.listing_id, con
 
 export async function GET(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const database = await ensureMarketplaceDatabase();
     const listingId = new URL(request.url).searchParams.get('listingId');
 
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const payload = await request.json() as { listingId?: string; body?: string };
     const listingId = payload.listingId?.trim();
     const body = payload.body?.trim();

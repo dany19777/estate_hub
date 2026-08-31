@@ -1,4 +1,4 @@
-import { authorizationResponse, getAppSession } from '@/lib/auth';
+import { authorizationResponse, requireVerifiedPhone } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { comparisonSelect } from '@/lib/comparison-analysis';
 
@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const database = await ensureMarketplaceDatabase();
     const result = await database.prepare(comparisonSelect).bind(session.user.id).all();
     return Response.json({ items: result.results ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const { listingId } = await request.json() as { listingId?: unknown };
     if (typeof listingId !== 'string' || !listingId) return Response.json({ error: 'validation_failed', message: 'Не выбрана квартира.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const listingId = new URL(request.url).searchParams.get('listingId');
     if (!listingId) return Response.json({ error: 'validation_failed', message: 'Не выбрана квартира.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();

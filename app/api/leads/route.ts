@@ -1,4 +1,4 @@
-import { authorizationResponse, getAppSession } from '@/lib/auth';
+import { authorizationResponse, requireVerifiedPhone } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,7 @@ function validViewingDate(value: string) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
     if (!/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {
       return Response.json({ error: 'idempotency_required', message: 'Не удалось безопасно отправить заявку. Обновите страницу и повторите.' }, { status: 400 });

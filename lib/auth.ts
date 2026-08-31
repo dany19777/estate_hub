@@ -1,3 +1,4 @@
+import { env } from 'cloudflare:workers';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
 export type PlatformRole = 'SUPERADMIN' | 'PLATFORM_ADMIN' | 'MODERATOR' | 'VERIFICATION_SPECIALIST' | 'FINANCE_OPERATOR' | 'SUPPORT' | 'CONTENT_MANAGER';
@@ -9,10 +10,12 @@ export type AppSession = {
   platformRoles: PlatformRole[];
   organization: { id: string; name: string; role: OrganizationRole } | null;
   permissions: Permission[];
+  phoneVerification: { status: 'not_started' | 'pending' | 'verified' | 'blocked'; phone: string | null; verifiedAt: string | null };
 };
 
 type UserRow = { id: string; email: string; full_name: string };
 type MembershipRow = { organization_id: string; organization_name: string; role: OrganizationRole };
+type PhoneVerificationRow = { status: 'pending' | 'verified' | 'blocked'; phone_e164: string; verified_at: string | null };
 
 const platformPermissionMatrix: Record<PlatformRole, Permission[]> = {
   SUPERADMIN: ['VIEW_DEVELOPER_DASHBOARD', 'MANAGE_COMPLEXES', 'MANAGE_UNITS', 'MANAGE_LEADS', 'VIEW_ADMIN', 'REVIEW_VERIFICATION', 'MODERATE_LISTINGS', 'MANAGE_FINANCE', 'MANAGE_BILLING', 'MANAGE_PROMOTIONS'],
@@ -35,7 +38,7 @@ const organizationPermissionMatrix: Record<OrganizationRole, Permission[]> = {
 };
 
 export class AuthorizationError extends Error {
-  constructor(public status: 401 | 403, message: string) {
+  constructor(public status: 401 | 403, message: string, public code?: string) {
     super(message);
   }
 }
@@ -72,7 +75,8 @@ export async function getAppSession(request: Request): Promise<AppSession> {
   if (!user) throw new AuthorizationError(401, 'Не удалось создать профиль пользователя.');
 
   const roleCount = await database.prepare(`SELECT COUNT(*) AS count FROM platform_role_assignments`).first<{ count: number }>();
-  if ((roleCount?.count ?? 0) === 0) {
+  const bootstrapEmail = String(env.ESTATEHUB_BOOTSTRAP_ADMIN_EMAIL ?? '').trim().toLowerCase();
+  if ((roleCount?.count ?? 0) === 0 && bootstrapEmail && identity.email.toLowerCase() === bootstrapEmail) {
     await database.batch([
       database.prepare(`INSERT OR IGNORE INTO platform_role_assignments (user_id, role) VALUES (?, 'SUPERADMIN')`).bind(user.id),
       database.prepare(`INSERT OR IGNORE INTO organization_memberships (organization_id, user_id, role, status) VALUES ('org-samarkand-development', ?, 'OWNER', 'active')`).bind(user.id),
@@ -81,13 +85,14 @@ export async function getAppSession(request: Request): Promise<AppSession> {
     ]);
   }
 
-  const [roleResult, membership] = await Promise.all([
+  const [roleResult, membership, phoneVerification] = await Promise.all([
     database.prepare(`SELECT role FROM platform_role_assignments WHERE user_id = ?`).bind(user.id).all<{ role: PlatformRole }>(),
     database.prepare(`SELECT membership.organization_id, organization.name AS organization_name, membership.role
       FROM organization_memberships membership
       JOIN organizations organization ON organization.id = membership.organization_id
       WHERE membership.user_id = ? AND membership.status = 'active'
       ORDER BY membership.created_at ASC LIMIT 1`).bind(user.id).first<MembershipRow>(),
+    database.prepare(`SELECT status, phone_e164, verified_at FROM buyer_phone_verifications WHERE user_id = ? LIMIT 1`).bind(user.id).first<PhoneVerificationRow>(),
   ]);
   const platformRoles = (roleResult.results ?? []).map((item) => item.role);
   const permissionSet = new Set<Permission>();
@@ -99,7 +104,14 @@ export async function getAppSession(request: Request): Promise<AppSession> {
     platformRoles,
     organization: membership ? { id: membership.organization_id, name: membership.organization_name, role: membership.role } : null,
     permissions: [...permissionSet],
+    phoneVerification: phoneVerification ? { status: phoneVerification.status, phone: phoneVerification.phone_e164, verifiedAt: phoneVerification.verified_at } : { status: 'not_started', phone: null, verifiedAt: null },
   };
+}
+
+export async function requireVerifiedPhone(request: Request) {
+  const session = await getAppSession(request);
+  if (session.phoneVerification.status !== 'verified') throw new AuthorizationError(403, 'Подтвердите номер телефона, чтобы использовать эту функцию.', 'phone_verification_required');
+  return session;
 }
 
 export async function requirePermission(request: Request, permission: Permission) {
@@ -110,7 +122,7 @@ export async function requirePermission(request: Request, permission: Permission
 
 export function authorizationResponse(error: unknown) {
   if (error instanceof AuthorizationError) {
-    return Response.json({ error: error.status === 401 ? 'unauthenticated' : 'forbidden', message: error.message }, { status: error.status });
+    return Response.json({ error: error.code ?? (error.status === 401 ? 'unauthenticated' : 'forbidden'), message: error.message }, { status: error.status });
   }
   return null;
 }

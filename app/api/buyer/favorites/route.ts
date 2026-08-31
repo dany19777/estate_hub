@@ -1,4 +1,4 @@
-import { authorizationResponse, getAppSession } from '@/lib/auth';
+import { authorizationResponse, requireVerifiedPhone } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
@@ -7,7 +7,7 @@ type FavoriteRow = { id: string; slug: string; name: string; image: string; pric
 
 export async function GET(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const database = await ensureMarketplaceDatabase();
     const result = await database.prepare(`SELECT c.id, c.slug, c.name, c.hero_image_url AS image, MIN(l.price_uzs) AS price_from, COUNT(l.id) AS available_units, c.completion_label
       FROM buyer_favorites favorite
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const { complexId } = await request.json() as { complexId?: unknown };
     if (typeof complexId !== 'string' || !complexId) return Response.json({ error: 'validation_failed', message: 'Не выбран жилой комплекс.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const complexId = new URL(request.url).searchParams.get('complexId');
     if (!complexId) return Response.json({ error: 'validation_failed', message: 'Не выбран жилой комплекс.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();

@@ -1,4 +1,4 @@
-import { authorizationResponse, getAppSession } from '@/lib/auth';
+import { authorizationResponse, requireVerifiedPhone } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { identityVerificationProvider } from '@/lib/identity-provider';
 
@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const database = await ensureMarketplaceDatabase();
     const verification = await database.prepare(`SELECT id, provider, document_type, document_last4, birth_date, status, risk_level,
       rejection_reason, submitted_at, reviewed_at, verified_at, updated_at
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const payload = await request.json() as Record<string, unknown>;
     const documentType = payload.documentType === 'passport' || payload.documentType === 'id_card' ? payload.documentType : null;
     const documentNumber = typeof payload.documentNumber === 'string' ? payload.documentNumber.replace(/\s+/g, '').toUpperCase() : '';

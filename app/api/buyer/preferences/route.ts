@@ -1,4 +1,4 @@
-import { authorizationResponse, getAppSession } from '@/lib/auth';
+import { authorizationResponse, requireVerifiedPhone } from '@/lib/auth';
 import { parseNaturalLanguageQuery } from '@/lib/catalog-service';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
@@ -26,7 +26,7 @@ function sanitizeFilters(value: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const database = await ensureMarketplaceDatabase();
     const result = await database.prepare(`SELECT id, name, filters_json, notifications_enabled, created_at, updated_at FROM buyer_saved_searches WHERE user_id = ? ORDER BY updated_at DESC`).bind(session.user.id).all();
     return Response.json({ searches: (result.results ?? []).map((row) => ({ ...row, filters: JSON.parse(String(row.filters_json)) })) }, { headers: { 'Cache-Control': 'private, no-store' } });
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getAppSession(request);
+    const session = await requireVerifiedPhone(request);
     const body = await request.json() as { name?: unknown; filters?: unknown };
     const filters = sanitizeFilters(body.filters);
     const name = typeof body.name === 'string' ? body.name.trim().slice(0, 80) : '';
