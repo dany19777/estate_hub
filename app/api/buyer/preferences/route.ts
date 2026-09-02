@@ -55,3 +55,21 @@ export async function POST(request: Request) {
     return authorizationResponse(error) ?? Response.json({ error: 'preference_save_failed', message: 'Не удалось сохранить поиск.' }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await requireVerifiedPhone(request);
+    const body = await request.json() as { searchId?: unknown; notificationsEnabled?: unknown };
+    const searchId = typeof body.searchId === 'string' ? body.searchId : '';
+    if (!searchId || typeof body.notificationsEnabled !== 'boolean') return Response.json({ error: 'validation_failed', message: 'Не выбрана настройка сохранённого поиска.' }, { status: 400 });
+    const enabled = body.notificationsEnabled ? 1 : 0;
+    const database = await ensureMarketplaceDatabase();
+    const result = await database.prepare(`UPDATE buyer_saved_searches SET notifications_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`).bind(enabled, searchId, session.user.id).run();
+    if (!(result.meta.changes ?? 0)) return Response.json({ error: 'not_found', message: 'Сохранённый поиск не найден.' }, { status: 404 });
+    await database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'buyer_search.notifications_updated', 'saved_search', ?, ?)`)
+      .bind(crypto.randomUUID(), session.user.id, searchId, JSON.stringify({ notificationsEnabled: Boolean(enabled) })).run();
+    return Response.json({ searchId, notificationsEnabled: Boolean(enabled), message: enabled ? 'Уведомления по поиску включены.' : 'Уведомления по поиску отключены.' });
+  } catch (error) {
+    return authorizationResponse(error) ?? Response.json({ error: 'preference_update_failed', message: 'Не удалось обновить сохранённый поиск.' }, { status: 500 });
+  }
+}

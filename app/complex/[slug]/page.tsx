@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Bell,
+  BellRing,
   Building2,
   CalendarDays,
   Eye,
@@ -31,9 +32,11 @@ import { ChatDialog } from '@/components/chat-dialog';
 import { LeadRequestDialog } from '@/components/lead-request-dialog';
 import { ReservationDialog } from '@/components/reservation-dialog';
 import { ComplexReviews } from '@/components/complex-reviews';
+import { WatchlistDialog } from '@/components/watchlist-dialog';
 import { useComplexDetail } from '@/hooks/use-complex-detail';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useWatchlist } from '@/hooks/use-watchlist';
 import { formatPriceMillions, formatPricePerSqm } from '@/lib/marketplace';
 
 export default function ComplexPage() {
@@ -44,6 +47,7 @@ export default function ComplexPage() {
   const [activeImage, setActiveImage] = useState(0);
   const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
   const { items: comparisonItems, has: isCompared, toggle: toggleComparison } = useComparisons();
+  const watchlist = useWatchlist();
   const [inventoryTab, setInventoryTab] = useState<'Все' | 'Первичный' | 'Вторичный'>('Все');
 
   const shareComplex = async () => {
@@ -56,7 +60,7 @@ export default function ComplexPage() {
     <header className="detail-header">
       <Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link>
       <nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav>
-      <div><button type="button" aria-label="Уведомления"><Bell /></button><Link href="/profile" aria-label="Личный кабинет"><UserRound /></Link></div>
+      <div><Link href="/profile" aria-label="Уведомления"><Bell /></Link><Link href="/profile" aria-label="Личный кабинет"><UserRound /></Link></div>
     </header>
   );
 
@@ -85,7 +89,7 @@ export default function ComplexPage() {
             <h1>{summary.name}</h1>
             <p><MapPin /> {summary.city}, {summary.district}, {summary.address} · <a href="#location">Показать на карте</a></p>
           </div>
-          <div className="detail-title-actions"><button className={isFavorite(summary.id) ? 'active' : ''} type="button" onClick={() => void toggleFavorite({ id: summary.id, slug: summary.slug, name: summary.name, image: summary.image, price_from: summary.priceFrom, available_units: summary.availableUnits, completion_label: summary.completionLabel })}><Heart /> <span>{isFavorite(summary.id) ? 'В избранном' : 'В избранное'}</span></button><button type="button" onClick={shareComplex}><Share2 /> <span>Поделиться</span></button></div>
+          <div className="detail-title-actions"><button className={isFavorite(summary.id) ? 'active' : ''} type="button" onClick={() => void toggleFavorite({ id: summary.id, slug: summary.slug, name: summary.name, image: summary.image, price_from: summary.priceFrom, available_units: summary.availableUnits, completion_label: summary.completionLabel })}><Heart /> <span>{isFavorite(summary.id) ? 'В избранном' : 'В избранное'}</span></button><WatchlistDialog name={summary.name} subscription={watchlist.find('complex', summary.id)} processing={watchlist.processing} onSave={(settings)=>watchlist.save('complex',summary.id,settings)} onRemove={()=>watchlist.remove('complex',summary.id)} trigger={<button className={watchlist.find('complex', summary.id) ? 'watching' : ''} type="button"><BellRing/> <span>{watchlist.find('complex', summary.id) ? 'Подписка активна' : 'Следить'}</span></button>}/><button type="button" onClick={shareComplex}><Share2 /> <span>Поделиться</span></button></div>
         </section>
 
         <section className="detail-gallery">

@@ -3,18 +3,20 @@
 import NextImage from 'next/image';
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, BadgeCheck, Banknote, Building2, CalendarDays, CheckCircle2, Heart, Home, MapPin, Maximize2, MessageCircle, Phone, Scale, Search, Share2, ShieldCheck, Tag, UserRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, Banknote, BellRing, Building2, CalendarDays, CheckCircle2, Heart, Home, MapPin, Maximize2, MessageCircle, Phone, Scale, Search, Share2, ShieldCheck, Tag, UserRound } from 'lucide-react';
 
 import { ChatDialog } from '@/components/chat-dialog';
 import { InternalLink as Link } from '@/components/internal-link';
 import { LeadRequestDialog } from '@/components/lead-request-dialog';
 import { MarketplaceHeader } from '@/components/marketplace-header';
 import { ReservationDialog } from '@/components/reservation-dialog';
+import { WatchlistDialog } from '@/components/watchlist-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useListingDetail } from '@/hooks/use-listing-detail';
+import { useWatchlist } from '@/hooks/use-watchlist';
 import { formatPriceMillions, formatPricePerSqm } from '@/lib/marketplace';
 
 const reasonLabels: Record<string, string> = {
@@ -33,6 +35,7 @@ export default function ListingPage() {
   const [activeImage, setActiveImage] = useState(0);
   const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
   const { has: isCompared, toggle: toggleComparison } = useComparisons();
+  const watchlist = useWatchlist();
 
   const chartPoints = useMemo(() => {
     const values = data?.priceHistory.map((item) => item.newPriceUzs) ?? [];
@@ -58,7 +61,7 @@ export default function ListingPage() {
       <div className="listing-breadcrumbs"><Link href="/"><Home /></Link><span>/</span><Link href="/catalog">{complex.city}</Link><span>/</span><Link href={`/complex/${complex.slug}`}>{complex.name}</Link><span>/</span><strong>Квартира № {listing.unitNumber}</strong></div>
       <Link className="listing-back" href={`/complex/${complex.slug}`}><ArrowLeft/> Все квартиры в {complex.name}</Link>
 
-      <section className="listing-detail-heading"><div><div>{listing.promoted && <Badge><Tag/> {listing.sponsoredLabel ?? 'Продвигается'}</Badge>}<Badge variant="secondary">{secondary ? 'Вторичный рынок' : 'Первичный рынок'}</Badge>{listing.sellerVerified && <Badge className="verified-listing-badge"><ShieldCheck/> Проверено</Badge>}</div><h1>{listing.rooms}-комнатная квартира, {listing.areaSqm} м²</h1><p><MapPin/> {complex.city}, {complex.district}, {complex.name} · {listing.buildingName} · № {listing.unitNumber}</p></div><div className="listing-heading-actions"><button className={isFavorite(complex.id) ? 'active' : ''} type="button" onClick={() => void toggleFavorite({ id: complex.id, slug: complex.slug, name: complex.name, image: complex.image, price_from: listing.priceUzs, available_units: 1, completion_label: complex.completionLabel })}><Heart/> {isFavorite(complex.id) ? 'В избранном' : 'В избранное'}</button><button type="button" onClick={() => void toggleComparison(listing.id)}><Scale/> {isCompared(listing.id) ? 'В сравнении' : 'Сравнить'}</button><button type="button" onClick={() => void share()} aria-label="Поделиться"><Share2/></button></div></section>
+      <section className="listing-detail-heading"><div><div>{listing.promoted && <Badge><Tag/> {listing.sponsoredLabel ?? 'Продвигается'}</Badge>}<Badge variant="secondary">{secondary ? 'Вторичный рынок' : 'Первичный рынок'}</Badge>{listing.sellerVerified && <Badge className="verified-listing-badge"><ShieldCheck/> Проверено</Badge>}</div><h1>{listing.rooms}-комнатная квартира, {listing.areaSqm} м²</h1><p><MapPin/> {complex.city}, {complex.district}, {complex.name} · {listing.buildingName} · № {listing.unitNumber}</p></div><div className="listing-heading-actions"><button className={isFavorite(complex.id) ? 'active' : ''} type="button" onClick={() => void toggleFavorite({ id: complex.id, slug: complex.slug, name: complex.name, image: complex.image, price_from: listing.priceUzs, available_units: 1, completion_label: complex.completionLabel })}><Heart/> {isFavorite(complex.id) ? 'В избранном' : 'В избранное'}</button><WatchlistDialog name={`квартирой № ${listing.unitNumber}`} subscription={watchlist.find('listing',listing.id)} processing={watchlist.processing} onSave={(settings)=>watchlist.save('listing',listing.id,settings)} onRemove={()=>watchlist.remove('listing',listing.id)} trigger={<button className={watchlist.find('listing',listing.id) ? 'watching' : ''} type="button"><BellRing/> {watchlist.find('listing',listing.id) ? 'Отслеживается' : 'Следить'}</button>}/><button type="button" onClick={() => void toggleComparison(listing.id)}><Scale/> {isCompared(listing.id) ? 'В сравнении' : 'Сравнить'}</button><button type="button" onClick={() => void share()} aria-label="Поделиться"><Share2/></button></div></section>
 
       <section className="listing-detail-gallery"><div className="listing-detail-main-image"><NextImage src={images[activeImage] ?? images[0]} width={1200} height={720} unoptimized alt={`${listing.rooms}-комнатная квартира в ${complex.name}`}/><span><Maximize2/> {images.length} фото</span></div><div>{images.slice(1,4).map((image,index)=><button type="button" onClick={()=>setActiveImage(index+1)} key={`${image}-${index}`}><NextImage src={image} width={420} height={260} unoptimized alt={`Фото квартиры ${index+2}`}/></button>)}{images.length === 1 && <div className="listing-gallery-placeholder"><Building2/><span>Официальная карточка ЖК</span></div>}</div></section>
 

@@ -14,6 +14,7 @@ function Progress({
     <ProgressPrimitive.Root
       value={value}
       data-slot="progress"
+      suppressHydrationWarning
       className={cn('flex flex-wrap gap-3', className)}
       {...props}
     >

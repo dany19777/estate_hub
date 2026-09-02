@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   AlertTriangle,
   Bell,
+  BellRing,
   BookmarkCheck,
   Building2,
   CalendarDays,
@@ -30,6 +31,8 @@ import { ChatDialog } from '@/components/chat-dialog';
 import { BuyerVerificationDialog } from '@/components/buyer-verification-dialog';
 import { ReservationDisputeDialog } from '@/components/reservation-dispute-dialog';
 import { PhoneVerificationDialog } from '@/components/phone-verification-dialog';
+import { NotificationCenter } from '@/components/notification-center';
+import { BuyerWatchlistPanel } from '@/components/buyer-watchlist-panel';
 import { InternalLink as Link } from '@/components/internal-link';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useComparisons } from '@/hooks/use-comparisons';
@@ -41,6 +44,8 @@ import { useBuyerVerification } from '@/hooks/use-buyer-verification';
 import { useBuyerDisputes } from '@/hooks/use-buyer-disputes';
 import { useRecommendations } from '@/hooks/use-recommendations';
 import { usePhoneVerification } from '@/hooks/use-phone-verification';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useWatchlist } from '@/hooks/use-watchlist';
 import { formatPriceMillions } from '@/lib/marketplace';
 
 const sidebar = [
@@ -53,7 +58,8 @@ const sidebar = [
   { icon: WalletCards, label: 'Бронирования' },
   { icon: AlertTriangle, label: 'Споры' },
   { icon: MessageCircle, label: 'Сообщения' },
-  { icon: Bell, label: 'Уведомления', count: 5 },
+  { icon: Bell, label: 'Уведомления' },
+  { icon: BellRing, label: 'Подписки' },
   { icon: Settings, label: 'Профиль и безопасность' },
 ];
 
@@ -61,9 +67,11 @@ export default function BuyerProfile() {
   const [active, setActive] = useState('Обзор');
   const { favorites } = useFavorites();
   const { items: comparisons } = useComparisons();
-  const { searches } = useSavedSearches();
+  const { searches, setNotifications: setSearchNotifications } = useSavedSearches();
   const recommendations = useRecommendations();
   const phone = usePhoneVerification();
+  const notifications = useNotifications();
+  const watchlist = useWatchlist();
   const { reservations } = useReservations();
   const { disputes, loading: disputesLoading, error: disputesError, reload: reloadDisputes } = useBuyerDisputes();
   const { viewings } = useViewings();
@@ -77,9 +85,9 @@ export default function BuyerProfile() {
   const reservationDate = activeReservation?.reservation_expires_at ?? activeReservation?.hold_expires_at;
   return (
     <main className="buyer-profile-page">
-      <header className="profile-header"><Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link><nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav><div><button type="button"><Bell /></button><span>ИИ</span><div><strong>Иван Иванов</strong><small>+998 90 123 45 67</small></div></div></header>
+      <header className="profile-header"><Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link><nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav><div><button className="profile-header-notifications" type="button" onClick={() => setActive('Уведомления')} aria-label="Открыть уведомления"><Bell />{notifications.unreadCount > 0 && <i>{notifications.unreadCount}</i>}</button><span>ИИ</span><div><strong>Иван Иванов</strong><small>+998 90 123 45 67</small></div></div></header>
       <div className="profile-layout">
-        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small className={phone.verification.status === 'verified' ? '' : 'pending'}><ShieldCheck /> {phone.loading ? 'Проверяем телефон…' : phone.verification.status === 'verified' ? 'Телефон подтверждён' : 'Нужно подтвердить телефон'}</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.label === 'Сравнения' ? comparisons.length : item.label === 'Сохранённые поиски' ? searches.length : item.label === 'Мои просмотры' ? viewings.length : item.label === 'Бронирования' ? reservations.length : item.label === 'Споры' ? disputes.filter((dispute) => ['open', 'in_review'].includes(dispute.status)).length : item.label === 'Сообщения' ? (unreadMessages || conversations.length) : item.count; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
+        <aside className="profile-sidebar"><div className="profile-person"><span>ИИ</span><div><strong>Иван Иванов</strong><small className={phone.verification.status === 'verified' ? '' : 'pending'}><ShieldCheck /> {phone.loading ? 'Проверяем телефон…' : phone.verification.status === 'verified' ? 'Телефон подтверждён' : 'Нужно подтвердить телефон'}</small></div></div><nav>{sidebar.map((item) => { const count = item.label === 'Избранное' ? favorites.length : item.label === 'Сравнения' ? comparisons.length : item.label === 'Сохранённые поиски' ? searches.length : item.label === 'Мои просмотры' ? viewings.length : item.label === 'Бронирования' ? reservations.length : item.label === 'Споры' ? disputes.filter((dispute) => ['open', 'in_review'].includes(dispute.status)).length : item.label === 'Сообщения' ? (unreadMessages || conversations.length) : item.label === 'Уведомления' ? notifications.unreadCount : item.label === 'Подписки' ? watchlist.subscriptions.length + searches.filter((search) => Boolean(search.notifications_enabled)).length : 0; return <button type="button" className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{count ? <em>{count}</em> : null}</button>; })}</nav><button className="profile-logout" type="button"><LogOut /> Выйти</button></aside>
         <section className="profile-content">
           <div className="profile-welcome"><div><span>Личный кабинет</span><h1>Добрый день, Иван 👋</h1><p>Ваши объекты, встречи и бронирования — в одном месте.</p></div><Button variant="outline"><Settings /> Настроить профиль</Button></div>
 
@@ -88,6 +96,8 @@ export default function BuyerProfile() {
           {active === 'Рекомендации' && <section className="profile-feature-panel recommendation-panel"><div><span><Sparkles /></span><div><small>Персональная подборка</small><h2>Рекомендации для вас</h2><p>{recommendations.loading ? 'Сопоставляем сохранённые критерии с актуальным каталогом…' : recommendations.basis ? `Основа: ${recommendations.basis.label}.` : 'Показываем проверенные предложения из каталога.'}</p></div></div>{recommendations.error && <p className="profile-empty">{recommendations.error}</p>}{recommendations.recommendations.length > 0 && <div className="recommendation-grid">{recommendations.recommendations.map((item) => <Link href={`/complex/${item.slug}`} key={item.id}><img src={item.image} alt=""/><div><strong>{item.name}</strong><span>от {formatPriceMillions(item.priceFrom)} сум</span><small>{item.reasons.join(' · ')}</small></div><ChevronRight /></Link>)}</div>}<p className="recommendation-disclosure">{recommendations.disclosure}</p></section>}
           {active === 'Сообщения' && <section className="profile-feature-panel profile-messages-panel" id="messages"><div><span><MessageCircle /></span><div><small>Прямой контакт</small><h2>Сообщения продавцам</h2><p>{conversations.length ? `${conversations.length} ${conversations.length === 1 ? 'диалог' : 'диалога'} с контекстом квартиры и продавца.` : 'Напишите продавцу со страницы квартиры — диалог сохранится здесь.'}</p></div></div>{conversations.length ? <div className="profile-message-list">{conversations.map((conversation) => <ChatDialog key={conversation.id} listingId={conversation.listing_id} complexName={conversation.complex_name} unitNumber={conversation.unit_number} seller={conversation.seller} onMessageSent={() => void reloadMessages()} trigger={<button type="button"><img src={conversation.image} alt={conversation.complex_name}/><span><strong>{conversation.seller}</strong><small>{conversation.complex_name} · № {conversation.unit_number}</small><em>{conversation.last_message ?? 'Диалог создан'}</em></span>{Number(conversation.unread_count) > 0 ? <b>{conversation.unread_count}</b> : <ChevronRight />}</button>} />)}</div> : <Button nativeButton={false} render={<Link href="/catalog" />}>Найти квартиру</Button>}</section>}
           {active === 'Споры' && <section className="profile-feature-panel profile-disputes-panel"><div><span><AlertTriangle /></span><div><small>Защита покупателя</small><h2>Споры по бронированиям</h2><p>{disputesLoading ? 'Загружаем обращения…' : disputes.length ? 'Здесь видны статус, решение и комментарий финансового специалиста.' : 'Если застройщик не соблюдает условия оплаченной брони, откройте спор из карточки бронирования.'}</p></div></div>{disputesError && <p className="profile-empty">{disputesError}</p>}{disputes.length ? <div className="buyer-dispute-list">{disputes.map((dispute) => <article key={dispute.id}><span className={`buyer-dispute-state ${dispute.status}`}><AlertTriangle /></span><div><strong>{dispute.complex_name} · № {dispute.unit_number}</strong><small>{dispute.status === 'open' ? 'Новое обращение' : dispute.status === 'in_review' ? 'Финансовый специалист рассматривает спор' : dispute.status === 'resolved_refund' ? 'Полный возврат одобрен' : 'Спор закрыт без возврата'}</small>{dispute.resolution_note && <p>{dispute.resolution_note}</p>}</div><Badge variant="secondary">{dispute.priority === 'high' ? 'Высокий приоритет' : 'Обычный'}</Badge></article>)}</div> : null}</section>}
+          {active === 'Уведомления' && <NotificationCenter notifications={notifications.notifications} unreadCount={notifications.unreadCount} preferences={notifications.preferences} channelStatus={notifications.channelStatus} loading={notifications.loading} processing={notifications.processing} error={notifications.error} feedback={notifications.feedback} onRead={notifications.markRead} onReadAll={notifications.markAllRead} onPreferences={notifications.savePreferences} />}
+          {active === 'Подписки' && <BuyerWatchlistPanel subscriptions={watchlist.subscriptions} savedSearches={searches} loading={watchlist.loading} processing={watchlist.processing} error={watchlist.error} feedback={watchlist.feedback} onRemove={watchlist.remove} onToggleSearch={setSearchNotifications} />}
 
           <div className="profile-status-grid">
             <article><span className="profile-stat-icon blue"><Heart /></span><div><strong>{favorites.length}</strong><small>в избранном</small></div><a href="#favorites"><ChevronRight /></a></article>
