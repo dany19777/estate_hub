@@ -75,7 +75,7 @@ export async function getAppSession(request: Request): Promise<AppSession> {
   if (!user) throw new AuthorizationError(401, 'Не удалось создать профиль пользователя.');
 
   const roleCount = await database.prepare(`SELECT COUNT(*) AS count FROM platform_role_assignments`).first<{ count: number }>();
-  const bootstrapEmail = String(env.ESTATEHUB_BOOTSTRAP_ADMIN_EMAIL ?? '').trim().toLowerCase();
+  const bootstrapEmail = String((env as typeof env & { ESTATEHUB_BOOTSTRAP_ADMIN_EMAIL?: string }).ESTATEHUB_BOOTSTRAP_ADMIN_EMAIL ?? '').trim().toLowerCase();
   if ((roleCount?.count ?? 0) === 0 && bootstrapEmail && identity.email.toLowerCase() === bootstrapEmail) {
     await database.batch([
       database.prepare(`INSERT OR IGNORE INTO platform_role_assignments (user_id, role) VALUES (?, 'SUPERADMIN')`).bind(user.id),

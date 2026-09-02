@@ -30,6 +30,7 @@ import { InternalLink as Link } from '@/components/internal-link';
 import { ChatDialog } from '@/components/chat-dialog';
 import { LeadRequestDialog } from '@/components/lead-request-dialog';
 import { ReservationDialog } from '@/components/reservation-dialog';
+import { ComplexReviews } from '@/components/complex-reviews';
 import { useComplexDetail } from '@/hooks/use-complex-detail';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useFavorites } from '@/hooks/use-favorites';
@@ -124,13 +125,14 @@ export default function ComplexPage() {
                 <div className="chart-x-labels"><span>Сен</span><span>Ноя</span><span>Янв</span><span>Мар</span><span>Май</span><span>Авг</span></div>
               </div>
             </section>
+            <ComplexReviews complexId={summary.id} complexName={summary.name} />
           </div>
 
           <aside className="detail-rail">
             <div className="price-card"><span>Квартиры</span><strong>от {formatPriceMillions(summary.priceFrom)} сум</strong><p>от {formatPricePerSqm(summary.pricePerSqmFrom)}</p><a href="#inventory">Выбрать квартиру <ArrowRight /></a></div>
             <div className="developer-card"><div className="developer-card-head"><span>{summary.developer.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span><div><h3>{summary.developer}</h3><p><ShieldCheck /> Проверенный застройщик</p></div></div><div className="developer-stats"><span><strong>Проверен</strong>статус</span><span><strong>{summary.availableUnits}</strong>квартир</span><span><strong>{summary.rating.toFixed(1)}</strong>рейтинг</span></div><LeadRequestDialog type="consultation" complexId={summary.id} complexName={summary.name} trigger={<Button className="developer-message" variant="outline"><MessageCircle /> Получить консультацию</Button>} /></div>
             <div className="viewing-card"><span><CalendarDays /></span><h3>Записаться на просмотр</h3><p>Выберите дату и время — менеджер подтвердит визит.</p><div><button type="button">1 день<br/><strong>Ближайший</strong></button><button type="button" className="active">30 дней<br/><strong>Доступно</strong></button><button type="button">5 слотов<br/><strong>В день</strong></button></div>{firstPrimaryListing ? <LeadRequestDialog type="viewing" complexId={summary.id} complexName={summary.name} listingId={firstPrimaryListing.id} unitNumber={firstPrimaryListing.unitNumber} trigger={<Button>Выбрать время</Button>} /> : <Button disabled>Нет первичных квартир</Button>}</div>
-            <div className="rating-card"><div><strong>{summary.rating.toFixed(1)}</strong><span><Star/><Star/><Star/><Star/><Star/></span><small>Проверенный рейтинг</small></div><p>Качество строительства <span>{Math.max(summary.rating - 0.1, 0).toFixed(1)}</span></p><p>Расположение <span>{Math.min(summary.rating + 0.1, 5).toFixed(1)}</span></p><p>Инфраструктура <span>{summary.rating.toFixed(1)}</span></p><a href="#reviews">Отзывы появятся после модерации</a></div>
+            <div className="rating-card"><div><strong>{summary.rating.toFixed(1)}</strong><span><Star/><Star/><Star/><Star/><Star/></span><small>Проверенный рейтинг</small></div><p>Качество строительства <span>{Math.max(summary.rating - 0.1, 0).toFixed(1)}</span></p><p>Расположение <span>{Math.min(summary.rating + 0.1, 5).toFixed(1)}</span></p><p>Инфраструктура <span>{summary.rating.toFixed(1)}</span></p><a href="#reviews">Читать отзывы и оценки</a></div>
           </aside>
         </section>
       </div>

@@ -15,6 +15,7 @@ import {
   Landmark,
   ListChecks,
   Menu,
+  MessageSquareText,
   Search,
   Settings,
   ShieldCheck,
@@ -30,6 +31,7 @@ import { AdminFinancePanel } from '@/components/admin-finance-panel';
 import { AdminDisputesPanel } from '@/components/admin-disputes-panel';
 import { AdminBillingPanel } from '@/components/admin-billing-panel';
 import { AdminPromotionsPanel } from '@/components/admin-promotions-panel';
+import { AdminReviewsPanel } from '@/components/admin-reviews-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,6 +39,7 @@ import { useAdminFinance } from '@/hooks/use-admin-finance';
 import { useAdminDisputes } from '@/hooks/use-admin-disputes';
 import { useAdminBilling } from '@/hooks/use-admin-billing';
 import { useAdminPromotions } from '@/hooks/use-admin-promotions';
+import { useAdminReviews } from '@/hooks/use-admin-reviews';
 
 const adminNav = [
   { label: 'Обзор', icon: Gauge },
@@ -46,6 +49,7 @@ const adminNav = [
   { label: 'Жилые комплексы', icon: Building2 },
   { label: 'Верификация', icon: FileCheck2, count: 17 },
   { label: 'Модерация', icon: ListChecks, count: 9 },
+  { label: 'Отзывы', icon: MessageSquareText },
   { label: 'Брони и платежи', icon: WalletCards },
   { label: 'Споры и возвраты', icon: AlertTriangle, count: 3 },
   { label: 'Тарифы и биллинг', icon: CircleDollarSign },
@@ -96,6 +100,7 @@ export default function AdminDashboard() {
   const disputes = useAdminDisputes();
   const billing = useAdminBilling();
   const promotions = useAdminPromotions();
+  const reviews = useAdminReviews();
 
   async function loadDashboard() {
     setLoadError('');
@@ -174,7 +179,7 @@ export default function AdminDashboard() {
     const targets: Record<string, string> = {
       Обзор: 'admin-overview', Пользователи: 'admin-overview', Застройщики: 'moderation', 'Агентства и владельцы': 'verification',
       'Жилые комплексы': 'moderation', Верификация: 'verification', Модерация: 'moderation', 'Брони и платежи': 'finance',
-      'Споры и возвраты': 'disputes', 'Тарифы и биллинг': 'billing', Продвижение: 'promotions', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
+      Отзывы: 'reviews', 'Споры и возвраты': 'disputes', 'Тарифы и биллинг': 'billing', Продвижение: 'promotions', Аудит: 'audit', Аналитика: 'admin-overview', 'Настройки системы': 'system-health',
     };
     setActiveNav(label);
     setMobileNav(false);
@@ -188,7 +193,7 @@ export default function AdminDashboard() {
         <div className="admin-brand"><span><ShieldCheck /></span><div><strong>Estate<em>Hub</em></strong><small>Platform Admin</small></div><button type="button" onClick={() => setMobileNav(false)} aria-label="Закрыть меню"><X /></button></div>
         <div className="admin-user"><span>{userInitials}</span><div><strong>{dashboard?.session.user.fullName ?? 'Администратор'}</strong><small>{dashboard?.session.platformRoles[0] ?? 'Platform Admin'}</small></div><ChevronDown /></div>
         <nav>{adminNav.map((item) => {
-          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? disputes.stats.active : item.label === 'Тарифы и биллинг' ? billing.stats.activeSubscriptions : item.label === 'Продвижение' ? promotions.stats.active + promotions.stats.scheduled : item.count;
+          const count = item.label === 'Верификация' ? dashboard?.stats.pendingVerifications : item.label === 'Модерация' ? dashboard?.moderation.length : item.label === 'Отзывы' ? reviews.stats.pending + reviews.stats.reports : item.label === 'Брони и платежи' ? finance.stats.operationsCount : item.label === 'Споры и возвраты' ? disputes.stats.active : item.label === 'Тарифы и биллинг' ? billing.stats.activeSubscriptions : item.label === 'Продвижение' ? promotions.stats.active + promotions.stats.scheduled : item.count;
           return <button type="button" className={activeNav === item.label ? 'active' : ''} onClick={() => navigateAdmin(item.label)} key={item.label}><item.icon /><span>{item.label}</span>{Boolean(count) && <em>{count}</em>}</button>;
         })}</nav>
         <div className="system-status"><span><i/> Все системы работают</span><small>Последняя проверка: сейчас</small></div>
@@ -243,6 +248,18 @@ export default function AdminDashboard() {
               {dashboard?.moderation.map((item) => <TableRow key={item.complex_id}><TableCell><div className="admin-applicant"><span>{item.name.slice(0, 2).toUpperCase()}</span><strong>{item.name}</strong></div></TableCell><TableCell>{item.developer}</TableCell><TableCell><Badge className="queue-status working">{item.workflow_status === 'pending_moderation' ? 'Публикация ЖК' : 'Новый инвентарь'}</Badge></TableCell><TableCell>{item.pending_listings}</TableCell><TableCell><div className="verification-actions"><button type="button" className="approve" onClick={() => void moderate(item.complex_id, 'publish')} disabled={processing === item.complex_id} aria-label={`Опубликовать ${item.name}`} title="Опубликовать"><Check /></button><button type="button" className="reject" onClick={() => void moderate(item.complex_id, 'reject')} disabled={processing === item.complex_id} aria-label={`Отклонить ${item.name}`} title="Отклонить"><X /></button></div></TableCell></TableRow>)}
             </TableBody></Table>
           </section>
+
+          <AdminReviewsPanel
+            reviews={reviews.queue}
+            stats={reviews.stats}
+            loading={reviews.loading}
+            error={reviews.error}
+            processing={reviews.processing}
+            onDecision={async (reviewId, decision, reason) => {
+              const message = await reviews.decide(reviewId, decision, reason);
+              setFeedback(message);
+            }}
+          />
 
           <AdminDisputesPanel
             disputes={disputes.disputes}

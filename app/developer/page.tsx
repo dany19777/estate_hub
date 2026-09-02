@@ -21,6 +21,7 @@ import {
   ListChecks,
   Menu,
   MessageCircle,
+  MessageSquareText,
   MoreHorizontal,
   Plus,
   Phone,
@@ -44,14 +45,16 @@ import { DeveloperMessagesPanel } from '@/components/developer-messages-panel';
 import { DeveloperReservationsPanel } from '@/components/developer-reservations-panel';
 import { DeveloperBillingPanel } from '@/components/developer-billing-panel';
 import { DeveloperPromotionsPanel } from '@/components/developer-promotions-panel';
+import { DeveloperReviewsPanel } from '@/components/developer-reviews-panel';
 import { useDeveloperBilling } from '@/hooks/use-developer-billing';
 import { useDeveloperPromotions } from '@/hooks/use-developer-promotions';
 import { useDeveloperMessages } from '@/hooks/use-developer-messages';
 import { useDeveloperReservations } from '@/hooks/use-developer-reservations';
+import { useDeveloperReviews } from '@/hooks/use-developer-reviews';
 
 const navGroups: Array<{ label: string; items: Array<{ icon: LucideIcon; label: string; active?: boolean; count?: number }> }> = [
   { label: 'Главное', items: [{ icon: LayoutDashboard, label: 'Дашборд', active: true }] },
-  { label: 'Управление', items: [{ icon: Building2, label: 'Жилые комплексы' }, { icon: Home, label: 'Квартиры' }, { icon: CalendarDays, label: 'Бронирования' }, { icon: Users, label: 'Клиенты и лиды', count: 24 }, { icon: ListChecks, label: 'Просмотры' }, { icon: MessageCircle, label: 'Сообщения' }, { icon: Handshake, label: 'Сделки' }, { icon: FileText, label: 'Документы' }] },
+  { label: 'Управление', items: [{ icon: Building2, label: 'Жилые комплексы' }, { icon: Home, label: 'Квартиры' }, { icon: CalendarDays, label: 'Бронирования' }, { icon: Users, label: 'Клиенты и лиды', count: 24 }, { icon: ListChecks, label: 'Просмотры' }, { icon: MessageCircle, label: 'Сообщения' }, { icon: MessageSquareText, label: 'Отзывы' }, { icon: Handshake, label: 'Сделки' }, { icon: FileText, label: 'Документы' }] },
   { label: 'Рост', items: [{ icon: Sparkles, label: 'Продвижение' }, { icon: ImageIcon, label: 'Медиа' }, { icon: BarChart3, label: 'Аналитика' }] },
   { label: 'Организация', items: [{ icon: Users, label: 'Команда' }, { icon: CreditCard, label: 'Тариф и оплата' }, { icon: Settings, label: 'Настройки' }] },
 ];
@@ -150,6 +153,7 @@ export default function DeveloperDashboard() {
   const developerReservations = useDeveloperReservations();
   const developerBilling = useDeveloperBilling();
   const developerPromotions = useDeveloperPromotions();
+  const developerReviews = useDeveloperReviews();
   const unreadDeveloperMessages = developerMessages.conversations.reduce((total, conversation) => total + Number(conversation.unread_count), 0);
 
   function navigateSection(label: string) {
@@ -161,6 +165,7 @@ export default function DeveloperDashboard() {
       'Клиенты и лиды': 'developer-leads',
       'Просмотры': 'developer-leads',
       'Сообщения': 'developer-messages',
+      'Отзывы': 'developer-reviews',
       'Продвижение': 'developer-promotions',
       'Тариф и оплата': 'developer-billing',
     };
@@ -295,7 +300,7 @@ export default function DeveloperDashboard() {
         <div className="company-mini-card"><span>SD</span><div><strong>{dashboard?.organization?.name ?? 'Компания'}</strong><small><ShieldCheck /> Рабочий кабинет</small></div><ChevronDown /></div>
         <nav>
           {navGroups.map((group) => <div className="developer-nav-group" key={group.label}><span>{group.label}</span>{group.items.map((item) => {
-            const count = item.label === 'Бронирования' ? developerReservations.stats.active + developerReservations.stats.holds : item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.label === 'Сообщения' ? (unreadDeveloperMessages || developerMessages.conversations.length) : item.label === 'Продвижение' ? developerPromotions.promotions.filter((promotion) => ['active', 'scheduled'].includes(promotion.status)).length : item.label === 'Тариф и оплата' ? `${developerBilling.usage.activeInventory}/${developerBilling.usage.limit}` : item.count;
+            const count = item.label === 'Бронирования' ? developerReservations.stats.active + developerReservations.stats.holds : item.label === 'Клиенты и лиды' ? leadData?.stats.new : item.label === 'Просмотры' ? leadData?.stats.viewings : item.label === 'Сообщения' ? (unreadDeveloperMessages || developerMessages.conversations.length) : item.label === 'Отзывы' ? developerReviews.reviews.length : item.label === 'Продвижение' ? developerPromotions.promotions.filter((promotion) => ['active', 'scheduled'].includes(promotion.status)).length : item.label === 'Тариф и оплата' ? `${developerBilling.usage.activeInventory}/${developerBilling.usage.limit}` : item.count;
             return <button className={activeNav === item.label ? 'active' : ''} type="button" key={item.label} onClick={() => navigateSection(item.label)}><item.icon /> <strong>{item.label}</strong>{Boolean(count) && <em>{count}</em>}</button>;
           })}</div>)}
         </nav>
@@ -345,6 +350,17 @@ export default function DeveloperDashboard() {
               <DeveloperReservationsPanel {...developerReservations} />
 
               <DeveloperMessagesPanel {...developerMessages} />
+
+              <DeveloperReviewsPanel
+                reviews={developerReviews.reviews}
+                loading={developerReviews.loading}
+                error={developerReviews.error}
+                feedback={developerReviews.feedback}
+                processing={developerReviews.processing}
+                onRespond={async (reviewId, text) => {
+                  await developerReviews.respond(reviewId, text);
+                }}
+              />
 
               <DeveloperPromotionsPanel
                 products={developerPromotions.products}

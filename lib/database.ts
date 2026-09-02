@@ -76,6 +76,8 @@ type PriceHistoryRow = { id: string; old_price_uzs: number | null; new_price_uzs
 
 type PromotionSignalRow = { complex_id: string; surface: string; boost_weight: number };
 
+const categoryKeysForSeed = ['construction_quality', 'location', 'infrastructure', 'yard', 'sound_insulation', 'management_service'] as const;
+
 let initialization: Promise<void> | null = null;
 
 function marketplaceDatabase() {
@@ -194,6 +196,25 @@ async function seedMarketplace(database: D1Database) {
     statements.push(database.prepare(`INSERT OR IGNORE INTO listing_price_history (id, listing_id, old_price_uzs, new_price_uzs, reason, changed_by) VALUES (?, ?, NULL, ?, 'initial_publication', 'system-seed')`)
       .bind(`price-${listingId}-initial`, listingId, priceUzs));
   }
+
+  statements.push(
+    database.prepare(`INSERT OR IGNORE INTO users (id, external_user_id, email, full_name) VALUES ('demo-reviewer-aziza', 'demo-reviewer-aziza', 'aziza.review@example.uz', 'Азиза Каримова')`),
+    database.prepare(`INSERT OR IGNORE INTO users (id, external_user_id, email, full_name) VALUES ('demo-reviewer-timur', 'demo-reviewer-timur', 'timur.review@example.uz', 'Тимур Юлдашев')`),
+    database.prepare(`INSERT OR IGNORE INTO users (id, external_user_id, email, full_name) VALUES ('demo-developer-response', 'demo-developer-response', 'reviews@samarkand-development.example', 'Отдел качества Samarkand Development')`),
+    database.prepare(`INSERT OR IGNORE INTO organization_memberships (organization_id, user_id, role, status) VALUES ('org-samarkand-development', 'demo-developer-response', 'CONTENT_MANAGER', 'active')`),
+    database.prepare(`INSERT OR IGNORE INTO buyer_phone_verifications (user_id, phone_e164, status, verified_at) VALUES ('demo-reviewer-aziza', '+998900000101', 'verified', CURRENT_TIMESTAMP)`),
+    database.prepare(`INSERT OR IGNORE INTO buyer_phone_verifications (user_id, phone_e164, status, verified_at) VALUES ('demo-reviewer-timur', '+998900000102', 'verified', CURRENT_TIMESTAMP)`),
+    database.prepare(`INSERT OR IGNORE INTO secondary_listing_owners (listing_id, seller_user_id, contact_phone, document_type, document_reference, verification_status) VALUES ('listing-complex-bogishamol-A-097', 'demo-reviewer-aziza', '+998900000101', 'ownership_certificate', 'DEMO-OWNER-A097', 'approved')`),
+    database.prepare(`INSERT OR IGNORE INTO reviews (id, user_id, complex_id, body, status, trust_level, reviewed_by, reviewed_at, created_at, updated_at) VALUES ('review-demo-aziza-bogishamol', 'demo-reviewer-aziza', 'complex-bogishamol', 'Живу здесь больше года. Двор действительно закрытый и спокойный, лифты работают стабильно. Особенно нравится расположение и то, что до центра можно быстро добраться.', 'published', 'verified_resident', 'demo-developer-response', CURRENT_TIMESTAMP, datetime('now', '-45 days'), datetime('now', '-45 days'))`),
+    database.prepare(`INSERT OR IGNORE INTO reviews (id, user_id, complex_id, body, status, trust_level, reviewed_by, reviewed_at, created_at, updated_at) VALUES ('review-demo-timur-bogishamol', 'demo-reviewer-timur', 'complex-bogishamol', 'Рассматривали квартиру для семьи. Планировки удачные, территория ухоженная, рядом есть магазины. Звукоизоляцию хотелось бы лучше, но в целом комплекс понравился.', 'published', 'standard', 'demo-developer-response', CURRENT_TIMESTAMP, datetime('now', '-21 days'), datetime('now', '-21 days'))`),
+  );
+  const demoReviewRatings = [
+    ['review-demo-aziza-bogishamol', [5, 5, 4, 5, 4, 5]],
+    ['review-demo-timur-bogishamol', [4, 5, 4, 4, 3, 4]],
+  ] as const;
+  demoReviewRatings.forEach(([reviewId, ratings]) => categoryKeysForSeed.forEach((category, index) => statements.push(database.prepare(`INSERT OR IGNORE INTO review_ratings (review_id, category, rating) VALUES (?, ?, ?)`).bind(reviewId, category, ratings[index]))));
+  statements.push(database.prepare(`INSERT OR IGNORE INTO review_responses (id, review_id, organization_id, responder_user_id, body, created_at, updated_at) VALUES ('response-demo-bogishamol', 'review-demo-timur-bogishamol', 'org-samarkand-development', 'demo-developer-response', 'Спасибо за честную обратную связь. Мы передали замечание по звукоизоляции управляющей компании и включили дополнительную проверку в план работ.', datetime('now', '-18 days'), datetime('now', '-18 days'))`));
+  statements.push(database.prepare(`UPDATE complexes SET rating = COALESCE((SELECT ROUND(SUM(rating.rating * CASE WHEN review.trust_level = 'verified_resident' THEN 2.0 ELSE 1.0 END) / SUM(CASE WHEN review.trust_level = 'verified_resident' THEN 2.0 ELSE 1.0 END), 1) FROM review_ratings rating JOIN reviews review ON review.id = rating.review_id WHERE review.complex_id = complexes.id AND review.status = 'published'), rating) WHERE id = 'complex-bogishamol'`));
 
   statements.push(database.prepare(`INSERT OR IGNORE INTO promotions
     (id, product_id, organization_id, complex_id, status, starts_at, ends_at, amount_uzs, provider, provider_reference, idempotency_key, sponsored_label)
