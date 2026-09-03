@@ -21,10 +21,12 @@ export async function GET(request: Request) {
     const statusParam = searchParams.get('status');
     const sellerParam = searchParams.get('seller');
     const sortParam = searchParams.get('sort');
-    const excludedFilters = new Set(['rooms', 'minPrice', 'maxPrice', 'completed', 'notFirstFloor', 'minFloor', 'maxFloor', 'minArea', 'maxArea', 'reservable', 'market', 'seller', 'district', 'finish']);
+    const excludedFilters = new Set(['city', 'complex', 'rooms', 'minPrice', 'maxPrice', 'completed', 'notFirstFloor', 'minFloor', 'maxFloor', 'minArea', 'maxArea', 'reservable', 'specialOffer', 'market', 'seller', 'district', 'finish']);
     const query: CatalogQuery = {
       market: marketParam === 'primary' || marketParam === 'secondary' ? marketParam : 'all',
       q: searchParams.get('q')?.trim() || undefined,
+      city: searchParams.get('city')?.trim() || undefined,
+      complex: searchParams.get('complex')?.trim() || undefined,
       rooms: positiveNumber(searchParams.get('rooms')),
       status: statusParam === 'completed' || statusParam === 'under_construction' ? statusParam : undefined,
       seller: sellerParam === 'developer' || sellerParam === 'owner' || sellerParam === 'agency' ? sellerParam as SellerType : undefined,
@@ -38,7 +40,8 @@ export async function GET(request: Request) {
       finish: searchParams.get('finish')?.trim() || undefined,
       verified: booleanValue(searchParams.get('verified')),
       reservable: booleanValue(searchParams.get('reservable')),
-      sort: sortParam === 'price_asc' || sortParam === 'price_desc' || sortParam === 'newest' ? sortParam : 'recommended',
+      specialOffer: booleanValue(searchParams.get('specialOffer')),
+      sort: sortParam === 'price_asc' || sortParam === 'price_desc' || sortParam === 'price_per_sqm' || sortParam === 'newest' || sortParam === 'area_desc' ? sortParam : 'recommended',
       surface: searchParams.get('surface') === 'homepage' ? 'homepage' : 'search',
       excludeParsed: (searchParams.get('excludeParsed') ?? '').split(',').filter((key) => excludedFilters.has(key)),
       limit: positiveNumber(searchParams.get('limit')),

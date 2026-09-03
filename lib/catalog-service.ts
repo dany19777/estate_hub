@@ -26,6 +26,7 @@ export function parseNaturalLanguageQuery(query: string): ParsedSearch {
   const filters: ParsedFilter[] = [];
   const unsupportedCriteria: string[] = [];
   const validationWarnings: string[] = [];
+  if (/самарканд|samarqand|samarkand/.test(normalized)) pushUnique(filters, { key: 'city', label: 'Самарканд', value: 'Самарканд' });
   const roomMatch = normalized.match(/(?:^|\s)([1-9])(?:\s*[-–]?\s*)(?:комнат|комн\.)/) ?? (/(?:двуш|двухкомнат)/.test(normalized) ? ['', '2'] : null) ?? (/(?:треш|трехкомнат)/.test(normalized) ? ['', '3'] : null) ?? (/(?:однуш|однокомнат)/.test(normalized) ? ['', '1'] : null);
   if (roomMatch?.[1]) { const rooms = Number(roomMatch[1]); pushUnique(filters, { key: 'rooms', label: `${rooms} ${rooms === 1 ? 'комната' : rooms < 5 ? 'комнаты' : 'комнат'}`, value: rooms }); }
 
@@ -59,6 +60,7 @@ export function parseNaturalLanguageQuery(query: string): ParsedSearch {
   if (/(?:сдан|готов(?:ом|ый|ом доме)?|заселен)/.test(normalized)) pushUnique(filters, { key: 'completed', label: 'сдан', value: true });
   if (/(?:не\s+на\s+перв|не\s+первый\s+этаж|выше\s+первого)/.test(normalized)) pushUnique(filters, { key: 'notFirstFloor', label: 'не первый этаж', value: true });
   if (/(?:онлайн[- ]?брон|забронировать онлайн)/.test(normalized)) pushUnique(filters, { key: 'reservable', label: 'онлайн-бронь', value: true });
+  if (/(?:спецпредлож|эксклюзивн\w*\s+цен|скидк\w*\s+estatehub)/.test(normalized)) pushUnique(filters, { key: 'specialOffer', label: 'спецпредложение EstateHub', value: true });
   const wantsPrimary = /новострой|первичн|от застройщика/.test(normalized);
   const wantsSecondary = /вторичн|готовая квартира от/.test(normalized);
   if (wantsPrimary && wantsSecondary) validationWarnings.push('Указаны оба типа рынка — показываем все предложения.');
@@ -103,11 +105,14 @@ export function buildCatalog(complexes: ComplexRecord[], listings: ListingRecord
   const maxFloor = query.maxFloor ?? (value('maxFloor') as number | undefined);
   const district = query.district ?? (value('district') as string | undefined);
   const finish = query.finish ?? (value('finish') as string | undefined);
+  const city = query.city ?? (value('city') as string | undefined);
+  const complexQuery = query.complex ?? (value('complex') as string | undefined);
   const parsedMarket = value('market') as CatalogQuery['market'];
   const parsedSeller = value('seller') as CatalogQuery['seller'];
   const wantsCompleted = parsed.filters.some((filter) => filter.key === 'completed');
   const wantsNotFirstFloor = parsed.filters.some((filter) => filter.key === 'notFirstFloor');
   const wantsReservable = parsed.filters.some((filter) => filter.key === 'reservable');
+  const wantsSpecialOffer = parsed.filters.some((filter) => filter.key === 'specialOffer');
   const normalizedText = (query.q ?? '').toLowerCase().trim();
   const useTextSearch = normalizedText.length > 0 && rawParsed.filters.length === 0;
   const invalidPrice = Boolean(minPrice && maxPrice && minPrice > maxPrice);
@@ -117,13 +122,16 @@ export function buildCatalog(complexes: ComplexRecord[], listings: ListingRecord
   const effectiveSeller = query.seller ?? parsedSeller;
   const items = complexes.flatMap<ComplexSummary>((complex) => {
     if (query.verified && (!complex.developerVerified || !complex.complexVerified)) return [];
+    if (city && complex.city.toLowerCase() !== city.toLowerCase()) return [];
+    if (complexQuery && ![complex.id, complex.slug, complex.name.toLowerCase()].includes(complexQuery.toLowerCase())) return [];
+    if ((query.specialOffer || wantsSpecialOffer) && !complex.specialOffer) return [];
     if ((query.status === 'completed' || wantsCompleted) && complex.completionStatus !== 'completed') return [];
     if (query.status === 'under_construction' && complex.completionStatus !== 'under_construction') return [];
     if (district && complex.district.toLowerCase() !== district.toLowerCase()) return [];
     if (useTextSearch && !`${complex.name} ${complex.city} ${complex.district} ${complex.address} ${complex.developer}`.toLowerCase().includes(normalizedText)) return [];
     const matchingListings = listings.filter((listing) => {
       if (listing.complexId !== complex.id || !hasMarket(listing, effectiveMarket) || !matchesSeller(listing, effectiveSeller)) return false;
-      if (rooms && listing.rooms !== rooms) return false;
+      if (rooms && (rooms >= 4 ? listing.rooms < rooms : listing.rooms !== rooms)) return false;
       if (!invalidPrice && minPrice && listing.priceUzs < minPrice) return false;
       if (!invalidPrice && maxPrice && listing.priceUzs > maxPrice) return false;
       if (!invalidArea && minArea && listing.areaSqm < minArea) return false;
@@ -140,10 +148,18 @@ export function buildCatalog(complexes: ComplexRecord[], listings: ListingRecord
     const promotionWeight = query.surface === 'homepage' ? complex.promotionHomepageWeight : complex.promotionSearchWeight;
     const { promotionSearchWeight: _searchWeight, promotionHomepageWeight: _homepageWeight, ...publicComplex } = complex;
     return [{ ...publicComplex, priceFrom: Math.min(...prices), pricePerSqmFrom: Math.min(...matchingListings.map((listing) => Math.round(listing.priceUzs / listing.areaSqm))), availableUnits: matchingListings.length,
+      largestArea: Math.max(...matchingListings.map((listing) => listing.areaSqm)), newestPublishedAt: matchingListings.map((listing) => listing.publishedAt).sort().at(-1) ?? '',
       minRooms: Math.min(...roomValues), maxRooms: Math.max(...roomValues), marketTypes: [...new Set(matchingListings.map((listing) => listing.marketType))], reservable: matchingListings.some((listing) => listing.reserveEnabled),
-      sponsored: promotionWeight > 0, sponsoredLabel: promotionWeight > 0 ? 'Реклама' : null, promotionWeight }];
+      sponsored: promotionWeight > 0, sponsoredLabel: promotionWeight > 0 ? (complex.specialOfferLabel ?? 'Реклама') : null, promotionWeight }];
   });
-  const sorted = [...items].sort((a, b) => { if (query.sort === 'price_asc') return a.priceFrom - b.priceFrom; if (query.sort === 'price_desc') return b.priceFrom - a.priceFrom; if (query.sort === 'newest') return a.completionLabel.localeCompare(b.completionLabel); return b.promotionWeight - a.promotionWeight || Number(b.featured) - Number(a.featured) || b.rating - a.rating; });
+  const sorted = [...items].sort((a, b) => {
+    if (query.sort === 'price_asc') return a.priceFrom - b.priceFrom;
+    if (query.sort === 'price_desc') return b.priceFrom - a.priceFrom;
+    if (query.sort === 'price_per_sqm') return a.pricePerSqmFrom - b.pricePerSqmFrom;
+    if (query.sort === 'area_desc') return b.largestArea - a.largestArea;
+    if (query.sort === 'newest') return b.newestPublishedAt.localeCompare(a.newestPublishedAt);
+    return b.promotionWeight - a.promotionWeight || Number(b.featured) - Number(a.featured) || b.rating - a.rating;
+  });
   const limited = query.limit ? sorted.slice(0, query.limit) : sorted;
   let alternatives: ComplexSummary[] = [], alternativeReason: string | null = null;
   if (allowAlternatives && sorted.length === 0 && (query.q || rooms || minPrice || maxPrice || minArea || maxArea || minFloor || maxFloor || district || finish)) {
@@ -152,5 +168,13 @@ export function buildCatalog(complexes: ComplexRecord[], listings: ListingRecord
     alternatives = fallback.items;
     alternativeReason = relaxed.items.length ? 'Точных совпадений нет — показываем ближайшие варианты в выбранном районе.' : 'Точных совпадений нет — ослабили второстепенные условия, сохранив тип рынка.';
   }
-  return { items: limited, total: sorted.length, parsedFilters: parsed.filters, unsupportedCriteria: parsed.unsupportedCriteria, validationWarnings: parsed.validationWarnings, alternatives, alternativeReason };
+  const facets = {
+    cities: [...new Set(complexes.map((complex) => complex.city))].sort(),
+    districts: [...new Set(complexes.filter((complex) => !city || complex.city.toLowerCase() === city.toLowerCase()).map((complex) => complex.district))].sort(),
+    complexes: complexes
+      .filter((complex) => (!city || complex.city.toLowerCase() === city.toLowerCase()) && (!district || complex.district.toLowerCase() === district.toLowerCase()))
+      .map((complex) => ({ slug: complex.slug, name: complex.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  };
+  return { items: limited, total: sorted.length, parsedFilters: parsed.filters, unsupportedCriteria: parsed.unsupportedCriteria, validationWarnings: parsed.validationWarnings, alternatives, alternativeReason, facets };
 }

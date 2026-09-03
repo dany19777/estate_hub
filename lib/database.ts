@@ -26,6 +26,8 @@ type ComplexRow = {
   rating: number;
   map_x: number;
   map_y: number;
+  latitude: number;
+  longitude: number;
 };
 
 type ListingRow = {
@@ -74,7 +76,7 @@ type ListingDetailRow = ComplexListingRow & {
 
 type PriceHistoryRow = { id: string; old_price_uzs: number | null; new_price_uzs: number; reason: string; changed_at: string };
 
-type PromotionSignalRow = { complex_id: string; surface: string; boost_weight: number };
+type PromotionSignalRow = { complex_id: string; surface: string; boost_weight: number; special_offer: number; sponsored_label: string | null };
 
 const categoryKeysForSeed = ['construction_quality', 'location', 'infrastructure', 'yard', 'sound_insulation', 'management_service'] as const;
 
@@ -84,6 +86,25 @@ function marketplaceDatabase() {
   const database = (env as MarketplaceEnv).DB;
   if (!database) throw new Error('Marketplace database binding DB is not configured');
   return database;
+}
+
+async function ensureCatalogGeography(database: D1Database) {
+  const columns = await database.prepare('PRAGMA table_info(complexes)').all<{ name: string }>();
+  const names = new Set((columns.results ?? []).map((column) => column.name));
+  const statements: D1PreparedStatement[] = [];
+  if (!names.has('latitude')) statements.push(database.prepare('ALTER TABLE complexes ADD COLUMN latitude REAL NOT NULL DEFAULT 39.6542'));
+  if (!names.has('longitude')) statements.push(database.prepare('ALTER TABLE complexes ADD COLUMN longitude REAL NOT NULL DEFAULT 66.9597'));
+  if (statements.length === 0) return;
+  await database.batch(statements);
+  const coordinates = [
+    ['complex-bogishamol', 39.6828, 66.9442],
+    ['complex-registan', 39.6548, 66.9757],
+    ['complex-silk-road', 39.6765, 66.9895],
+    ['complex-afrasiyob', 39.6403, 66.9015],
+    ['complex-samarkand-city', 39.6608, 66.9468],
+    ['complex-zarafshan', 39.675, 67.054],
+  ] as const;
+  await database.batch(coordinates.map(([id, latitude, longitude]) => database.prepare('UPDATE complexes SET latitude = ?, longitude = ? WHERE id = ?').bind(latitude, longitude, id)));
 }
 
 async function seedMarketplace(database: D1Database) {
@@ -147,9 +168,9 @@ async function seedMarketplace(database: D1Database) {
   for (const complex of complexSeeds) {
     statements.push(database.prepare(`INSERT OR IGNORE INTO complexes (
       id, slug, district_id, developer_org_id, name, address, description, completion_status,
-      completion_label, verification_status, hero_image_url, featured, rating, map_x, map_y
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?, ?, ?, ?)`)
-      .bind(complex.id, complex.slug, complex.districtId, complex.developerId, complex.name, complex.address, complex.description, complex.completionStatus, complex.completionLabel, complex.image, complex.featured, complex.rating, complex.mapX, complex.mapY));
+      completion_label, verification_status, hero_image_url, featured, rating, map_x, map_y, latitude, longitude
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(complex.id, complex.slug, complex.districtId, complex.developerId, complex.name, complex.address, complex.description, complex.completionStatus, complex.completionLabel, complex.image, complex.featured, complex.rating, complex.mapX, complex.mapY, complex.latitude, complex.longitude));
     statements.push(database.prepare(`INSERT OR IGNORE INTO verification_cases (id, subject_type, subject_id, status, risk_level, reviewed_by, reviewed_at) VALUES (?, 'complex', ?, 'approved', 'low', 'system-seed', CURRENT_TIMESTAMP)`)
       .bind(`verification-${complex.id}`, complex.id));
     statements.push(database.prepare(`INSERT OR IGNORE INTO complex_publication_workflows (complex_id, status, submitted_at, reviewed_at) VALUES (?, 'published', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`)
@@ -219,6 +240,9 @@ async function seedMarketplace(database: D1Database) {
   statements.push(database.prepare(`INSERT OR IGNORE INTO promotions
     (id, product_id, organization_id, complex_id, status, starts_at, ends_at, amount_uzs, provider, provider_reference, idempotency_key, sponsored_label)
     VALUES ('promotion-demo-bogishamol', 'promotion-featured-complex', 'org-samarkand-development', 'complex-bogishamol', 'active', CURRENT_TIMESTAMP, datetime('now', '+14 days'), 0, 'demo', 'demo:featured-bogishamol', 'demo-featured-bogishamol', 'Реклама')`));
+  statements.push(database.prepare(`INSERT OR IGNORE INTO promotions
+    (id, product_id, organization_id, complex_id, status, starts_at, ends_at, amount_uzs, provider, provider_reference, idempotency_key, sponsored_label)
+    VALUES ('promotion-demo-registan-special', 'promotion-special', 'org-zarafshan-group', 'complex-registan', 'active', CURRENT_TIMESTAMP, datetime('now', '+14 days'), 0, 'demo', 'demo:special-registan', 'demo-special-registan', 'Эксклюзивная цена')`));
 
   statements.push(database.prepare(`INSERT OR IGNORE INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES ('audit-marketplace-seed', 'system', 'system-seed', 'marketplace.seeded', 'catalog', 'samarkand', '{"source":"mvp-seed"}')`));
   await database.batch(statements);
@@ -230,6 +254,7 @@ export async function ensureMarketplaceDatabase() {
     initialization = (async () => {
       await database.batch(schemaStatements.map((statement) => database.prepare(statement)));
       await database.batch(indexStatements.map((statement) => database.prepare(statement)));
+      await ensureCatalogGeography(database);
       await seedMarketplace(database);
       await database.prepare('PRAGMA optimize').run();
     })().catch((error) => {
@@ -249,7 +274,7 @@ export async function readMarketplaceData() {
       c.id, c.slug, c.name, city.name_ru AS city, d.name_ru AS district, c.address,
       o.name AS developer, o.verification_status AS developer_verification,
       c.verification_status AS complex_verification, c.completion_status, c.completion_label,
-      c.hero_image_url, c.featured, c.rating, c.map_x, c.map_y
+      c.hero_image_url, c.featured, c.rating, c.map_x, c.map_y, c.latitude, c.longitude
       FROM complexes c
       JOIN districts d ON d.id = c.district_id
       JOIN cities city ON city.id = d.city_id
@@ -265,18 +290,24 @@ export async function readMarketplaceData() {
       WHERE l.status = 'published' AND u.availability_status = 'available'
       ORDER BY l.published_at DESC`).all<ListingRow>(),
     database.prepare(`SELECT COALESCE(promotion.complex_id, listing.complex_id) AS complex_id,
-      product.surface, MAX(product.boost_weight) AS boost_weight
+      product.surface, MAX(product.boost_weight) AS boost_weight,
+      MAX(CASE WHEN product.surface = 'special' THEN 1 ELSE 0 END) AS special_offer,
+      MAX(CASE WHEN product.surface = 'special' THEN promotion.sponsored_label END) AS sponsored_label
       FROM promotions promotion JOIN promotion_products product ON product.id = promotion.product_id
       LEFT JOIN listings listing ON listing.id = promotion.listing_id
       WHERE promotion.status = 'active' AND promotion.starts_at <= CURRENT_TIMESTAMP AND promotion.ends_at > CURRENT_TIMESTAMP
       GROUP BY COALESCE(promotion.complex_id, listing.complex_id), product.surface`).all<PromotionSignalRow>(),
   ]);
 
-  const promotionSignals = new Map<string, { search: number; homepage: number }>();
+  const promotionSignals = new Map<string, { search: number; homepage: number; specialOffer: boolean; specialOfferLabel: string | null }>();
   for (const signal of promotionResult.results ?? []) {
-    const current = promotionSignals.get(signal.complex_id) ?? { search: 0, homepage: 0 };
+    const current = promotionSignals.get(signal.complex_id) ?? { search: 0, homepage: 0, specialOffer: false, specialOfferLabel: null };
     if (['search', 'search_homepage', 'special'].includes(signal.surface)) current.search = Math.max(current.search, Number(signal.boost_weight));
     if (['homepage', 'search_homepage', 'special'].includes(signal.surface)) current.homepage = Math.max(current.homepage, Number(signal.boost_weight));
+    if (signal.special_offer) {
+      current.specialOffer = true;
+      current.specialOfferLabel = signal.sponsored_label ?? 'Спецпредложение EstateHub';
+    }
     promotionSignals.set(signal.complex_id, current);
   }
 
@@ -297,6 +328,10 @@ export async function readMarketplaceData() {
     rating: row.rating,
     mapX: row.map_x,
     mapY: row.map_y,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    specialOffer: promotionSignals.get(row.id)?.specialOffer ?? false,
+    specialOfferLabel: promotionSignals.get(row.id)?.specialOfferLabel ?? null,
     promotionSearchWeight: promotionSignals.get(row.id)?.search ?? 0,
     promotionHomepageWeight: promotionSignals.get(row.id)?.homepage ?? 0,
   }));

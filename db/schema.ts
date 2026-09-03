@@ -102,6 +102,8 @@ export const schemaStatements = [
     rating REAL NOT NULL DEFAULT 0,
     map_x REAL NOT NULL,
     map_y REAL NOT NULL,
+    latitude REAL NOT NULL DEFAULT 39.6542,
+    longitude REAL NOT NULL DEFAULT 66.9597,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,

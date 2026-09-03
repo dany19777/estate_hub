@@ -20,32 +20,32 @@ export const complexes = [
   {
     id: 'complex-bogishamol', slug: 'bogishamol', districtId: 'district-bogishamol', developerId: 'org-samarkand-development',
     name: 'Bog‘ishamol Residence', address: 'ул. Амир Темура, 142', description: 'Камерный жилой комплекс с закрытым двором, панорамными окнами и готовой инфраструктурой.',
-    completionStatus: 'completed', completionLabel: 'Сдан в 2024', image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=88', featured: 1, rating: 4.8, mapX: 54, mapY: 44, floors: 24,
+    completionStatus: 'completed', completionLabel: 'Сдан в 2024', image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=88', featured: 1, rating: 4.8, mapX: 54, mapY: 44, latitude: 39.6828, longitude: 66.9442, floors: 24,
   },
   {
     id: 'complex-registan', slug: 'registan-gardens', districtId: 'district-registan', developerId: 'org-zarafshan-group',
     name: 'Registan Gardens', address: 'ул. Регистан, 18', description: 'Современный квартал рядом с историческим центром и приватным зелёным двором.',
-    completionStatus: 'under_construction', completionLabel: 'IV кв. 2026', image: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=88', featured: 0, rating: 4.7, mapX: 37, mapY: 55, floors: 18,
+    completionStatus: 'under_construction', completionLabel: 'IV кв. 2026', image: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=88', featured: 0, rating: 4.7, mapX: 37, mapY: 55, latitude: 39.6548, longitude: 66.9757, floors: 18,
   },
   {
     id: 'complex-silk-road', slug: 'silk-road-avenue', districtId: 'district-siyob', developerId: 'org-orient-house',
     name: 'Silk Road Avenue', address: 'просп. Шёлкового пути, 27', description: 'Городской комплекс с семейными планировками и развитой инфраструктурой.',
-    completionStatus: 'under_construction', completionLabel: 'II кв. 2027', image: 'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=1200&q=88', featured: 1, rating: 4.8, mapX: 68, mapY: 27, floors: 20,
+    completionStatus: 'under_construction', completionLabel: 'II кв. 2027', image: 'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=1200&q=88', featured: 1, rating: 4.8, mapX: 68, mapY: 27, latitude: 39.6765, longitude: 66.9895, floors: 20,
   },
   {
     id: 'complex-afrasiyob', slug: 'afrasiyob-park', districtId: 'district-sattepo', developerId: 'org-imorat-invest',
     name: 'Afrasiyob Park', address: 'ул. Афросиаб, 84', description: 'Готовый семейный комплекс с просторными квартирами и благоустроенным парком.',
-    completionStatus: 'completed', completionLabel: 'Сдан в 2023', image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=88', featured: 0, rating: 4.6, mapX: 24, mapY: 34, floors: 16,
+    completionStatus: 'completed', completionLabel: 'Сдан в 2023', image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=88', featured: 0, rating: 4.6, mapX: 24, mapY: 34, latitude: 39.6403, longitude: 66.9015, floors: 16,
   },
   {
     id: 'complex-samarkand-city', slug: 'samarkand-city', districtId: 'district-center', developerId: 'org-city-estate',
     name: 'Samarkand City', address: 'ул. Университетская, 9', description: 'Многофункциональный городской квартал с сервисами, магазинами и прогулочными зонами.',
-    completionStatus: 'under_construction', completionLabel: 'I кв. 2026', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=88', featured: 1, rating: 4.9, mapX: 47, mapY: 69, floors: 26,
+    completionStatus: 'under_construction', completionLabel: 'I кв. 2026', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=88', featured: 1, rating: 4.9, mapX: 47, mapY: 69, latitude: 39.6608, longitude: 66.9468, floors: 26,
   },
   {
     id: 'complex-zarafshan', slug: 'zarafshan-riverside', districtId: 'district-konigil', developerId: 'org-zarafshan-group',
     name: 'Zarafshan Riverside', address: 'Конигил, набережная Зарафшана', description: 'Тихий жилой комплекс у воды с готовыми предложениями вторичного рынка.',
-    completionStatus: 'completed', completionLabel: 'Сдан в 2022', image: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=88', featured: 0, rating: 4.5, mapX: 78, mapY: 62, floors: 14,
+    completionStatus: 'completed', completionLabel: 'Сдан в 2022', image: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=88', featured: 0, rating: 4.5, mapX: 78, mapY: 62, latitude: 39.675, longitude: 67.054, floors: 14,
   },
 ] as const;
 

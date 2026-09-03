@@ -14,6 +14,7 @@ const emptyCatalog: CatalogResponse = {
   validationWarnings: [],
   alternatives: [],
   alternativeReason: null,
+  facets: { cities: [], districts: [], complexes: [] },
 };
 
 export function useComplexes(parameters: Record<string, QueryValue>) {

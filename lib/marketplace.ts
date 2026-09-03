@@ -3,7 +3,7 @@ export type MarketType = 'PRIMARY_DEVELOPER' | 'SECONDARY_OWNER' | 'SECONDARY_AG
 export type SellerType = 'developer' | 'owner' | 'agency';
 
 export type ParsedFilter = {
-  key: 'rooms' | 'minPrice' | 'maxPrice' | 'completed' | 'notFirstFloor' | 'minFloor' | 'maxFloor' | 'minArea' | 'maxArea' | 'reservable' | 'market' | 'seller' | 'district' | 'finish';
+  key: 'city' | 'complex' | 'rooms' | 'minPrice' | 'maxPrice' | 'completed' | 'notFirstFloor' | 'minFloor' | 'maxFloor' | 'minArea' | 'maxArea' | 'reservable' | 'specialOffer' | 'market' | 'seller' | 'district' | 'finish';
   label: string;
   value: string | number | boolean;
 };
@@ -25,8 +25,12 @@ export type ComplexSummary = {
   rating: number;
   mapX: number;
   mapY: number;
+  latitude: number;
+  longitude: number;
   priceFrom: number;
   pricePerSqmFrom: number;
+  largestArea: number;
+  newestPublishedAt: string;
   availableUnits: number;
   minRooms: number;
   maxRooms: number;
@@ -34,7 +38,15 @@ export type ComplexSummary = {
   reservable: boolean;
   sponsored: boolean;
   sponsoredLabel: string | null;
+  specialOffer: boolean;
+  specialOfferLabel: string | null;
   promotionWeight: number;
+};
+
+export type CatalogFacets = {
+  cities: string[];
+  districts: string[];
+  complexes: { slug: string; name: string }[];
 };
 
 export type CatalogResponse = {
@@ -45,11 +57,14 @@ export type CatalogResponse = {
   validationWarnings: string[];
   alternatives: ComplexSummary[];
   alternativeReason: string | null;
+  facets: CatalogFacets;
 };
 
 export type CatalogQuery = {
   market?: 'all' | 'primary' | 'secondary';
   q?: string;
+  city?: string;
+  complex?: string;
   rooms?: number;
   status?: 'completed' | 'under_construction';
   seller?: SellerType;
@@ -63,7 +78,8 @@ export type CatalogQuery = {
   finish?: string;
   verified?: boolean;
   reservable?: boolean;
-  sort?: 'recommended' | 'price_asc' | 'price_desc' | 'newest';
+  specialOffer?: boolean;
+  sort?: 'recommended' | 'price_asc' | 'price_desc' | 'price_per_sqm' | 'newest' | 'area_desc';
   surface?: 'search' | 'homepage';
   excludeParsed?: string[];
   limit?: number;
@@ -71,7 +87,7 @@ export type CatalogQuery = {
 
 export type ComplexRecord = Omit<
   ComplexSummary,
-  'priceFrom' | 'pricePerSqmFrom' | 'availableUnits' | 'minRooms' | 'maxRooms' | 'marketTypes' | 'reservable' | 'sponsored' | 'sponsoredLabel' | 'promotionWeight'
+  'priceFrom' | 'pricePerSqmFrom' | 'largestArea' | 'newestPublishedAt' | 'availableUnits' | 'minRooms' | 'maxRooms' | 'marketTypes' | 'reservable' | 'sponsored' | 'sponsoredLabel' | 'promotionWeight'
 > & { promotionSearchWeight: number; promotionHomepageWeight: number };
 
 export type ListingRecord = {

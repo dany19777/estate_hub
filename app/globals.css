@@ -348,6 +348,7 @@ a { color: inherit; text-decoration: none; }
 .filter-input-group > div { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .filter-input-group input, .filter-input-group select { min-width: 0; height: 34px; border: 1px solid #dfe5ed; border-radius: 8px; color: #344054; background: white; font-size: 9px; }
 .filter-input-group select { width: 100%; padding: 0 9px; }
+.filter-sublegend { margin: 5px 0 2px; color: #667085; font-size: 9px; font-weight: 700; }
 .filter-check { display: flex; align-items: center; gap: 8px; margin: 12px 0; color: #445168; font-size: 10px; cursor: pointer; }
 .filter-check input { position: absolute; opacity: 0; }
 .filter-check > span { display: grid; width: 17px; height: 17px; place-items: center; border: 1px solid #9cbcff; border-radius: 5px; color: white; background: var(--blue); }
@@ -437,6 +438,25 @@ a { color: inherit; text-decoration: none; }
 .map-card a svg { width: 12px; }
 .map-controls { position: absolute; right: 18px; top: 18px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #d7dee6; border-radius: 9px; box-shadow: 0 7px 18px rgba(20,35,55,.1); }
 .map-controls button { width: 36px; height: 34px; border: 0; border-bottom: 1px solid #dfe5eb; background: white; font-size: 18px; cursor: pointer; }
+.real-map-surface { background: #eaf0eb; }
+.complex-leaflet-map { position: absolute; inset: 0; z-index: 1; background: #eaf0eb; }
+.complex-leaflet-map .leaflet-tile-pane { filter: saturate(.72) contrast(.94) brightness(1.04); }
+.complex-leaflet-map .leaflet-control-zoom { overflow: hidden; border: 1px solid #d7dee6; border-radius: 10px; box-shadow: 0 7px 18px rgba(20,35,55,.12); }
+.complex-leaflet-map .leaflet-control-zoom a { display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-bottom: 1px solid #e0e5eb; color: #314158; font: 600 20px/1 Inter, sans-serif; }
+.complex-leaflet-map .leaflet-control-attribution { color: #748094; background: rgba(255,255,255,.88); font-size: 8px; }
+.estate-map-marker-wrapper { border: 0; background: transparent; }
+.estate-map-marker { display: inline-flex; min-width: 68px; height: 30px; align-items: center; justify-content: center; padding: 0 9px; border: 2px solid white; border-radius: 10px 10px 10px 3px; color: white; background: var(--blue); box-shadow: 0 7px 18px rgba(35,99,235,.34); font-size: 9px; font-weight: 800; white-space: nowrap; transition: transform .15s ease, color .15s ease, background .15s ease; }
+.estate-map-marker.selected { color: var(--blue); background: white; box-shadow: 0 10px 25px rgba(15,38,72,.24); transform: scale(1.1); }
+.map-result-count { position: absolute; z-index: 450; top: 16px; left: 16px; display: grid; grid-template-columns: 28px auto; align-items: center; gap: 0 8px; padding: 9px 12px; border: 1px solid rgba(213,222,232,.9); border-radius: 11px; color: #1e293b; background: rgba(255,255,255,.94); box-shadow: 0 8px 22px rgba(18,35,55,.12); backdrop-filter: blur(8px); }
+.map-result-count svg { width: 19px; height: 19px; grid-row: 1 / 3; color: var(--blue); }
+.map-result-count strong { font-size: 13px; line-height: 1; }
+.map-result-count span { color: #69768a; font-size: 8px; }
+.real-map-surface .map-card { z-index: 450; }
+.map-card .map-developer { margin-top: 6px; color: #3d526e; font-weight: 650; }
+.map-card .map-developer svg { color: var(--blue); }
+.map-card-facts { display: flex !important; flex-flow: row wrap !important; gap: 5px; margin-top: 9px; padding: 0 !important; }
+.map-card-facts span { display: inline-flex; width: auto; height: 22px; align-items: center; padding: 0 7px; border-radius: 6px; color: #586578; background: #f2f5f8; font-size: 8px; font-weight: 650; }
+.special-offer-badge { background: #e4552e !important; }
 .filter-backdrop { display: none; }
 
 @media (max-width: 1180px) {

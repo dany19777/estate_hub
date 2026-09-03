@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Bot,
@@ -24,6 +24,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ComplexMap } from '@/components/complex-map';
 import { InternalLink as Link } from '@/components/internal-link';
 import { MarketplaceHeader } from '@/components/marketplace-header';
 import { useComplexes } from '@/hooks/use-complexes';
@@ -50,36 +51,51 @@ const marketContext = {
 } as const;
 
 const marketValue = (market: string): 'all' | 'primary' | 'secondary' => market === 'Первичный' ? 'primary' : market === 'Вторичный' ? 'secondary' : 'all';
+type CatalogSort = 'recommended' | 'price_asc' | 'price_desc' | 'price_per_sqm' | 'newest' | 'area_desc';
+
+function numberParam(value: string | null) {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
 
 export default function CatalogPage() {
   const searchParams = useSearchParams();
   const initialMarket = searchParams.get('market');
-  const [view, setView] = useState<'list' | 'map'>('list');
+  const initialStatus = searchParams.get('status');
+  const initialSeller = searchParams.get('seller');
+  const initialSort = searchParams.get('sort');
+  const [view, setView] = useState<'list' | 'map'>(() => searchParams.get('view') === 'map' ? 'map' : 'list');
   const [activeMarket, setActiveMarket] = useState(() => initialMarket === 'primary' ? 'Первичный' : initialMarket === 'secondary' ? 'Вторичный' : 'Все');
   const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
   const [selected, setSelected] = useState<ComplexSummary | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
-  const [rooms, setRooms] = useState<number | undefined>();
-  const [status, setStatus] = useState<'completed' | 'under_construction' | undefined>();
-  const [seller, setSeller] = useState<SellerType | undefined>();
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [minArea, setMinArea] = useState('');
-  const [maxArea, setMaxArea] = useState('');
-  const [minFloor, setMinFloor] = useState('');
-  const [maxFloor, setMaxFloor] = useState('');
-  const [district, setDistrict] = useState('');
-  const [finish, setFinish] = useState('');
-  const [removedAiFilters, setRemovedAiFilters] = useState<string[]>([]);
-  const [verified, setVerified] = useState(true);
-  const [reservable, setReservable] = useState(false);
-  const [sort, setSort] = useState<'recommended' | 'price_asc' | 'price_desc' | 'newest'>('recommended');
+  const [city, setCity] = useState(() => searchParams.get('city') ?? 'Самарканд');
+  const [complexSlug, setComplexSlug] = useState(() => searchParams.get('complex') ?? '');
+  const [rooms, setRooms] = useState<number | undefined>(() => numberParam(searchParams.get('rooms')));
+  const [status, setStatus] = useState<'completed' | 'under_construction' | undefined>(() => initialStatus === 'completed' || initialStatus === 'under_construction' ? initialStatus : undefined);
+  const [seller, setSeller] = useState<SellerType | undefined>(() => initialSeller === 'developer' || initialSeller === 'owner' || initialSeller === 'agency' ? initialSeller : undefined);
+  const [minPrice, setMinPrice] = useState(() => numberParam(searchParams.get('minPrice')) ? String(Number(searchParams.get('minPrice')) / 1_000_000) : '');
+  const [maxPrice, setMaxPrice] = useState(() => numberParam(searchParams.get('maxPrice')) ? String(Number(searchParams.get('maxPrice')) / 1_000_000) : '');
+  const [minArea, setMinArea] = useState(() => searchParams.get('minArea') ?? '');
+  const [maxArea, setMaxArea] = useState(() => searchParams.get('maxArea') ?? '');
+  const [minFloor, setMinFloor] = useState(() => searchParams.get('minFloor') ?? '');
+  const [maxFloor, setMaxFloor] = useState(() => searchParams.get('maxFloor') ?? '');
+  const [district, setDistrict] = useState(() => searchParams.get('district') ?? '');
+  const [finish, setFinish] = useState(() => searchParams.get('finish') ?? '');
+  const [removedAiFilters, setRemovedAiFilters] = useState<string[]>(() => (searchParams.get('excludeParsed') ?? '').split(',').filter(Boolean));
+  const [verified, setVerified] = useState(() => searchParams.get('verified') !== 'false');
+  const [reservable, setReservable] = useState(() => searchParams.get('reservable') === 'true');
+  const [specialOffer, setSpecialOffer] = useState(() => searchParams.get('specialOffer') === 'true');
+  const [sort, setSort] = useState<CatalogSort>(() => initialSort === 'price_asc' || initialSort === 'price_desc' || initialSort === 'price_per_sqm' || initialSort === 'newest' || initialSort === 'area_desc' ? initialSort : 'recommended');
   const [saveMessage, setSaveMessage] = useState('');
 
   const request = useMemo(() => ({
     market: marketValue(activeMarket),
     q: search.trim() || undefined,
+    city: city || undefined,
+    complex: complexSlug || undefined,
     rooms,
     status,
     seller,
@@ -94,21 +110,42 @@ export default function CatalogPage() {
     excludeParsed: removedAiFilters.join(',') || undefined,
     verified,
     reservable,
+    specialOffer,
     sort,
     surface: 'search',
-  }), [activeMarket, district, finish, maxArea, maxFloor, maxPrice, minArea, minFloor, minPrice, removedAiFilters, reservable, rooms, search, seller, sort, status, verified]);
+  }), [activeMarket, city, complexSlug, district, finish, maxArea, maxFloor, maxPrice, minArea, minFloor, minPrice, removedAiFilters, reservable, rooms, search, seller, sort, specialOffer, status, verified]);
   const { data: catalog, loading, error, retry } = useComplexes(request);
   const filtered = catalog.items;
 
   const activeSelection = filtered.find((item) => item.id === selected?.id) ?? filtered[0] ?? null;
 
-  const selectMarket = (nextMarket: string) => {
-    setActiveMarket(nextMarket);
-    const params = new URLSearchParams(window.location.search);
-    params.set('market', marketValue(nextMarket));
-    if (search.trim()) params.set('q', search.trim()); else params.delete('q');
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('market', marketValue(activeMarket));
+    if (view === 'map') params.set('view', 'map');
+    if (search.trim()) params.set('q', search.trim());
+    if (city && city !== 'Самарканд') params.set('city', city);
+    if (complexSlug) params.set('complex', complexSlug);
+    if (rooms) params.set('rooms', String(rooms));
+    if (status) params.set('status', status);
+    if (seller) params.set('seller', seller);
+    if (minPrice) params.set('minPrice', String(Number(minPrice) * 1_000_000));
+    if (maxPrice) params.set('maxPrice', String(Number(maxPrice) * 1_000_000));
+    if (minArea) params.set('minArea', minArea);
+    if (maxArea) params.set('maxArea', maxArea);
+    if (minFloor) params.set('minFloor', minFloor);
+    if (maxFloor) params.set('maxFloor', maxFloor);
+    if (district) params.set('district', district);
+    if (finish) params.set('finish', finish);
+    if (removedAiFilters.length) params.set('excludeParsed', removedAiFilters.join(','));
+    if (!verified) params.set('verified', 'false');
+    if (reservable) params.set('reservable', 'true');
+    if (specialOffer) params.set('specialOffer', 'true');
+    if (sort !== 'recommended') params.set('sort', sort);
     window.history.replaceState({}, '', `/catalog?${params.toString()}`);
-  };
+  }, [activeMarket, city, complexSlug, district, finish, maxArea, maxFloor, maxPrice, minArea, minFloor, minPrice, removedAiFilters, reservable, rooms, search, seller, sort, specialOffer, status, verified, view]);
+
+  const selectMarket = (nextMarket: string) => setActiveMarket(nextMarket);
 
   const saveSearch = async () => {
     setSaveMessage('Сохраняем…');
@@ -129,10 +166,13 @@ export default function CatalogPage() {
     setMinFloor('');
     setMaxFloor('');
     setDistrict('');
+    setCity('Самарканд');
+    setComplexSlug('');
     setFinish('');
     setRemovedAiFilters([]);
     setVerified(true);
     setReservable(false);
+    setSpecialOffer(false);
     setSort('recommended');
   };
 
@@ -185,8 +225,11 @@ export default function CatalogPage() {
             <div><button className={seller === undefined ? 'active' : ''} type="button" onClick={() => setSeller(undefined)}>Все</button><button className={seller === 'developer' ? 'active' : ''} type="button" onClick={() => setSeller('developer')}>Застройщик</button><button className={seller === 'owner' ? 'active' : ''} type="button" onClick={() => setSeller('owner')}>Владелец</button><button className={seller === 'agency' ? 'active' : ''} type="button" onClick={() => setSeller('agency')}>Агентство</button></div>
           </fieldset>
           <fieldset className="filter-group filter-input-group">
-            <legend>Район и отделка</legend>
-            <select value={district} onChange={(event) => setDistrict(event.target.value)} aria-label="Район"><option value="">Все районы</option>{['Боғишамол', 'Регистан', 'Сиёб', 'Саттепо', 'Центр', 'Конигил'].map((item) => <option key={item}>{item}</option>)}</select>
+            <legend>Город, район и ЖК</legend>
+            <select value={city} onChange={(event) => { setCity(event.target.value); setDistrict(''); setComplexSlug(''); }} aria-label="Город"><option value="">Все города</option>{catalog.facets.cities.map((item) => <option key={item}>{item}</option>)}</select>
+            <select value={district} onChange={(event) => { setDistrict(event.target.value); setComplexSlug(''); }} aria-label="Район"><option value="">Все районы</option>{catalog.facets.districts.map((item) => <option key={item}>{item}</option>)}</select>
+            <select value={complexSlug} onChange={(event) => setComplexSlug(event.target.value)} aria-label="Жилой комплекс"><option value="">Все жилые комплексы</option>{catalog.facets.complexes.map((item) => <option value={item.slug} key={item.slug}>{item.name}</option>)}</select>
+            <span className="filter-sublegend">Отделка</span>
             <select value={finish} onChange={(event) => setFinish(event.target.value)} aria-label="Отделка"><option value="">Любая отделка</option><option>С ремонтом</option><option>Чистовая</option><option>Предчистовая</option></select>
           </fieldset>
           <fieldset className="filter-group filter-input-group">
@@ -197,15 +240,16 @@ export default function CatalogPage() {
           </fieldset>
           <label className="filter-check"><input checked={verified} onChange={(event) => setVerified(event.target.checked)} type="checkbox" /><span><Check /></span> Только проверенные</label>
           <label className="filter-check"><input checked={reservable} onChange={(event) => setReservable(event.target.checked)} type="checkbox" /><span><Check /></span> Онлайн-бронирование</label>
+          <label className="filter-check"><input checked={specialOffer} onChange={(event) => setSpecialOffer(event.target.checked)} type="checkbox" /><span><Check /></span> Спецпредложение EstateHub</label>
           <Button className="apply-filters" onClick={() => setFiltersOpen(false)}>Показать {catalog.total} комплексов</Button>
           <button className="clear-filters" type="button" onClick={resetFilters}>Сбросить фильтры</button>
         </aside>
 
         <section className="catalog-results">
           <div className="catalog-results-heading">
-            <div><span>Самарканд</span><h1>{loading ? 'Ищем предложения…' : `${catalog.total} жилых комплексов`}</h1>{saveMessage && <small className="saved-search-message">{saveMessage}</small>}</div>
+            <div><span>{city || 'Все города'}</span><h1>{loading ? 'Ищем предложения…' : `${catalog.total} жилых комплексов`}</h1>{saveMessage && <small className="saved-search-message">{saveMessage}</small>}</div>
             <Button variant="outline" size="sm" onClick={saveSearch}>Сохранить поиск</Button>
-            <label className="catalog-sort"><span className="sr-only">Сортировка</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="recommended">Сначала рекомендуемые</option><option value="price_asc">Сначала дешевле</option><option value="price_desc">Сначала дороже</option><option value="newest">Сначала новые</option></select></label>
+            <label className="catalog-sort"><span className="sr-only">Сортировка</span><select value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}><option value="recommended">Сначала рекомендуемые</option><option value="price_asc">Сначала дешевле</option><option value="price_desc">Сначала дороже</option><option value="price_per_sqm">По цене за м²</option><option value="newest">Сначала новые</option><option value="area_desc">Сначала больше площадь</option></select></label>
           </div>
 
           <section className="market-context-card" aria-label={`Примеры раздела ${context.label}`}>
@@ -230,7 +274,7 @@ export default function CatalogPage() {
                 <article className="result-card" key={item.id}>
                   <div className="result-card-image">
                     <img src={item.image} alt={item.name} />
-                    {item.sponsored ? <Badge className="sponsored-badge"><Sparkles /> {item.sponsoredLabel}</Badge> : <Badge>{marketLabel(item.marketTypes)}</Badge>}
+                    {item.sponsored ? <Badge className={`sponsored-badge ${item.specialOffer ? 'special-offer-badge' : ''}`}><Sparkles /> {item.sponsoredLabel}</Badge> : <Badge>{marketLabel(item.marketTypes)}</Badge>}
                     <button className={isFavorite(item.id) ? 'active' : ''} onClick={() => void toggleFavorite({ id: item.id, slug: item.slug, name: item.name, image: item.image, price_from: item.priceFrom, available_units: item.availableUnits, completion_label: item.completionLabel })} type="button" aria-label="Добавить в избранное"><Heart /></button>
                   </div>
                   <div className="result-card-body">
@@ -244,15 +288,13 @@ export default function CatalogPage() {
               ))}
             </div>
           ) : (
-            <div className="map-surface">
-              <div className="map-label map-label-1">САМАРКАНД</div>
-              <div className="map-road road-1" /><div className="map-road road-2" /><div className="map-road road-3" /><div className="map-river" />
-              {filtered.map((item) => <button key={item.id} type="button" className={`price-marker ${activeSelection?.id === item.id ? 'selected' : ''}`} style={{ left: `${item.mapX}%`, top: `${item.mapY}%` }} onClick={() => setSelected(item)}>{formatPriceMillions(item.priceFrom)}</button>)}
+            <div className="map-surface real-map-surface">
+              <ComplexMap items={filtered} selectedId={activeSelection?.id ?? null} onSelect={setSelected} />
+              <div className="map-result-count"><MapPin /><strong>{catalog.total}</strong><span>ЖК по выбранным фильтрам</span></div>
               {activeSelection && <div className="map-card">
                 <img src={activeSelection.image} alt={activeSelection.name} />
-                <div><Badge>{marketLabel(activeSelection.marketTypes)}</Badge><h2>{activeSelection.name}</h2><p><MapPin /> {activeSelection.district}</p><strong>от {formatPriceMillions(activeSelection.priceFrom)} сум</strong><Link href={`/complex/${activeSelection.slug}`}>Открыть комплекс <ArrowRight /></Link></div>
+                <div><Badge>{activeSelection.specialOffer ? activeSelection.specialOfferLabel : marketLabel(activeSelection.marketTypes)}</Badge><h2>{activeSelection.name}</h2><p><MapPin /> {activeSelection.city}, {activeSelection.district}</p><p className="map-developer"><ShieldCheck /> {activeSelection.developerVerified ? 'Проверенный застройщик' : 'Застройщик'} · {activeSelection.developer}</p><div className="map-card-facts"><span>{activeSelection.availableUnits} квартир</span><span>{activeSelection.completionLabel}</span></div><strong>от {formatPriceMillions(activeSelection.priceFrom)} сум</strong><Link href={`/complex/${activeSelection.slug}`}>Открыть комплекс <ArrowRight /></Link></div>
               </div>}
-              <div className="map-controls"><button type="button">+</button><button type="button">−</button></div>
             </div>
           )}
         </section>
