@@ -575,8 +575,8 @@ a { color: inherit; text-decoration: none; }
 .complex-location-copy p { display: flex; align-items: flex-start; gap: 5px; margin: 14px 0 8px; color: #506078; font-size: 10px; line-height: 1.45; }
 .complex-location-copy p svg { width: 14px; flex: 0 0 auto; color: #2461db; }
 .complex-location-copy small { display: block; color: #8590a0; font-size: 8px; line-height: 1.55; }
-.complex-location-map { min-height: 280px; }
-.complex-location-map .complex-leaflet-map { width: 100%; height: 100%; min-height: 280px; }
+.complex-location-map { position: relative; min-height: 280px; overflow: hidden; isolation: isolate; }
+.complex-location-map .complex-leaflet-map { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 280px; }
 .complex-feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .complex-feature-list { display: grid; gap: 9px; margin-top: 17px; }
 .complex-feature-list > div { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 9px; border-radius: 9px; background: #f8fafc; }

@@ -44,6 +44,8 @@ export function ComplexMap({ items, selectedId, onSelect }: ComplexMapProps) {
       minZoom: 10,
       maxZoom: 18,
       zoomControl: false,
+      scrollWheelZoom: false,
+      touchZoom: true,
     });
     library.control.zoom({ position: 'topright' }).addTo(map);
     library.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -52,9 +54,22 @@ export function ComplexMap({ items, selectedId, onSelect }: ComplexMapProps) {
     }).addTo(map);
     mapRef.current = map;
     const markers = markersRef.current;
+    let lastPinchZoom = 0;
+    const handleTrackpadPinch = (event: WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      const now = performance.now();
+      if (now - lastPinchZoom < 90) return;
+      lastPinchZoom = now;
+      const direction = event.deltaY < 0 ? 1 : -1;
+      const nextZoom = Math.min(map.getMaxZoom(), Math.max(map.getMinZoom(), map.getZoom() + direction));
+      map.setZoomAround(map.mouseEventToContainerPoint(event), nextZoom, { animate: true });
+    };
+    container.addEventListener('wheel', handleTrackpadPinch, { passive: false });
     const observer = new ResizeObserver(() => map.invalidateSize({ animate: false }));
     observer.observe(container);
     return () => {
+      container.removeEventListener('wheel', handleTrackpadPinch);
       observer.disconnect();
       map.remove();
       mapRef.current = null;
