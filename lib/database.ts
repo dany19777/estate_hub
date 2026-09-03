@@ -5,7 +5,7 @@ import { indexStatements, schemaStatements } from '@/db/schema';
 import { buildCatalog } from '@/lib/catalog-service';
 import { expireBillingPeriods } from '@/lib/billing';
 import { expirePromotions } from '@/lib/promotions';
-import type { ComplexDetail, ComplexListing, ComplexRecord, ListingDetail, ListingPriceHistoryEntry, ListingRecord, MarketType, SellerType } from '@/lib/marketplace';
+import type { ComplexBuilding, ComplexDetail, ComplexDocument, ComplexFeature, ComplexListing, ComplexPricePoint, ComplexRecord, ListingDetail, ListingPriceHistoryEntry, ListingRecord, MarketType, SellerType } from '@/lib/marketplace';
 
 type MarketplaceEnv = Cloudflare.Env & { DB: D1Database };
 
@@ -59,6 +59,19 @@ type ComplexListingRow = ListingRow & {
   sponsored_label: string | null;
 };
 
+type ComplexBuildingRow = {
+  id: string;
+  name: string;
+  total_floors: number;
+  completion_status: ComplexRecord['completionStatus'];
+  sections_count: number;
+  available_units: number;
+};
+
+type ComplexFeatureRow = { id: string; category: ComplexFeature['category']; name: string; detail: string };
+type ComplexDocumentRow = { id: string; title: string; url: string | null };
+type ComplexPricePointRow = { period: string; price_per_sqm: number; listing_count: number };
+
 type ListingDetailRow = ComplexListingRow & {
   expires_at: string | null;
   availability_status: string;
@@ -79,6 +92,23 @@ type PriceHistoryRow = { id: string; old_price_uzs: number | null; new_price_uzs
 type PromotionSignalRow = { complex_id: string; surface: string; boost_weight: number; special_offer: number; sponsored_label: string | null };
 
 const categoryKeysForSeed = ['construction_quality', 'location', 'infrastructure', 'yard', 'sound_insulation', 'management_service'] as const;
+
+const commonComplexFeatures = [
+  ['amenity', 'Закрытый двор', 'Территория без машин и доступ по карте'],
+  ['amenity', 'Видеонаблюдение', 'Камеры в подъездах и по периметру'],
+  ['amenity', 'Детская площадка', 'Безопасное покрытие и зоны для разных возрастов'],
+  ['amenity', 'Подземный паркинг', 'Лифт из паркинга на жилые этажи'],
+  ['infrastructure', 'Школа и детский сад', 'До 15 минут пешком'],
+  ['infrastructure', 'Супермаркет', 'Магазины повседневного спроса рядом'],
+  ['infrastructure', 'Общественный транспорт', 'Остановки в пределах 500 метров'],
+  ['infrastructure', 'Парк и прогулочные зоны', 'Благоустроенные маршруты рядом с домом'],
+] as const;
+
+const commonComplexDocuments = [
+  'Разрешение на строительство · SM-2024-018',
+  'Проектная декларация · редакция 3',
+  'Заключение технической экспертизы',
+] as const;
 
 let initialization: Promise<void> | null = null;
 
@@ -182,6 +212,14 @@ async function seedMarketplace(database: D1Database) {
       .bind(buildingId, complex.id, complex.floors, complex.completionStatus));
     statements.push(database.prepare(`INSERT OR IGNORE INTO sections (id, building_id, name) VALUES (?, ?, 'Секция 1')`)
       .bind(sectionId, buildingId));
+    statements.push(database.prepare(`INSERT OR IGNORE INTO buildings (id, complex_id, name, total_floors, completion_status) VALUES (?, ?, 'Корпус B', ?, ?)`)
+      .bind(`building-${complex.id}-b`, complex.id, Math.max(complex.floors - 2, 1), complex.completionStatus));
+    statements.push(database.prepare(`INSERT OR IGNORE INTO sections (id, building_id, name) VALUES (?, ?, 'Секция 1')`)
+      .bind(`section-${complex.id}-b`, `building-${complex.id}-b`));
+    commonComplexFeatures.forEach(([category, name, detail], index) => statements.push(database.prepare(`INSERT OR IGNORE INTO complex_features (id, complex_id, category, name, detail, sort_order) VALUES (?, ?, ?, ?, ?, ?)`)
+      .bind(`feature-${complex.id}-${category}-${index}`, complex.id, category, name, detail, index)));
+    commonComplexDocuments.forEach((title, index) => statements.push(database.prepare(`INSERT OR IGNORE INTO media_assets (id, entity_type, entity_id, media_type, url, alt_text, sort_order) VALUES (?, 'complex', ?, 'document', '', ?, ?)`)
+      .bind(`document-${complex.id}-${index}`, complex.id, title, index)));
     const mediaUrls = [
       complex.image,
       'https://images.unsplash.com/photo-1600573472592-401b489a3cdc?auto=format&fit=crop&w=1000&q=88',
@@ -216,6 +254,12 @@ async function seedMarketplace(database: D1Database) {
       .bind(listingId, unitId, complexId, sellerOrgId, marketType, sellerType, priceUzs, reserveEnabled));
     statements.push(database.prepare(`INSERT OR IGNORE INTO listing_price_history (id, listing_id, old_price_uzs, new_price_uzs, reason, changed_by) VALUES (?, ?, NULL, ?, 'initial_publication', 'system-seed')`)
       .bind(`price-${listingId}-initial`, listingId, priceUzs));
+    const sixMonthsAgoPrice = Math.round(priceUzs * 0.94);
+    const threeMonthsAgoPrice = Math.round(priceUzs * 0.97);
+    statements.push(database.prepare(`INSERT OR IGNORE INTO listing_price_history (id, listing_id, old_price_uzs, new_price_uzs, reason, changed_by, changed_at) VALUES (?, ?, NULL, ?, 'market_update', 'system-seed', datetime('now', '-6 months'))`)
+      .bind(`price-${listingId}-6m`, listingId, sixMonthsAgoPrice));
+    statements.push(database.prepare(`INSERT OR IGNORE INTO listing_price_history (id, listing_id, old_price_uzs, new_price_uzs, reason, changed_by, changed_at) VALUES (?, ?, ?, ?, 'market_update', 'system-seed', datetime('now', '-3 months'))`)
+      .bind(`price-${listingId}-3m`, listingId, sixMonthsAgoPrice, threeMonthsAgoPrice));
   }
 
   statements.push(
@@ -363,7 +407,7 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
   const summary = buildCatalog(complexes, listings, {}).items.find((item) => item.id === record.id);
   if (!summary) return null;
 
-  const [listingResult, mediaResult] = await Promise.all([
+  const [listingResult, mediaResult, buildingResult, featureResult, documentResult, priceHistoryResult] = await Promise.all([
     database.prepare(`SELECT
       l.id, l.complex_id, u.unit_number, u.rooms, u.area_sqm, u.floor_number,
       u.total_floors, u.finish, l.price_uzs, l.market_type, l.seller_type,
@@ -383,6 +427,26 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
       WHERE l.complex_id = ? AND l.status = 'published' AND u.availability_status = 'available'
       ORDER BY l.price_uzs ASC`).bind(record.id).all<ComplexListingRow>(),
     database.prepare(`SELECT url FROM media_assets WHERE entity_type = 'complex' AND entity_id = ? AND media_type = 'image' ORDER BY sort_order ASC`).bind(record.id).all<{ url: string }>(),
+    database.prepare(`SELECT building.id, building.name, building.total_floors, building.completion_status,
+      COUNT(DISTINCT section.id) AS sections_count,
+      COUNT(DISTINCT CASE WHEN unit.availability_status = 'available' THEN unit.id END) AS available_units
+      FROM buildings building
+      LEFT JOIN sections section ON section.building_id = building.id
+      LEFT JOIN units unit ON unit.building_id = building.id
+      WHERE building.complex_id = ?
+      GROUP BY building.id, building.name, building.total_floors, building.completion_status
+      ORDER BY building.name ASC`).bind(record.id).all<ComplexBuildingRow>(),
+    database.prepare(`SELECT id, category, name, detail FROM complex_features WHERE complex_id = ? ORDER BY category ASC, sort_order ASC, name ASC`).bind(record.id).all<ComplexFeatureRow>(),
+    database.prepare(`SELECT id, alt_text AS title, NULLIF(url, '') AS url FROM media_assets WHERE entity_type = 'complex' AND entity_id = ? AND media_type = 'document' ORDER BY sort_order ASC`).bind(record.id).all<ComplexDocumentRow>(),
+    database.prepare(`SELECT substr(history.changed_at, 1, 7) AS period,
+      ROUND(AVG(CAST(history.new_price_uzs AS REAL) / unit.area_sqm)) AS price_per_sqm,
+      COUNT(DISTINCT history.listing_id) AS listing_count
+      FROM listing_price_history history
+      JOIN listings listing ON listing.id = history.listing_id
+      JOIN units unit ON unit.id = listing.unit_id
+      WHERE listing.complex_id = ? AND listing.status = 'published'
+      GROUP BY substr(history.changed_at, 1, 7)
+      ORDER BY period ASC`).bind(record.id).all<ComplexPricePointRow>(),
   ]);
 
   const detailListings: ComplexListing[] = (listingResult.results ?? []).map((row) => ({
@@ -406,11 +470,32 @@ export async function readComplexDetail(slug: string): Promise<ComplexDetail | n
     sponsoredLabel: row.sponsored_label,
   }));
 
+  const buildings: ComplexBuilding[] = (buildingResult.results ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    totalFloors: row.total_floors,
+    completionStatus: row.completion_status,
+    sectionsCount: Number(row.sections_count),
+    availableUnits: Number(row.available_units),
+  }));
+  const features: ComplexFeature[] = (featureResult.results ?? []).map((row) => ({ id: row.id, category: row.category, name: row.name, detail: row.detail }));
+  const documents: ComplexDocument[] = (documentResult.results ?? []).map((row) => ({ id: row.id, title: row.title, url: row.url }));
+  const priceHistory: ComplexPricePoint[] = (priceHistoryResult.results ?? []).map((row) => ({ period: row.period, pricePerSqm: Number(row.price_per_sqm), listingCount: Number(row.listing_count) }));
+  const similarComplexes = buildCatalog(complexes, listings, { verified: true }).items
+    .filter((item) => item.id !== record.id)
+    .sort((left, right) => Number(right.district === summary.district) - Number(left.district === summary.district) || right.rating - left.rating)
+    .slice(0, 3);
+
   return {
     summary,
     description: record.description,
     gallery: (mediaResult.results ?? []).map((item) => item.url),
     listings: detailListings,
+    buildings,
+    features,
+    documents,
+    priceHistory,
+    similarComplexes,
   };
 }
 

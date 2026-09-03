@@ -114,6 +114,16 @@ export const schemaStatements = [
     reviewed_at TEXT,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS complex_features (
+    id TEXT PRIMARY KEY,
+    complex_id TEXT NOT NULL REFERENCES complexes(id),
+    category TEXT NOT NULL CHECK (category IN ('infrastructure', 'amenity')),
+    name TEXT NOT NULL,
+    detail TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(complex_id, category, name)
+  )`,
   `CREATE TABLE IF NOT EXISTS buildings (
     id TEXT PRIMARY KEY,
     complex_id TEXT NOT NULL REFERENCES complexes(id),
@@ -578,6 +588,7 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_phone_challenges_user_created ON phone_verification_challenges(user_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_phone_challenges_expiry ON phone_verification_challenges(expires_at) WHERE consumed_at IS NULL`,
   `CREATE INDEX IF NOT EXISTS idx_complex_workflow_status ON complex_publication_workflows(status, updated_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_complex_features_complex_category ON complex_features(complex_id, category, sort_order)`,
   `CREATE INDEX IF NOT EXISTS idx_units_complex_availability ON units(complex_id, availability_status)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_complex_status ON listings(complex_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_market_price ON listings(market_type, price_uzs) WHERE status = 'published'`,

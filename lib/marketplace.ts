@@ -114,11 +114,44 @@ export type ComplexListing = ListingRecord & {
   sponsoredLabel: string | null;
 };
 
+export type ComplexBuilding = {
+  id: string;
+  name: string;
+  totalFloors: number;
+  completionStatus: ComplexSummary['completionStatus'];
+  sectionsCount: number;
+  availableUnits: number;
+};
+
+export type ComplexFeature = {
+  id: string;
+  category: 'infrastructure' | 'amenity';
+  name: string;
+  detail: string;
+};
+
+export type ComplexDocument = {
+  id: string;
+  title: string;
+  url: string | null;
+};
+
+export type ComplexPricePoint = {
+  period: string;
+  pricePerSqm: number;
+  listingCount: number;
+};
+
 export type ComplexDetail = {
   summary: ComplexSummary;
   description: string;
   gallery: string[];
   listings: ComplexListing[];
+  buildings: ComplexBuilding[];
+  features: ComplexFeature[];
+  documents: ComplexDocument[];
+  priceHistory: ComplexPricePoint[];
+  similarComplexes: ComplexSummary[];
 };
 
 export type ListingPriceHistoryEntry = {
