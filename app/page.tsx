@@ -301,9 +301,9 @@ export default function HomePage() {
             </p>
           </div>
           <div className="view-switcher" aria-label="Вид результатов">
-            <button className="active" type="button">
+            <span className="active" aria-current="true">
               <Building2 /> Каталог
-            </button>
+            </span>
             <Link href="/catalog">
               <Map /> Карта
             </Link>
