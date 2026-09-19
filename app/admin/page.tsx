@@ -33,6 +33,7 @@ import { AdminBillingPanel } from '@/components/admin-billing-panel';
 import { AdminPromotionsPanel } from '@/components/admin-promotions-panel';
 import { AdminReviewsPanel } from '@/components/admin-reviews-panel';
 import { AdminUsersPanel } from '@/components/admin-users-panel';
+import { AdminAuditPanel } from '@/components/admin-audit-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -291,10 +292,6 @@ export default function AdminDashboard() {
     .toUpperCase();
   const highRiskCount =
     dashboard?.queue.filter((item) => item.risk_level === 'high').length ?? 0;
-  const refundCount = finance.operations.filter(
-    (item) => item.operation_type === 'refund',
-  ).length;
-
   function navigateAdmin(label: string) {
     const targets: Record<string, string> = {
       Обзор: 'admin-overview',
@@ -929,55 +926,7 @@ export default function AdminDashboard() {
           />
 
           <div className="admin-lower-grid">
-            <section className="admin-panel admin-activity" id="audit">
-              <div className="admin-panel-heading">
-                <div>
-                  <h2>Последние критические действия</h2>
-                  <p>Неизменяемый журнал аудита</p>
-                </div>
-                <button type="button" onClick={() => navigateAdmin('Аудит')}>
-                  Весь аудит
-                </button>
-              </div>
-              <div>
-                <article>
-                  <span>
-                    <Check />
-                  </span>
-                  <p>
-                    <strong>Одобрен застройщик Imorat Invest</strong>
-                    <small>Verification Specialist · request 9f32…c181</small>
-                  </p>
-                  <time>02:18</time>
-                </article>
-                <article>
-                  <span>
-                    <ShieldCheck />
-                  </span>
-                  <p>
-                    <strong>Изменена цена квартиры A-142</strong>
-                    <small>Samarkand Development · 680 → 685 млн сум</small>
-                  </p>
-                  <time>01:54</time>
-                </article>
-                <article>
-                  <span>
-                    <WalletCards />
-                  </span>
-                  <p>
-                    <strong>
-                      {refundCount
-                        ? 'Последний возврат зарегистрирован'
-                        : 'Возвраты ожидают операций'}
-                    </strong>
-                    <small>
-                      Платёжный журнал · причина фиксируется в аудите
-                    </small>
-                  </p>
-                  <time>сейчас</time>
-                </article>
-              </div>
-            </section>
+            <AdminAuditPanel query={query} />
             <section className="admin-panel system-health" id="system-health">
               <div className="admin-panel-heading">
                 <div>
