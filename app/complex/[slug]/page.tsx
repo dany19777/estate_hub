@@ -21,6 +21,7 @@ import { WatchlistDialog } from '@/components/watchlist-dialog';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useComplexDetail } from '@/hooks/use-complex-detail';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useTrackRecentlyViewed } from '@/hooks/use-recently-viewed';
 import { useWatchlist } from '@/hooks/use-watchlist';
 import { formatPriceMillions, formatPricePerSqm } from '@/lib/marketplace';
 import type { ComplexSummary, SellerType } from '@/lib/marketplace';
@@ -50,6 +51,7 @@ export default function ComplexPage() {
   const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
   const { items: comparisonItems, has: isCompared, toggle: toggleComparison } = useComparisons();
   const watchlist = useWatchlist();
+  useTrackRecentlyViewed('complex', data?.summary.id);
   const [inventoryTab, setInventoryTab] = useState<InventoryTab>('Все');
   const [sellerFilter, setSellerFilter] = useState<'all' | SellerType>('all');
   const [roomsFilter, setRoomsFilter] = useState('all');
@@ -149,7 +151,7 @@ export default function ComplexPage() {
         </section>
 
         <section className="detail-gallery">
-          <div className="gallery-main"><NextImage src={images[activeImage] ?? images[0]} width={1200} height={700} unoptimized alt={`${summary.name} — основное фото`} priority /><button type="button"><Maximize2 /> Все фото · {images.length}</button></div>
+          <div className="gallery-main"><NextImage src={images[activeImage] ?? images[0]} width={1200} height={700} unoptimized alt={`${summary.name} — основное фото`} priority /><button type="button" onClick={() => setActiveImage((current) => (current + 1) % images.length)}><Maximize2 /> Следующее фото · {activeImage + 1}/{images.length}</button></div>
           <div className="gallery-side">{images.slice(1, 4).map((image, index) => <button type="button" onClick={() => setActiveImage(index + 1)} key={image}><NextImage src={image} width={480} height={300} unoptimized alt={`${summary.name} — фото ${index + 2}`} />{index === 2 && images.length > 4 ? <span>+{images.length - 4}</span> : null}</button>)}</div>
         </section>
 
@@ -218,7 +220,7 @@ export default function ComplexPage() {
           <aside className="detail-rail">
             <div className="price-card"><span>Квартиры</span><strong>от {formatPriceMillions(summary.priceFrom)} сум</strong><p>от {formatPricePerSqm(summary.pricePerSqmFrom)}</p><a href="#inventory">Выбрать квартиру <ArrowRight /></a></div>
             <div className="developer-card"><div className="developer-card-head"><span>{summary.developer.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span><div><h3>{summary.developer}</h3><p><ShieldCheck /> Проверенный застройщик</p></div></div><div className="developer-stats"><span><strong>Проверен</strong>статус</span><span><strong>{summary.availableUnits}</strong>квартир</span><span><strong>{summary.rating.toFixed(1)}</strong>рейтинг</span></div><LeadRequestDialog type="consultation" complexId={summary.id} complexName={summary.name} trigger={<Button className="developer-message" variant="outline"><MessageCircle /> Получить консультацию</Button>} /></div>
-            <div className="viewing-card"><span><CalendarDays /></span><h3>Записаться на просмотр</h3><p>Выберите дату и время — менеджер подтвердит визит.</p><div><button type="button">1 день<br /><strong>Ближайший</strong></button><button type="button" className="active">30 дней<br /><strong>Доступно</strong></button><button type="button">5 слотов<br /><strong>В день</strong></button></div>{firstPrimaryListing ? <LeadRequestDialog type="viewing" complexId={summary.id} complexName={summary.name} listingId={firstPrimaryListing.id} unitNumber={firstPrimaryListing.unitNumber} trigger={<Button>Выбрать время</Button>} /> : <Button disabled>Нет первичных квартир</Button>}</div>
+            <div className="viewing-card"><span><CalendarDays /></span><h3>Записаться на просмотр</h3><p>Выберите дату и время — менеджер подтвердит визит.</p><div aria-label="Доступность записи"><span>1 день<br /><strong>Ближайший</strong></span><span className="active">30 дней<br /><strong>Доступно</strong></span><span>5 слотов<br /><strong>В день</strong></span></div>{firstPrimaryListing ? <LeadRequestDialog type="viewing" complexId={summary.id} complexName={summary.name} listingId={firstPrimaryListing.id} unitNumber={firstPrimaryListing.unitNumber} trigger={<Button>Выбрать время</Button>} /> : <Button disabled>Нет первичных квартир</Button>}</div>
             <div className="rating-card"><div><strong>{summary.rating.toFixed(1)}</strong><span><Star /><Star /><Star /><Star /><Star /></span><small>Проверенный рейтинг</small></div><p>Качество строительства <span>{Math.max(summary.rating - 0.1, 0).toFixed(1)}</span></p><p>Расположение <span>{Math.min(summary.rating + 0.1, 5).toFixed(1)}</span></p><p>Инфраструктура <span>{summary.rating.toFixed(1)}</span></p><a href="#reviews">Читать отзывы и оценки</a></div>
           </aside>
         </section>

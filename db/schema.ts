@@ -297,6 +297,14 @@ export const schemaStatements = [
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS buyer_recent_views (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    target_type TEXT NOT NULL CHECK (target_type IN ('complex', 'listing')),
+    target_id TEXT NOT NULL,
+    viewed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, target_type, target_id)
+  )`,
   `CREATE TABLE IF NOT EXISTS buyer_watch_subscriptions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),
@@ -606,6 +614,7 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_reservations_hold_expiry ON reservation_transactions(status, hold_expires_at)`,
   `CREATE INDEX IF NOT EXISTS idx_buyer_favorites_created ON buyer_favorites(user_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_buyer_saved_searches_updated ON buyer_saved_searches(user_id, updated_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_buyer_recent_views_user_viewed ON buyer_recent_views(user_id, viewed_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_watch_user_active_updated ON buyer_watch_subscriptions(user_id, active, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_watch_target_active ON buyer_watch_subscriptions(target_type, target_id, active)`,
   `CREATE INDEX IF NOT EXISTS idx_notifications_user_read_created ON notifications(user_id, read_at, created_at)`,

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useListingDetail } from '@/hooks/use-listing-detail';
+import { useTrackRecentlyViewed } from '@/hooks/use-recently-viewed';
 import { useWatchlist } from '@/hooks/use-watchlist';
 import { formatPriceMillions, formatPricePerSqm } from '@/lib/marketplace';
 
@@ -36,6 +37,7 @@ export default function ListingPage() {
   const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
   const { has: isCompared, toggle: toggleComparison } = useComparisons();
   const watchlist = useWatchlist();
+  useTrackRecentlyViewed('listing', data?.listing.id);
 
   const chartPoints = useMemo(() => {
     const values = data?.priceHistory.map((item) => item.newPriceUzs) ?? [];
