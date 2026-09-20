@@ -18,6 +18,7 @@ export function useSession() {
   const [session, setSession] = useState<MarketplaceSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [unauthenticated, setUnauthenticated] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -26,6 +27,7 @@ export function useSession() {
         const payload = (await response.json()) as MarketplaceSession & {
           message?: string;
         };
+        if (response.status === 401) setUnauthenticated(true);
         if (!response.ok)
           throw new Error(
             payload.message ?? 'Не удалось определить права доступа.',
@@ -45,5 +47,5 @@ export function useSession() {
     return () => controller.abort();
   }, []);
 
-  return { session, loading, error };
+  return { session, loading, error, unauthenticated };
 }

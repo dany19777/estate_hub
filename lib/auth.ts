@@ -1,5 +1,5 @@
-import { env } from 'cloudflare:workers';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { passwordSessionUser, sameOrigin } from '@/lib/password-auth';
 
 export type PlatformRole =
   | 'SUPERADMIN'
@@ -46,7 +46,6 @@ export type AppSession = {
   };
 };
 
-type UserRow = { id: string; email: string; full_name: string };
 type MembershipRow = {
   organization_id: string;
   organization_name: string;
@@ -131,110 +130,15 @@ export class AuthorizationError extends Error {
   }
 }
 
-function requestIdentity(request: Request) {
-  const url = new URL(request.url);
-  const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-  const externalId =
-    request.headers.get('oai-authenticated-user-id') ??
-    (isLocal ? 'local-sites-owner' : null);
-  const email =
-    request.headers.get('oai-authenticated-user-email') ??
-    (isLocal ? 'seedy@sites.test' : null);
-  let fullName = email ?? 'Пользователь EstateHub';
-  const encodedName = request.headers.get('oai-authenticated-user-full-name');
-  if (
-    encodedName &&
-    request.headers.get('oai-authenticated-user-full-name-encoding') ===
-      'percent-encoded-utf-8'
-  ) {
-    try {
-      fullName = decodeURIComponent(encodedName);
-    } catch {
-      /* fall back to email */
-    }
-  }
-  if (!externalId || !email)
-    throw new AuthorizationError(
-      401,
-      'Для доступа необходимо войти в аккаунт.',
-    );
-  return { externalId, email, fullName };
-}
-
 export async function getAppSession(request: Request): Promise<AppSession> {
-  const identity = requestIdentity(request);
-  const database = await ensureMarketplaceDatabase();
-  let user = await database
-    .prepare(
-      `SELECT id, email, full_name FROM users WHERE external_user_id = ? LIMIT 1`,
-    )
-    .bind(identity.externalId)
-    .first<UserRow>();
-
-  if (!user) {
-    const userId = crypto.randomUUID();
-    await database
-      .prepare(
-        `INSERT OR IGNORE INTO users (id, external_user_id, email, full_name) VALUES (?, ?, ?, ?)`,
-      )
-      .bind(userId, identity.externalId, identity.email, identity.fullName)
-      .run();
-    user = await database
-      .prepare(
-        `SELECT id, email, full_name FROM users WHERE external_user_id = ? LIMIT 1`,
-      )
-      .bind(identity.externalId)
-      .first<UserRow>();
-  } else if (
-    user.email !== identity.email ||
-    user.full_name !== identity.fullName
-  ) {
-    await database
-      .prepare(
-        `UPDATE users SET email = ?, full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      )
-      .bind(identity.email, identity.fullName, user.id)
-      .run();
-    user = { ...user, email: identity.email, full_name: identity.fullName };
-  }
-  if (!user)
-    throw new AuthorizationError(
-      401,
-      'Не удалось создать профиль пользователя.',
-    );
-
-  const roleCount = await database
-    .prepare(`SELECT COUNT(*) AS count FROM platform_role_assignments`)
-    .first<{ count: number }>();
-  const bootstrapEmail = String(
-    (env as typeof env & { ESTATEHUB_BOOTSTRAP_ADMIN_EMAIL?: string })
-      .ESTATEHUB_BOOTSTRAP_ADMIN_EMAIL ?? '',
-  )
-    .trim()
-    .toLowerCase();
   if (
-    (roleCount?.count ?? 0) === 0 &&
-    bootstrapEmail &&
-    identity.email.toLowerCase() === bootstrapEmail
-  ) {
-    await database.batch([
-      database
-        .prepare(
-          `INSERT OR IGNORE INTO platform_role_assignments (user_id, role) VALUES (?, 'SUPERADMIN')`,
-        )
-        .bind(user.id),
-      database
-        .prepare(
-          `INSERT OR IGNORE INTO organization_memberships (organization_id, user_id, role, status) VALUES ('org-samarkand-development', ?, 'OWNER', 'active')`,
-        )
-        .bind(user.id),
-      database
-        .prepare(
-          `INSERT OR IGNORE INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'access.bootstrap_owner', 'user', ?, '{"scope":"owner-only-site"}')`,
-        )
-        .bind(`audit-bootstrap-${user.id}`, user.id, user.id),
-    ]);
-  }
+    !['GET', 'HEAD', 'OPTIONS'].includes(request.method) &&
+    !sameOrigin(request)
+  )
+    throw new AuthorizationError(403, 'Недопустимый источник запроса.');
+  const user = await passwordSessionUser(request);
+  if (!user) throw new AuthorizationError(401, 'Войдите в аккаунт EstateHub.');
+  const database = await ensureMarketplaceDatabase();
 
   const [roleResult, membership, phoneVerification] = await Promise.all([
     database

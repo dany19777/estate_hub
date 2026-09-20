@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  Bell,
-  Building2,
-  Heart,
-  Menu,
-  ShieldCheck,
-  UserRound,
-  X,
-} from 'lucide-react';
+import { Bell, Building2, Heart, Menu, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { InternalLink as Link } from '@/components/internal-link';
@@ -21,7 +13,6 @@ type MarketplaceHeaderProps = {
 export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { session } = useSession();
-  const canOpenAdmin = session?.permissions.includes('VIEW_ADMIN');
   const canOpenDeveloper = session?.permissions.includes(
     'VIEW_DEVELOPER_DASHBOARD',
   );
@@ -63,11 +54,6 @@ export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
           </Link>
           <Link href="/#how-it-works">Как это работает</Link>
           <Link href="/developer">Для застройщиков</Link>
-          {canOpenAdmin && (
-            <Link className="role-navigation-link" href="/admin">
-              <ShieldCheck /> Админ-панель
-            </Link>
-          )}
         </nav>
         <div className="header-actions">
           <button
@@ -103,8 +89,8 @@ export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
           </Link>
           <Link
             className="profile-button"
-            href="/profile"
-            aria-label="Личный кабинет"
+            href={session ? '/account' : '/login'}
+            aria-label={session ? 'Личный кабинет' : 'Войти'}
           >
             <UserRound />
           </Link>
@@ -129,7 +115,6 @@ export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
           {canOpenDeveloper && (
             <Link href="/developer">Кабинет застройщика</Link>
           )}
-          {canOpenAdmin && <Link href="/admin">Панель администратора</Link>}
         </nav>
       )}
     </header>
