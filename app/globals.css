@@ -9771,6 +9771,57 @@ a {
   padding: 24px;
   scroll-margin-top: 78px;
 }
+.admin-workspace {
+  height: 100vh;
+  min-width: 0;
+  overflow: hidden;
+}
+.admin-view-container {
+  height: calc(100vh - 60px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.admin-view-container[data-view]:not([data-view='overview']) > .admin-heading,
+.admin-view-container[data-view]:not([data-view='overview']) > .admin-kpis,
+.admin-view-container[data-view]:not([data-view='overview']):not(
+    [data-view='verification']
+  )
+  > .admin-main-grid,
+.admin-view-container[data-view]:not([data-view='moderation']) > #moderation,
+.admin-view-container[data-view]:not([data-view='directory']) > #directory,
+.admin-view-container[data-view]:not([data-view='users']) > #users,
+.admin-view-container[data-view]:not([data-view='reviews']) > #reviews,
+.admin-view-container[data-view]:not([data-view='disputes']) > #disputes,
+.admin-view-container[data-view]:not([data-view='billing']) > #billing,
+.admin-view-container[data-view]:not([data-view='promotions']) > #promotions,
+.admin-view-container[data-view]:not([data-view='finance']) > #finance,
+.admin-view-container[data-view]:not([data-view='audit']):not(
+    [data-view='system-health']
+  )
+  > .admin-lower-grid,
+.admin-view-container[data-view]:not([data-view='audit']) .admin-audit-panel,
+.admin-view-container[data-view]:not([data-view='system-health'])
+  .system-health {
+  display: none;
+}
+.admin-view-container[data-view='verification'] > .admin-main-grid {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 0;
+}
+.admin-view-container[data-view='verification'] .admin-side-stack {
+  display: none;
+}
+.admin-view-container[data-view='audit'] > .admin-lower-grid,
+.admin-view-container[data-view='system-health'] > .admin-lower-grid {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 0;
+}
+.admin-view-container[data-view]:not([data-view='overview'])
+  > .admin-operation-state
+  + .admin-panel,
+.admin-view-container[data-view]:not([data-view='overview']) > .admin-panel {
+  margin-top: 0;
+}
 .admin-heading {
   display: flex;
   align-items: end;

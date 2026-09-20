@@ -112,6 +112,39 @@ const queueLabels: Record<string, string> = {
   in_review: 'В работе',
 };
 
+const adminViews: Record<string, string> = {
+  Обзор: 'overview',
+  Пользователи: 'users',
+  'Роли и доступ': 'users',
+  Застройщики: 'directory',
+  'Агентства и владельцы': 'directory',
+  'Жилые комплексы': 'directory',
+  Верификация: 'verification',
+  Модерация: 'moderation',
+  Отзывы: 'reviews',
+  'Брони и платежи': 'finance',
+  'Споры и возвраты': 'disputes',
+  'Тарифы и биллинг': 'billing',
+  Продвижение: 'promotions',
+  Аудит: 'audit',
+  Аналитика: 'overview',
+  'Настройки системы': 'system-health',
+};
+
+const adminHashLabels: Record<string, string> = {
+  users: 'Пользователи',
+  directory: 'Застройщики',
+  verification: 'Верификация',
+  moderation: 'Модерация',
+  reviews: 'Отзывы',
+  finance: 'Брони и платежи',
+  disputes: 'Споры и возвраты',
+  billing: 'Тарифы и биллинг',
+  promotions: 'Продвижение',
+  audit: 'Аудит',
+  'system-health': 'Настройки системы',
+};
+
 function formatAdminMoney(value: number) {
   return value >= 1_000_000
     ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум`
@@ -168,6 +201,10 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
+    const requestedView = window.location.hash.slice(1);
+    if (adminHashLabels[requestedView]) {
+      setActiveNav(adminHashLabels[requestedView]);
+    }
     const task = window.setTimeout(() => {
       void loadDashboard();
     }, 0);
@@ -294,35 +331,18 @@ export default function AdminDashboard() {
     .toUpperCase();
   const highRiskCount =
     dashboard?.queue.filter((item) => item.risk_level === 'high').length ?? 0;
+  const activeView = adminViews[activeNav] ?? 'overview';
+
   function navigateAdmin(label: string) {
-    const targets: Record<string, string> = {
-      Обзор: 'admin-overview',
-      Пользователи: 'users',
-      'Роли и доступ': 'users',
-      Застройщики: 'directory',
-      'Агентства и владельцы': 'directory',
-      'Жилые комплексы': 'directory',
-      Верификация: 'verification',
-      Модерация: 'moderation',
-      'Брони и платежи': 'finance',
-      Отзывы: 'reviews',
-      'Споры и возвраты': 'disputes',
-      'Тарифы и биллинг': 'billing',
-      Продвижение: 'promotions',
-      Аудит: 'audit',
-      Аналитика: 'admin-overview',
-      'Настройки системы': 'system-health',
-    };
+    const target = adminViews[label] ?? 'overview';
     setActiveNav(label);
     setMobileNav(false);
     window.history.replaceState(
       null,
       '',
-      `#${targets[label] ?? 'admin-overview'}`,
+      target === 'overview' ? '/admin' : `#${target}`,
     );
-    document
-      .getElementById(targets[label] ?? 'admin-overview')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelector('.admin-content')?.scrollTo({ top: 0 });
   }
 
   return (
@@ -450,7 +470,11 @@ export default function AdminDashboard() {
             <span>{userInitials}</span>
           </div>
         </header>
-        <div className="admin-content" id="admin-overview">
+        <div
+          className="admin-content admin-view-container"
+          id="admin-overview"
+          data-view={activeView}
+        >
           <div className="admin-heading">
             <div>
               <span>29 августа 2026 · Самарканд</span>
