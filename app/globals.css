@@ -6888,6 +6888,7 @@ a {
 }
 .listing-call-action {
   display: flex;
+  width: calc(100% - 24px);
   height: 38px;
   align-items: center;
   justify-content: center;
@@ -9627,7 +9628,10 @@ a {
   color: #9bb8f7;
   background: #122440;
   font-size: 8px;
+  font-family: inherit;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition:
     border-color 0.2s ease,
     color 0.2s ease,

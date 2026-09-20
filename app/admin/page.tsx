@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
@@ -392,10 +391,14 @@ export default function AdminDashboard() {
             );
           })}
         </nav>
-        <Link className="admin-back-to-site" href="/">
+        <button
+          className="admin-back-to-site"
+          type="button"
+          onClick={() => window.location.assign(`${window.location.origin}/`)}
+        >
           <ArrowLeft />
           <span>Вернуться на сайт</span>
-        </Link>
+        </button>
         <div className="system-status">
           <span>
             <i /> Все системы работают
