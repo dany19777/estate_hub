@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowLeft,
   BarChart3,
   Bell,
   Building2,
@@ -34,6 +36,7 @@ import { AdminPromotionsPanel } from '@/components/admin-promotions-panel';
 import { AdminReviewsPanel } from '@/components/admin-reviews-panel';
 import { AdminUsersPanel } from '@/components/admin-users-panel';
 import { AdminAuditPanel } from '@/components/admin-audit-panel';
+import { AdminDirectoryPanel } from '@/components/admin-directory-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -297,9 +300,9 @@ export default function AdminDashboard() {
       Обзор: 'admin-overview',
       Пользователи: 'users',
       'Роли и доступ': 'users',
-      Застройщики: 'moderation',
-      'Агентства и владельцы': 'verification',
-      'Жилые комплексы': 'moderation',
+      Застройщики: 'directory',
+      'Агентства и владельцы': 'directory',
+      'Жилые комплексы': 'directory',
       Верификация: 'verification',
       Модерация: 'moderation',
       'Брони и платежи': 'finance',
@@ -389,6 +392,10 @@ export default function AdminDashboard() {
             );
           })}
         </nav>
+        <Link className="admin-back-to-site" href="/">
+          <ArrowLeft />
+          <span>Вернуться на сайт</span>
+        </Link>
         <div className="system-status">
           <span>
             <i /> Все системы работают
@@ -427,7 +434,11 @@ export default function AdminDashboard() {
             />
           </div>
           <div>
-            <button type="button" aria-label="Уведомления" onClick={() => navigateAdmin('Верификация')}>
+            <button
+              type="button"
+              aria-label="Уведомления"
+              onClick={() => navigateAdmin('Верификация')}
+            >
               <Bell />
               {Boolean(dashboard?.stats.pendingVerifications) && (
                 <span>{dashboard?.stats.pendingVerifications}</span>
@@ -443,7 +454,10 @@ export default function AdminDashboard() {
               <h1>Контроль платформы</h1>
               <p>Верификация, модерация, бронирования и финансовые операции.</p>
             </div>
-            <Button variant="outline" onClick={() => navigateAdmin('Настройки системы')}>
+            <Button
+              variant="outline"
+              onClick={() => navigateAdmin('Настройки системы')}
+            >
               <SlidersHorizontal /> Настроить дашборд
             </Button>
           </div>
@@ -842,6 +856,19 @@ export default function AdminDashboard() {
               </TableBody>
             </Table>
           </section>
+
+          <AdminDirectoryPanel
+            query={query}
+            focus={
+              activeNav === 'Застройщики'
+                ? 'developers'
+                : activeNav === 'Агентства и владельцы'
+                  ? 'agencies'
+                  : activeNav === 'Жилые комплексы'
+                    ? 'complexes'
+                    : undefined
+            }
+          />
 
           <AdminUsersPanel query={query} />
 
