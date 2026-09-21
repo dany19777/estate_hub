@@ -31,7 +31,11 @@ import { useBuyerPreferences } from '@/components/buyer-preferences';
 import { useComplexes } from '@/hooks/use-complexes';
 import { useFavorites } from '@/hooks/use-favorites';
 import type { ComplexSummary, SellerType } from '@/lib/marketplace';
-import { formatPriceMillions, marketLabel } from '@/lib/marketplace';
+import {
+  formatApartmentCount,
+  formatPriceMillions,
+  marketLabel,
+} from '@/lib/marketplace';
 
 const marketContext = {
   Все: {
@@ -693,7 +697,7 @@ export default function CatalogPage() {
             className="apply-filters"
             onClick={() => setFiltersOpen(false)}
           >
-            Показать {catalog.total} комплексов
+            {`Показать ${catalog.total} комплексов`}
           </Button>
           <button
             className="clear-filters"
@@ -871,7 +875,7 @@ export default function CatalogPage() {
                           : `${item.minRooms}–${item.maxRooms}`}{' '}
                         комн.
                       </span>
-                      <span>{item.availableUnits} квартир</span>
+                      <span>{formatApartmentCount(item.availableUnits)}</span>
                       <span>{item.completionLabel}</span>
                     </div>
                     {item.reservable && (
@@ -925,7 +929,9 @@ export default function CatalogPage() {
                       · {activeSelection.developer}
                     </p>
                     <div className="map-card-facts">
-                      <span>{activeSelection.availableUnits} квартир</span>
+                      <span>
+                        {formatApartmentCount(activeSelection.availableUnits)}
+                      </span>
                       <span>{activeSelection.completionLabel}</span>
                     </div>
                     <strong>

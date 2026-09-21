@@ -94,9 +94,81 @@ const messages = {
     'Поиск сохранён': 'Qidiruv saqlandi',
     Сбросить: 'Tozalash',
     'Попробовать снова': 'Qayta urinib ko‘ring',
+    'Например: двушка до 900 млн в сданном ЖК':
+      'Masalan: topshirilgan majmuada 900 mln gacha ikki xonali kvartira',
+    'Ищу двушку до 900 млн в сданном ЖК, не на первом этаже':
+      'Topshirilgan majmuada 900 mln gacha, birinchi qavatda bo‘lmagan ikki xonali kvartira izlayapman',
+    Самарканд: 'Samarqand',
+    Регистан: 'Registon',
+    Боғишамол: 'Bog‘ishamol',
+    Центр: 'Markaz',
+    Сиёб: 'Siyob',
+    'кв.': 'chorak',
+    от: 'dan boshlab',
+    млн: 'mln',
+    'Актуально в Самарканде': 'SAMARQANDDAGI DOLZARB TAKLIFLAR',
+    'Эксклюзивная цена': 'Maxsus narx',
+    Реклама: 'Reklama',
+    'Выбор EstateHub': 'EstateHub tanlovi',
+    'Курс Центрального банка': 'Markaziy bank kursi',
+    'Поиск по каталогу': 'Katalog bo‘yicha qidirish',
+    'ЖК, район или запрос на обычном языке':
+      'Majmua, tuman yoki oddiy tildagi so‘rov',
+    'AI-поиск готов': 'AI qidiruvi tayyor',
+    'AI понял ваш запрос': 'AI so‘rovingizni tushundi',
+    'Опишите квартиру обычным языком':
+      'Kvartirani oddiy tilda tasvirlab bering',
+    Состояние: 'Holati',
+    Сдан: 'Topshirilgan',
+    Строится: 'Qurilmoqda',
+    Продавец: 'Sotuvchi',
+    Владелец: 'Egasi',
+    Агентство: 'Agentlik',
+    'Город, район и ЖК': 'Shahar, tuman va majmua',
+    Город: 'Shahar',
+    Район: 'Tuman',
+    'Все города': 'Barcha shaharlar',
+    'Все районы': 'Barcha tumanlar',
+    'Все жилые комплексы': 'Barcha turar joy majmualari',
+    Отделка: 'Ta’mir',
+    'Любая отделка': 'Istalgan ta’mir',
+    'С ремонтом': 'Ta’mirlangan',
+    Чистовая: 'Tayyor ta’mir',
+    Предчистовая: 'Oq suvoq',
+    'Площадь, м²': 'Maydon, m²',
+    Этаж: 'Qavat',
+    'Только проверенные': 'Faqat tekshirilganlar',
+    'Спецпредложение EstateHub': 'EstateHub maxsus taklifi',
+    'Сбросить фильтры': 'Filtrlarni tozalash',
+    'Сохранить поиск': 'Qidiruvni saqlash',
+    Сортировка: 'Saralash',
+    'Сначала рекомендуемые': 'Avval tavsiya etilganlar',
+    'Сначала дешевле': 'Avval arzonlari',
+    'Сначала дороже': 'Avval qimmatlari',
+    'По цене за м²': 'm² narxi bo‘yicha',
+    'Сначала новые': 'Avval yangilari',
+    'Сначала больше площадь': 'Avval maydoni kattalari',
+    'Доступно онлайн-бронирование': 'Onlayn band qilish mavjud',
+    комн: 'xona',
+    Конигил: 'Konigil',
+    Саттепо: 'Sattepo',
+    'Все варианты покупки в одном каталоге':
+      'Barcha xarid variantlari bitta katalogda',
+    'Новостройки от проверенных застройщиков и квартиры собственников на вторичном рынке.':
+      'Tekshirilgan quruvchilarning yangi uylari va ikkilamchi bozordagi mulkdor kvartiralari.',
+    Раздел: 'Bo‘lim',
+    Пример: 'Misol',
+    'Проверяем актуальные объявления': 'Dolzarb e’lonlar tekshirilmoqda',
+    'Применяем выбранные фильтры к опубликованным квартирам.':
+      'Tanlangan filtrlar e’lon qilingan kvartiralarga qo‘llanmoqda.',
+    'Минимальная цена': 'Minimal narx',
+    'Максимальная цена': 'Maksimal narx',
+    до: 'gacha',
+    'Примеры раздела': 'Bo‘lim misollari',
     'млн сум': 'mln so‘m',
     сум: 'so‘m',
     квартир: 'kvartira',
+    квартиры: 'kvartira',
     квартира: 'kvartira',
     этаж: 'qavat',
     район: 'tuman',
@@ -181,9 +253,81 @@ const messages = {
     'Поиск сохранён': 'Search saved',
     Сбросить: 'Reset',
     'Попробовать снова': 'Try again',
+    'Например: двушка до 900 млн в сданном ЖК':
+      'For example: a two-bedroom apartment under UZS 900M in a completed development',
+    'Ищу двушку до 900 млн в сданном ЖК, не на первом этаже':
+      'I am looking for a two-bedroom apartment under UZS 900M in a completed development, above the ground floor',
+    Самарканд: 'Samarkand',
+    Регистан: 'Registan',
+    Боғишамол: 'Bogishamol',
+    Центр: 'Central district',
+    Сиёб: 'Siyob',
+    'кв.': 'quarter',
+    от: 'from',
+    млн: 'M',
+    'Актуально в Самарканде': 'CURRENT IN SAMARKAND',
+    'Эксклюзивная цена': 'Exclusive price',
+    Реклама: 'Sponsored',
+    'Выбор EstateHub': 'EstateHub choice',
+    'Курс Центрального банка': 'Central Bank rate',
+    'Поиск по каталогу': 'Search catalog',
+    'ЖК, район или запрос на обычном языке':
+      'Development, district, or a natural-language request',
+    'AI-поиск готов': 'AI search is ready',
+    'AI понял ваш запрос': 'AI understood your request',
+    'Опишите квартиру обычным языком':
+      'Describe the apartment in natural language',
+    Состояние: 'Status',
+    Сдан: 'Completed',
+    Строится: 'Under construction',
+    Продавец: 'Seller',
+    Владелец: 'Owner',
+    Агентство: 'Agency',
+    'Город, район и ЖК': 'City, district and development',
+    Город: 'City',
+    Район: 'District',
+    'Все города': 'All cities',
+    'Все районы': 'All districts',
+    'Все жилые комплексы': 'All residential developments',
+    Отделка: 'Finish',
+    'Любая отделка': 'Any finish',
+    'С ремонтом': 'Renovated',
+    Чистовая: 'Finished',
+    Предчистовая: 'Pre-finished',
+    'Площадь, м²': 'Area, m²',
+    Этаж: 'Floor',
+    'Только проверенные': 'Verified only',
+    'Спецпредложение EstateHub': 'EstateHub special offer',
+    'Сбросить фильтры': 'Reset filters',
+    'Сохранить поиск': 'Save search',
+    Сортировка: 'Sort',
+    'Сначала рекомендуемые': 'Recommended first',
+    'Сначала дешевле': 'Lowest price first',
+    'Сначала дороже': 'Highest price first',
+    'По цене за м²': 'Price per m²',
+    'Сначала новые': 'Newest first',
+    'Сначала больше площадь': 'Largest area first',
+    'Доступно онлайн-бронирование': 'Online reservation available',
+    комн: 'rooms',
+    Конигил: 'Konigil',
+    Саттепо: 'Sattepo',
+    'Все варианты покупки в одном каталоге':
+      'Every buying option in one catalog',
+    'Новостройки от проверенных застройщиков и квартиры собственников на вторичном рынке.':
+      'New builds from verified developers and owner-listed resale apartments.',
+    Раздел: 'Section',
+    Пример: 'Example',
+    'Проверяем актуальные объявления': 'Checking current listings',
+    'Применяем выбранные фильтры к опубликованным квартирам.':
+      'Applying your selected filters to published apartments.',
+    'Минимальная цена': 'Minimum price',
+    'Максимальная цена': 'Maximum price',
+    до: 'to',
+    'Примеры раздела': 'Section examples',
     'млн сум': 'M UZS',
     сум: 'UZS',
     квартир: 'apartments',
+    квартиры: 'apartments',
     квартира: 'apartment',
     этаж: 'floor',
     район: 'district',
@@ -201,6 +345,34 @@ function translateText(value: string, locale: BuyerLocale) {
   const dictionary = messages[locale] as Record<string, string>;
   const trimmed = value.trim();
   if (!trimmed) return value;
+  const developmentCount = trimmed.match(/^(\d+) жилых комплексов$/);
+  if (developmentCount) {
+    return locale === 'en'
+      ? `${developmentCount[1]} residential developments`
+      : `${developmentCount[1]} ta turar joy majmuasi`;
+  }
+  const filterResultCount = trimmed.match(/^Показать (\d+) комплексов$/);
+  if (filterResultCount) {
+    return locale === 'en'
+      ? `Show ${filterResultCount[1]} developments`
+      : `${filterResultCount[1]} ta majmuani ko‘rsatish`;
+  }
+  const searchExample = trimmed.match(
+    /^Например: двушка до (.+) в сданном ЖК$/,
+  );
+  if (searchExample) {
+    return locale === 'en'
+      ? `For example: a two-bedroom apartment under ${searchExample[1]} in a completed development`
+      : `Masalan: topshirilgan majmuada ${searchExample[1]} gacha ikki xonali kvartira`;
+  }
+  const queryExample = trimmed.match(
+    /^Ищу двушку до (.+) в сданном ЖК, не на первом этаже$/,
+  );
+  if (queryExample) {
+    return locale === 'en'
+      ? `I am looking for a two-bedroom apartment under ${queryExample[1]} in a completed development, above the ground floor`
+      : `Topshirilgan majmuada ${queryExample[1]} gacha, birinchi qavatda bo‘lmagan ikki xonali kvartira izlayapman`;
+  }
   if (dictionary[trimmed]) return value.replace(trimmed, dictionary[trimmed]);
   let translated = value;
   for (const [source, target] of Object.entries(dictionary).sort(
@@ -211,6 +383,11 @@ function translateText(value: string, locale: BuyerLocale) {
       new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'gu'),
       target,
     );
+  }
+  if (locale === 'en') {
+    translated = translated
+      .replace(/1\s+apartments/g, '1 apartment')
+      .replace(/\b([IV]{1,3}) quarter (\d{4})\b/g, '$1 quarter, $2');
   }
   return translated;
 }
@@ -272,7 +449,11 @@ export function BuyerPreferencesProvider({
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [showGlobalControls, setShowGlobalControls] = useState(false);
   const originalText = useRef(new WeakMap<Text, string>()).current;
+  const renderedText = useRef(new WeakMap<Text, string>()).current;
   const originalAttributes = useRef(
+    new WeakMap<Element, Map<string, string>>(),
+  ).current;
+  const renderedAttributes = useRef(
     new WeakMap<Element, Map<string, string>>(),
   ).current;
 
@@ -350,7 +531,7 @@ export function BuyerPreferencesProvider({
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    const attributes = ['title', 'aria-label', 'placeholder'];
+    const attributes = ['title', 'aria-label', 'placeholder', 'alt'];
 
     const localizeText = (node: Text) => {
       if (
@@ -359,47 +540,52 @@ export function BuyerPreferencesProvider({
         )
       )
         return;
-      if (
-        currency === 'USD' &&
-        node.data.trim().toLowerCase() === 'сум' &&
-        node.parentElement?.textContent?.includes('$')
-      ) {
-        originalText.set(node, node.data);
-        node.data = node.data.replace(/сум/i, '');
-        return;
-      }
       const previous = originalText.get(node);
-      const expected = previous
-        ? translateText(
-            convertPrices(previous, currency, usdUzs, locale),
-            locale,
-          )
-        : null;
-      if (previous && node.data === expected) return;
-      if (!previous || node.data !== expected)
+      const lastRendered = renderedText.get(node);
+      if (
+        !previous ||
+        (lastRendered !== undefined && node.data !== lastRendered)
+      )
         originalText.set(node, node.data);
       const base = originalText.get(node) ?? node.data;
-      const next = translateText(
-        convertPrices(base, currency, usdUzs, locale),
-        locale,
-      );
+      const next =
+        currency === 'USD' &&
+        base.trim().toLowerCase() === 'сум' &&
+        node.parentElement?.textContent?.includes('$')
+          ? base.replace(/сум/i, '')
+          : translateText(
+              convertPrices(base, currency, usdUzs, locale),
+              locale,
+            );
+      renderedText.set(node, next);
       if (node.data !== next) node.data = next;
     };
     const localizeElement = (element: Element) => {
       let saved = originalAttributes.get(element);
+      let rendered = renderedAttributes.get(element);
       if (!saved) {
         saved = new Map();
         originalAttributes.set(element, saved);
       }
+      if (!rendered) {
+        rendered = new Map();
+        renderedAttributes.set(element, rendered);
+      }
       for (const attribute of attributes) {
         const current = element.getAttribute(attribute);
         if (current === null) continue;
-        if (!saved.has(attribute)) saved.set(attribute, current);
+        const lastRendered = rendered.get(attribute);
+        if (
+          !saved.has(attribute) ||
+          (lastRendered !== undefined && current !== lastRendered)
+        )
+          saved.set(attribute, current);
         const base = saved.get(attribute)!;
         const next = translateText(
           convertPrices(base, currency, usdUzs, locale),
           locale,
         );
+        rendered.set(attribute, next);
         if (current !== next) element.setAttribute(attribute, next);
       }
     };
@@ -431,7 +617,15 @@ export function BuyerPreferencesProvider({
       subtree: true,
     });
     return () => observer.disconnect();
-  }, [currency, locale, originalAttributes, originalText, usdUzs]);
+  }, [
+    currency,
+    locale,
+    originalAttributes,
+    originalText,
+    renderedAttributes,
+    renderedText,
+    usdUzs,
+  ]);
 
   const value = useMemo(
     () => ({

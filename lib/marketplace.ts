@@ -1,9 +1,29 @@
-export type MarketType = 'PRIMARY_DEVELOPER' | 'SECONDARY_OWNER' | 'SECONDARY_AGENCY';
+export type MarketType =
+  | 'PRIMARY_DEVELOPER'
+  | 'SECONDARY_OWNER'
+  | 'SECONDARY_AGENCY';
 
 export type SellerType = 'developer' | 'owner' | 'agency';
 
 export type ParsedFilter = {
-  key: 'city' | 'complex' | 'rooms' | 'minPrice' | 'maxPrice' | 'completed' | 'notFirstFloor' | 'minFloor' | 'maxFloor' | 'minArea' | 'maxArea' | 'reservable' | 'specialOffer' | 'market' | 'seller' | 'district' | 'finish';
+  key:
+    | 'city'
+    | 'complex'
+    | 'rooms'
+    | 'minPrice'
+    | 'maxPrice'
+    | 'completed'
+    | 'notFirstFloor'
+    | 'minFloor'
+    | 'maxFloor'
+    | 'minArea'
+    | 'maxArea'
+    | 'reservable'
+    | 'specialOffer'
+    | 'market'
+    | 'seller'
+    | 'district'
+    | 'finish';
   label: string;
   value: string | number | boolean;
 };
@@ -79,7 +99,13 @@ export type CatalogQuery = {
   verified?: boolean;
   reservable?: boolean;
   specialOffer?: boolean;
-  sort?: 'recommended' | 'price_asc' | 'price_desc' | 'price_per_sqm' | 'newest' | 'area_desc';
+  sort?:
+    | 'recommended'
+    | 'price_asc'
+    | 'price_desc'
+    | 'price_per_sqm'
+    | 'newest'
+    | 'area_desc';
   surface?: 'search' | 'homepage';
   excludeParsed?: string[];
   limit?: number;
@@ -87,7 +113,18 @@ export type CatalogQuery = {
 
 export type ComplexRecord = Omit<
   ComplexSummary,
-  'priceFrom' | 'pricePerSqmFrom' | 'largestArea' | 'newestPublishedAt' | 'availableUnits' | 'minRooms' | 'maxRooms' | 'marketTypes' | 'reservable' | 'sponsored' | 'sponsoredLabel' | 'promotionWeight'
+  | 'priceFrom'
+  | 'pricePerSqmFrom'
+  | 'largestArea'
+  | 'newestPublishedAt'
+  | 'availableUnits'
+  | 'minRooms'
+  | 'maxRooms'
+  | 'marketTypes'
+  | 'reservable'
+  | 'sponsored'
+  | 'sponsoredLabel'
+  | 'promotionWeight'
 > & { promotionSearchWeight: number; promotionHomepageWeight: number };
 
 export type ListingRecord = {
@@ -163,8 +200,23 @@ export type ListingPriceHistoryEntry = {
 };
 
 export type ListingDetail = {
-  listing: ComplexListing & { expiresAt: string | null; availabilityStatus: string; buildingName: string };
-  complex: Pick<ComplexSummary, 'id' | 'slug' | 'name' | 'city' | 'district' | 'address' | 'image' | 'completionLabel' | 'complexVerified'>;
+  listing: ComplexListing & {
+    expiresAt: string | null;
+    availabilityStatus: string;
+    buildingName: string;
+  };
+  complex: Pick<
+    ComplexSummary,
+    | 'id'
+    | 'slug'
+    | 'name'
+    | 'city'
+    | 'district'
+    | 'address'
+    | 'image'
+    | 'completionLabel'
+    | 'complexVerified'
+  >;
   description: string;
   gallery: string[];
   priceHistory: ListingPriceHistoryEntry[];
@@ -177,6 +229,18 @@ export function formatPriceMillions(priceUzs: number) {
 
 export function formatPricePerSqm(priceUzs: number) {
   return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(priceUzs / 1_000_000)} млн / м²`;
+}
+
+export function formatApartmentCount(count: number) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  const noun =
+    mod10 === 1 && mod100 !== 11
+      ? 'квартира'
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? 'квартиры'
+        : 'квартир';
+  return `${count} ${noun}`;
 }
 
 export function marketLabel(marketTypes: MarketType[]) {

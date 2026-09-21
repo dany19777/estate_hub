@@ -25,7 +25,11 @@ import { InternalLink as Link } from '@/components/internal-link';
 import { MarketplaceHeader } from '@/components/marketplace-header';
 import { useComplexes } from '@/hooks/use-complexes';
 import type { ComplexSummary } from '@/lib/marketplace';
-import { formatPriceMillions, marketLabel } from '@/lib/marketplace';
+import {
+  formatApartmentCount,
+  formatPriceMillions,
+  marketLabel,
+} from '@/lib/marketplace';
 
 function ComplexCard({
   complex,
@@ -88,7 +92,7 @@ function ComplexCard({
         </div>
         <div className="card-meta">
           <span>{complex.completionLabel}</span>
-          <span>{complex.availableUnits} квартир</span>
+          <span>{formatApartmentCount(complex.availableUnits)}</span>
           {complex.reservable && (
             <span className="reserve-meta">
               <Check /> Онлайн-бронь
@@ -350,7 +354,7 @@ export default function HomePage() {
 
         <div className="section-cta">
           <p>
-            <strong>{catalog.total} жилых комплексов</strong>
+            <strong>{`${catalog.total} жилых комплексов`}</strong>
             <span>с актуальными предложениями в Самарканде</span>
           </p>
           <Button
