@@ -24,7 +24,14 @@ export default function LoginPage() {
       };
       if (!response.ok) throw new Error(result.message || 'Не удалось войти.');
       if (!result.redirectTo) throw new Error('Сервер не определил кабинет.');
-      window.location.assign(result.redirectTo);
+      const returnTo = new URLSearchParams(window.location.search).get(
+        'returnTo',
+      );
+      window.location.assign(
+        returnTo?.startsWith('/') && !returnTo.startsWith('//')
+          ? returnTo
+          : result.redirectTo,
+      );
     } catch (error) {
       setError(
         error instanceof Error

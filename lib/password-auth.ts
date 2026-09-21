@@ -3,7 +3,7 @@ import { ensureMarketplaceDatabase } from '@/lib/database';
 import { randomToken, tokenHash, verifyPassword } from '@/lib/password';
 
 const COOKIE = 'estatehub_session';
-const LIFETIME = 8 * 60 * 60;
+const LIFETIME = 30 * 24 * 60 * 60;
 const DUMMY_HASH =
   'pbkdf2-sha256$100000$00000000000000000000000000000000$0000000000000000000000000000000000000000000000000000000000000000';
 export function sessionToken(request: Request) {
@@ -96,6 +96,16 @@ export async function provisionTestAccounts() {
                 "INSERT OR IGNORE INTO organization_memberships (organization_id, user_id, role, status) SELECT 'org-samarkand-development', ?, 'OWNER', 'active' WHERE NOT EXISTS (SELECT 1 FROM auth_credentials WHERE user_id = ?)",
               )
               .bind(account.id, account.id),
+          );
+        if (account.role === 'buyer')
+          statements.push(
+            database
+              .prepare(
+                `INSERT OR IGNORE INTO buyer_phone_verifications
+                (user_id, phone_e164, status, verified_at)
+               VALUES (?, '+998901111111', 'verified', CURRENT_TIMESTAMP)`,
+              )
+              .bind(account.id),
           );
         statements.push(
           database

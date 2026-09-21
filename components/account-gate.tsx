@@ -11,7 +11,12 @@ export function AccountGate({
 }) {
   const { session, loading, error, unauthenticated } = useSession();
   useEffect(() => {
-    if (!loading && unauthenticated) window.location.replace('/login');
+    if (!loading && unauthenticated) {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      window.location.replace(
+        `/login?returnTo=${encodeURIComponent(returnTo)}`,
+      );
+    }
   }, [loading, unauthenticated]);
   if (loading)
     return (

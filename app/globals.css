@@ -187,6 +187,38 @@ a {
   align-items: center;
   gap: 4px;
 }
+.preference-select {
+  display: inline-flex;
+  align-items: center;
+}
+.global-buyer-preferences {
+  position: fixed;
+  z-index: 100;
+  top: 12px;
+  right: 18px;
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(20, 34, 56, 0.12);
+  backdrop-filter: blur(12px);
+}
+.global-buyer-preferences select {
+  min-width: 54px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #f4f7fb;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+body:has(.site-header) .global-buyer-preferences {
+  display: none;
+}
 .locale-button,
 .currency-button,
 .icon-button,
@@ -202,6 +234,11 @@ a {
 }
 .locale-button,
 .currency-button {
+  min-width: 50px;
+  appearance: none;
+  border-radius: 8px;
+  text-align: center;
+  text-align-last: center;
   gap: 4px;
   padding: 0 8px;
   font-size: 12px;
@@ -863,8 +900,7 @@ a {
     width: min(100% - 32px, 680px);
   }
   .desktop-nav,
-  .desktop-only,
-  .currency-button {
+  .desktop-only {
     display: none;
   }
   .mobile-menu {
@@ -954,8 +990,10 @@ a {
   .header-actions {
     gap: 0;
   }
-  .locale-button {
-    display: none;
+  .locale-button,
+  .currency-button {
+    min-width: 46px;
+    padding: 0 4px;
   }
   .hero-section {
     min-height: 655px;

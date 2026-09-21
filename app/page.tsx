@@ -120,14 +120,14 @@ function MobileNavigation() {
         <Search />
         <span>Поиск</span>
       </Link>
-      <a href="#complexes">
+      <Link href="/profile?section=favorites">
         <Heart />
         <span>Избранное</span>
-      </a>
-      <a href="#how-it-works">
+      </Link>
+      <Link href="/profile?section=messages">
         <MessageCircle />
         <span>Сообщения</span>
-      </a>
+      </Link>
       <Link href="/profile">
         <UserRound />
         <span>Профиль</span>

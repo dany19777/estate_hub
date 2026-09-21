@@ -4,6 +4,7 @@ import { Bell, Building2, Heart, Menu, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { InternalLink as Link } from '@/components/internal-link';
+import { useBuyerPreferences } from '@/components/buyer-preferences';
 import { useSession } from '@/hooks/use-session';
 
 type MarketplaceHeaderProps = {
@@ -13,6 +14,8 @@ type MarketplaceHeaderProps = {
 export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { session } = useSession();
+  const { locale, currency, rateDate, rateError, setLocale, setCurrency } =
+    useBuyerPreferences();
   const canOpenDeveloper = session?.permissions.includes(
     'VIEW_DEVELOPER_DASHBOARD',
   );
@@ -56,22 +59,42 @@ export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
           <Link href="/developer">Для застройщиков</Link>
         </nav>
         <div className="header-actions">
-          <button
-            className="locale-button"
-            type="button"
-            disabled
-            title="Узбекский и английский будут подключены на этапе локализации"
+          <label className="preference-select" aria-label="Язык интерфейса">
+            <span className="sr-only">Язык интерфейса</span>
+            <select
+              className="locale-button"
+              value={locale}
+              onChange={(event) =>
+                setLocale(event.target.value as 'ru' | 'uz' | 'en')
+              }
+            >
+              <option value="ru">RU</option>
+              <option value="uz">UZ</option>
+              <option value="en">EN</option>
+            </select>
+          </label>
+          <label
+            className="preference-select"
+            aria-label="Валюта"
+            title={
+              rateError ||
+              (rateDate ? `Курс Центрального банка от ${rateDate}` : undefined)
+            }
           >
-            RU
-          </button>
-          <button
-            className="currency-button"
-            type="button"
-            disabled
-            title="Цены MVP фиксированы в сумах"
-          >
-            UZS
-          </button>
+            <span className="sr-only">Валюта</span>
+            <select
+              className="currency-button"
+              value={currency}
+              onChange={(event) =>
+                setCurrency(event.target.value as 'UZS' | 'USD')
+              }
+            >
+              <option value="UZS">UZS</option>
+              <option value="USD" disabled={!rateDate}>
+                USD
+              </option>
+            </select>
+          </label>
           <Link
             className="icon-button desktop-only"
             href="/profile?section=favorites"
@@ -89,7 +112,7 @@ export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
           </Link>
           <Link
             className="profile-button"
-            href={session ? '/account' : '/login'}
+            href="/account"
             aria-label={session ? 'Личный кабинет' : 'Войти'}
           >
             <UserRound />
