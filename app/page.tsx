@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InternalLink as Link } from '@/components/internal-link';
 import { MarketplaceHeader } from '@/components/marketplace-header';
+import { SupportSection } from '@/components/support-section';
 import { useComplexes } from '@/hooks/use-complexes';
 import type { ComplexSummary } from '@/lib/marketplace';
 import {
@@ -254,7 +255,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="trust-strip" id="how-it-works">
+      <section className="trust-strip">
         <div className="shell trust-grid">
           <div>
             <span>
@@ -367,6 +368,8 @@ export default function HomePage() {
           </Button>
         </div>
       </section>
+
+      <SupportSection />
 
       <MobileNavigation />
     </main>

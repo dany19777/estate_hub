@@ -167,6 +167,42 @@ const messages = {
     'Примеры раздела': 'Bo‘lim misollari',
     Разделы: 'Bo‘limlar',
     Недвижимость: 'Ko‘chmas mulk',
+    'От поиска квартиры до связи с поддержкой':
+      'Kvartira qidirishdan yordam xizmatigacha',
+    'EstateHub помогает сравнить проверенные предложения, связаться с продавцом и получить помощь на каждом этапе.':
+      'EstateHub tekshirilgan takliflarni solishtirish, sotuvchi bilan bog‘lanish va har bir bosqichda yordam olishga ko‘maklashadi.',
+    'Найдите подходящий объект': 'Mos obyektni toping',
+    'Используйте каталог, карту, фильтры и поиск обычным языком.':
+      'Katalog, xarita, filtrlar va oddiy tildagi qidiruvdan foydalaning.',
+    'Проверьте и сравните': 'Tekshiring va solishtiring',
+    'Смотрите цены, документы, продавца и доступные квартиры.':
+      'Narxlar, hujjatlar, sotuvchi va mavjud kvartiralarni ko‘ring.',
+    'Свяжитесь или забронируйте': 'Bog‘laning yoki band qiling',
+    'Запишитесь на просмотр, задайте вопрос или оформите бронь.':
+      'Ko‘rishga yoziling, savol bering yoki band qiling.',
+    'Поддержка EstateHub': 'EstateHub yordam xizmati',
+    'Мы поможем разобраться': 'Biz sizga yordam beramiz',
+    'Опишите вопрос — обращение сохранится в системе и автоматически поступит на почту службы поддержки.':
+      'Savolingizni yozing — murojaat tizimda saqlanadi va yordam xizmatining pochtasiga avtomatik yuboriladi.',
+    'Электронная почта': 'Elektron pochta',
+    'Обычно отвечаем в течение рабочего дня':
+      'Odatda bir ish kuni ichida javob beramiz',
+    'Задать вопрос': 'Savol berish',
+    'Напишите нам напрямую': 'Bizga bevosita yozing',
+    'Ваше имя': 'Ismingiz',
+    'Как к вам обращаться': 'Sizga qanday murojaat qilaylik',
+    'Email для ответа': 'Javob uchun email',
+    Тема: 'Mavzu',
+    'Например: вопрос по бронированию': 'Masalan: band qilish bo‘yicha savol',
+    'Ваш вопрос': 'Savolingiz',
+    'Расскажите, с чем вам нужна помощь': 'Qanday yordam kerakligini yozing',
+    'Отправляем…': 'Yuborilmoqda…',
+    'Отправить вопрос': 'Savolni yuborish',
+    'Нажимая кнопку, вы соглашаетесь на обработку данных для ответа на обращение.':
+      'Tugmani bosib, murojaatga javob berish uchun ma’lumotlaringiz qayta ishlanishiga rozilik bildirasiz.',
+    'Вопрос принят службой поддержки.':
+      'Savol yordam xizmati tomonidan qabul qilindi.',
+    'Вопрос отправлен в службу поддержки.': 'Savol yordam xizmatiga yuborildi.',
     'млн сум': 'mln so‘m',
     сум: 'so‘m',
     квартир: 'kvartira',
@@ -328,6 +364,43 @@ const messages = {
     'Примеры раздела': 'Section examples',
     Разделы: 'Sections',
     Недвижимость: 'Real estate',
+    'От поиска квартиры до связи с поддержкой':
+      'From finding a home to getting support',
+    'EstateHub помогает сравнить проверенные предложения, связаться с продавцом и получить помощь на каждом этапе.':
+      'EstateHub helps you compare verified listings, contact the seller and get assistance at every step.',
+    'Найдите подходящий объект': 'Find the right property',
+    'Используйте каталог, карту, фильтры и поиск обычным языком.':
+      'Use the catalog, map, filters and natural-language search.',
+    'Проверьте и сравните': 'Verify and compare',
+    'Смотрите цены, документы, продавца и доступные квартиры.':
+      'Review prices, documents, the seller and available apartments.',
+    'Свяжитесь или забронируйте': 'Contact or reserve',
+    'Запишитесь на просмотр, задайте вопрос или оформите бронь.':
+      'Schedule a viewing, ask a question or make a reservation.',
+    'Поддержка EstateHub': 'EstateHub support',
+    'Мы поможем разобраться': 'We are here to help',
+    'Опишите вопрос — обращение сохранится в системе и автоматически поступит на почту службы поддержки.':
+      'Describe your question. It will be saved and automatically emailed to our support team.',
+    'Электронная почта': 'Email',
+    'Обычно отвечаем в течение рабочего дня':
+      'We usually reply within one business day',
+    'Задать вопрос': 'Ask a question',
+    'Напишите нам напрямую': 'Message us directly',
+    'Ваше имя': 'Your name',
+    'Как к вам обращаться': 'How should we address you?',
+    'Email для ответа': 'Reply email',
+    Тема: 'Subject',
+    'Например: вопрос по бронированию': 'For example: a reservation question',
+    'Ваш вопрос': 'Your question',
+    'Расскажите, с чем вам нужна помощь': 'Tell us how we can help',
+    'Отправляем…': 'Sending…',
+    'Отправить вопрос': 'Send question',
+    'Нажимая кнопку, вы соглашаетесь на обработку данных для ответа на обращение.':
+      'By submitting, you agree that we may process your data to respond to this request.',
+    'Вопрос принят службой поддержки.':
+      'Your question has been received by support.',
+    'Вопрос отправлен в службу поддержки.':
+      'Your question has been sent to support.',
     'млн сум': 'M UZS',
     сум: 'UZS',
     квартир: 'apartments',
