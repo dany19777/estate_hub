@@ -1,6 +1,12 @@
 'use client';
 import { useState } from 'react';
-export function LogoutButton({ className }: { className?: string }) {
+export function LogoutButton({
+  className,
+  label = 'Выйти',
+}: {
+  className?: string;
+  label?: string;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function leave() {
@@ -23,7 +29,7 @@ export function LogoutButton({ className }: { className?: string }) {
         onClick={leave}
         disabled={busy}
       >
-        {busy ? 'Выходим…' : 'Выйти'}
+        {busy ? 'Выходим…' : label}
       </button>
       {error && <span role="alert">{error}</span>}
     </>
