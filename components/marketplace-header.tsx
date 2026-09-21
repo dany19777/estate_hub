@@ -1,6 +1,14 @@
 'use client';
 
-import { Bell, Building2, Heart, Menu, UserRound, X } from 'lucide-react';
+import {
+  Bell,
+  Building2,
+  ChevronDown,
+  Heart,
+  Menu,
+  UserRound,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { InternalLink as Link } from '@/components/internal-link';
@@ -31,32 +39,51 @@ export function MarketplaceHeader({ active = 'all' }: MarketplaceHeaderProps) {
           </span>
         </Link>
         <nav className="desktop-nav" aria-label="Основная навигация">
-          <Link
-            className={active === 'all' ? 'active' : undefined}
-            href="/catalog?market=all"
-          >
-            Купить
-          </Link>
-          <Link
-            className={active === 'primary' ? 'active' : undefined}
-            href="/catalog?market=primary"
-          >
-            Новостройки
-          </Link>
-          <Link
-            className={active === 'secondary' ? 'active' : undefined}
-            href="/catalog?market=secondary"
-          >
-            Вторичный рынок
-          </Link>
-          <Link
-            className={active === 'seller' ? 'active' : undefined}
-            href="/seller"
-          >
-            Продать квартиру
-          </Link>
-          <Link href="/#how-it-works">Как это работает</Link>
-          <Link href="/developer">Для застройщиков</Link>
+          <details className="header-navigation-menu">
+            <summary>
+              <Menu />
+              <span>Разделы</span>
+              <ChevronDown className="header-navigation-chevron" />
+            </summary>
+            <div className="header-navigation-panel">
+              <div>
+                <small>Недвижимость</small>
+                <Link
+                  className={active === 'all' ? 'active' : undefined}
+                  href="/catalog?market=all"
+                >
+                  <span>Купить</span>
+                </Link>
+                <Link
+                  className={active === 'primary' ? 'active' : undefined}
+                  href="/catalog?market=primary"
+                >
+                  <span>Новостройки</span>
+                </Link>
+                <Link
+                  className={active === 'secondary' ? 'active' : undefined}
+                  href="/catalog?market=secondary"
+                >
+                  <span>Вторичный рынок</span>
+                </Link>
+                <Link
+                  className={active === 'seller' ? 'active' : undefined}
+                  href="/seller"
+                >
+                  <span>Продать квартиру</span>
+                </Link>
+              </div>
+              <div>
+                <small>EstateHub</small>
+                <Link href="/#how-it-works">
+                  <span>Как это работает</span>
+                </Link>
+                <Link href="/developer">
+                  <span>Для застройщиков</span>
+                </Link>
+              </div>
+            </div>
+          </details>
         </nav>
         <div className="header-actions">
           <label className="preference-select" aria-label="Язык интерфейса">
