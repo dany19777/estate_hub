@@ -816,7 +816,18 @@ body:has(.site-header) .global-buyer-preferences {
   backdrop-filter: blur(7px);
 }
 .card-content {
+  display: block;
   padding: 16px;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.card-content:hover {
+  background: #f8faff;
+}
+.card-content:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: -3px;
 }
 .card-heading-row {
   display: flex;
@@ -905,7 +916,7 @@ body:has(.site-header) .global-buyer-preferences {
   font-size: 16px;
   letter-spacing: -0.35px;
 }
-.card-bottom a {
+.card-open-icon {
   display: grid;
   width: 32px;
   height: 32px;
@@ -913,6 +924,9 @@ body:has(.site-header) .global-buyer-preferences {
   border-radius: 9px;
   color: var(--blue);
   background: #edf3ff;
+}
+.card-content:hover .card-open-icon {
+  background: #dfeaff;
 }
 .card-bottom svg {
   width: 16px;

@@ -74,7 +74,11 @@ function ComplexCard({
         </button>
         <div className="image-count">1 / 8</div>
       </div>
-      <div className="card-content">
+      <Link
+        className="card-content"
+        href={`/complex/${complex.slug}`}
+        aria-label={`Открыть ${complex.name}`}
+      >
         <div className="card-heading-row">
           <div>
             <h3>{complex.name}</h3>
@@ -102,14 +106,11 @@ function ComplexCard({
         </div>
         <div className="card-bottom">
           <strong>от {formatPriceMillions(complex.priceFrom)} сум</strong>
-          <Link
-            href={`/complex/${complex.slug}`}
-            aria-label={`Открыть ${complex.name}`}
-          >
+          <span className="card-open-icon" aria-hidden="true">
             <ArrowRight />
-          </Link>
+          </span>
         </div>
-      </div>
+      </Link>
     </article>
   );
 }
