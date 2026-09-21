@@ -855,7 +855,11 @@ export default function CatalogPage() {
                       <Heart />
                     </button>
                   </div>
-                  <div className="result-card-body">
+                  <Link
+                    className="result-card-body"
+                    href={`/complex/${item.slug}`}
+                    aria-label={`Открыть ${item.name}`}
+                  >
                     <div className="result-title-row">
                       <div>
                         <h2>{item.name}</h2>
@@ -887,11 +891,11 @@ export default function CatalogPage() {
                       <strong>
                         от {formatPriceMillions(item.priceFrom)} сум
                       </strong>
-                      <Link href={`/complex/${item.slug}`}>
+                      <span className="result-card-details">
                         Подробнее <ArrowRight />
-                      </Link>
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 </article>
               ))}
             </div>

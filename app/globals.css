@@ -2225,7 +2225,18 @@ body:has(.site-header) .global-buyer-preferences {
   fill: currentColor;
 }
 .result-card-body {
+  display: block;
   padding: 14px;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.result-card-body:hover {
+  background: #f8faff;
+}
+.result-card-body:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: -3px;
 }
 .result-title-row {
   display: flex;
@@ -2303,13 +2314,16 @@ body:has(.site-header) .global-buyer-preferences {
 .result-card-footer strong {
   font-size: 14px;
 }
-.result-card-footer a {
+.result-card-details {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: #1e5bd7;
   font-size: 9px;
   font-weight: 700;
+}
+.result-card-body:hover .result-card-details {
+  text-decoration: underline;
 }
 .result-card-footer svg {
   width: 13px;
