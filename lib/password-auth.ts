@@ -37,7 +37,10 @@ export async function provisionTestAccounts() {
   if (!provision)
     provision = (async () => {
       const database = await ensureMarketplaceDatabase();
-      const accounts = JSON.parse(atob(raw)) as Array<{
+      const decoded = new TextDecoder().decode(
+        Uint8Array.from(atob(raw), (character) => character.charCodeAt(0)),
+      );
+      const accounts = JSON.parse(decoded) as Array<{
         id: string;
         login: string;
         name: string;
@@ -67,6 +70,11 @@ export async function provisionTestAccounts() {
               account.login,
               account.name,
             ),
+          database
+            .prepare(
+              'UPDATE users SET email = ?, full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            )
+            .bind(account.login, account.name, account.id),
           database
             .prepare(
               "INSERT OR IGNORE INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) SELECT ?, 'system', 'test-account-provisioning', 'auth.test_account_created', 'user', ?, '{}' WHERE NOT EXISTS (SELECT 1 FROM auth_credentials WHERE user_id = ?)",
