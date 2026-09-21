@@ -25,6 +25,7 @@ import { InternalLink as Link } from '@/components/internal-link';
 import { MarketplaceHeader } from '@/components/marketplace-header';
 import { SupportSection } from '@/components/support-section';
 import { useComplexes } from '@/hooks/use-complexes';
+import { useFavorites } from '@/hooks/use-favorites';
 import type { ComplexSummary } from '@/lib/marketplace';
 import {
   formatApartmentCount,
@@ -145,7 +146,7 @@ function MobileNavigation() {
 export default function HomePage() {
   const [market, setMarket] = useState<'all' | 'primary' | 'secondary'>('all');
   const [query, setQuery] = useState('');
-  const [favorites, setFavorites] = useState<string[]>(['complex-bogishamol']);
+  const { has: isFavorite, toggle: toggleFavorite } = useFavorites();
 
   const {
     data: catalog,
@@ -162,14 +163,6 @@ export default function HomePage() {
       q: query.trim() || 'Квартиры в Самарканде',
     });
     window.location.assign(`/catalog?${params.toString()}`);
-  };
-
-  const toggleFavorite = (id: string) => {
-    setFavorites((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
   };
 
   return (
@@ -347,8 +340,16 @@ export default function HomePage() {
               <ComplexCard
                 key={complex.id}
                 complex={complex}
-                favorite={favorites.includes(complex.id)}
-                onFavorite={() => toggleFavorite(complex.id)}
+                favorite={isFavorite(complex.id)}
+                onFavorite={() => void toggleFavorite({
+                  id: complex.id,
+                  slug: complex.slug,
+                  name: complex.name,
+                  image: complex.image,
+                  price_from: complex.priceFrom,
+                  available_units: complex.availableUnits,
+                  completion_label: complex.completionLabel,
+                })}
               />
             ))}
           </div>
