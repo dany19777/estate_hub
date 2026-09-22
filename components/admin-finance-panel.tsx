@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import type { AdminFinanceOperation } from '@/hooks/use-admin-finance';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatUzsAmount } from '@/lib/marketplace';
 
 type Props = {
   operations: AdminFinanceOperation[];
@@ -20,8 +21,7 @@ const operationLabels = { reservation_payment: 'Оплата брони', refund
 const statusLabels = { pending: 'Ожидает', succeeded: 'Проведена', failed: 'Ошибка', manual_review: 'На сверке' } as const;
 
 function formatMoney(value: number) {
-  if (value >= 1_000_000) return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум`;
-  return `${new Intl.NumberFormat('ru-RU').format(value)} сум`;
+  return formatUzsAmount(value);
 }
 
 export function AdminFinancePanel({ operations, loading, error, processing, onRetry, onReconcile }: Props) {

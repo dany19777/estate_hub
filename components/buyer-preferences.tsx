@@ -205,6 +205,7 @@ const messages = {
       'Savol yordam xizmati tomonidan qabul qilindi.',
     'Вопрос отправлен в службу поддержки.': 'Savol yordam xizmatiga yuborildi.',
     'млн сум': 'mln so‘m',
+    'млрд сум': 'mlrd so‘m',
     сум: 'so‘m',
     квартир: 'kvartira',
     квартиры: 'kvartira',
@@ -404,6 +405,7 @@ const messages = {
     'Вопрос отправлен в службу поддержки.':
       'Your question has been sent to support.',
     'млн сум': 'M UZS',
+    'млрд сум': 'B UZS',
     сум: 'UZS',
     квартир: 'apartments',
     квартиры: 'apartments',
@@ -511,11 +513,15 @@ function convertPrices(
 ) {
   if (currency !== 'USD' || !usdUzs) return value;
   return value.replace(
-    /(\d[\d\s.,]*)(\s*млн(?:\s*сум)?|\s*сум)/gi,
+    /(\d[\d\s.,]*)(\s*(?:млн|млрд)(?:\s*сум)?|\s*сум)/gi,
     (_match, number: string, millions: string | undefined) => {
       const parsed = parseNumber(number);
       if (!Number.isFinite(parsed)) return _match;
-      const uzs = parsed * (millions?.includes('млн') ? 1_000_000 : 1);
+      const uzs = parsed * (millions?.includes('млрд')
+        ? 1_000_000_000
+        : millions?.includes('млн')
+          ? 1_000_000
+          : 1);
       return new Intl.NumberFormat(languageTags[locale], {
         style: 'currency',
         currency: 'USD',

@@ -51,6 +51,7 @@ import { useAdminDisputes } from '@/hooks/use-admin-disputes';
 import { useAdminBilling } from '@/hooks/use-admin-billing';
 import { useAdminPromotions } from '@/hooks/use-admin-promotions';
 import { useAdminReviews } from '@/hooks/use-admin-reviews';
+import { formatUzsAmount } from '@/lib/marketplace';
 
 const adminNav = [
   { label: 'Обзор', icon: Gauge },
@@ -146,9 +147,7 @@ const adminHashLabels: Record<string, string> = {
 };
 
 function formatAdminMoney(value: number) {
-  return value >= 1_000_000
-    ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум`
-    : `${new Intl.NumberFormat('ru-RU').format(value)} сум`;
+  return formatUzsAmount(value);
 }
 
 export default function AdminDashboard() {

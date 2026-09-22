@@ -5,10 +5,11 @@ import { AlertTriangle, CalendarClock, CircleDollarSign, Edit3, RefreshCw, Searc
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AdminPlacement, AdminPromotionProduct } from '@/hooks/use-admin-promotions';
+import { formatUzsAmount } from '@/lib/marketplace';
 
 type Props = { products: AdminPromotionProduct[]; placements: AdminPlacement[]; stats: { revenue: number; active: number; scheduled: number; expiring: number }; loading: boolean; error: string; processing: string; onRetry: () => void; onUpdateProduct: (product: AdminPromotionProduct) => Promise<void>; onCancel: (promotionId: string) => Promise<void> };
 const surfaceNames: Record<string, string> = { search: 'Поиск', homepage: 'Главная', search_homepage: 'Поиск + главная', special: 'Спецкампания' };
-function money(value: number) { return value >= 1_000_000 ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум` : `${new Intl.NumberFormat('ru-RU').format(value)} сум`; }
+function money(value: number) { return formatUzsAmount(value); }
 function date(value: string) { return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value.replace(' ', 'T')}Z`)); }
 
 export function AdminPromotionsPanel({ products, placements, stats, loading, error, processing, onRetry, onUpdateProduct, onCancel }: Props) {

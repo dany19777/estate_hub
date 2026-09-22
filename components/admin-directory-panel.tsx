@@ -18,6 +18,7 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatUzsAmount } from '@/lib/marketplace';
 
 type Organization = {
   id: string;
@@ -107,7 +108,7 @@ function statusClass(status: string) {
 }
 
 function formatMoney(value: number) {
-  return `${new Intl.NumberFormat('ru-RU').format(value)} сум`;
+  return formatUzsAmount(value);
 }
 
 export function AdminDirectoryPanel({

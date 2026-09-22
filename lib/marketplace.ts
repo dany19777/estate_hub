@@ -223,8 +223,18 @@ export type ListingDetail = {
 };
 
 export function formatPriceMillions(priceUzs: number) {
+  if (Math.abs(priceUzs) >= 1_000_000_000) {
+    const billions = priceUzs / 1_000_000_000;
+    return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(billions)} млрд`;
+  }
   const millions = priceUzs / 1_000_000;
   return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: millions % 1 === 0 ? 0 : 1 }).format(millions)} млн`;
+}
+
+export function formatUzsAmount(priceUzs: number) {
+  return Math.abs(priceUzs) >= 1_000_000
+    ? `${formatPriceMillions(priceUzs)} сум`
+    : `${new Intl.NumberFormat('ru-RU').format(priceUzs)} сум`;
 }
 
 export function formatPricePerSqm(priceUzs: number) {

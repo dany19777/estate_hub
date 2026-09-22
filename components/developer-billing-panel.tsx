@@ -4,6 +4,7 @@ import { AlertCircle, Check, CreditCard, RefreshCw, ShieldCheck, Sparkles } from
 
 import { Badge } from '@/components/ui/badge';
 import type { DeveloperBillingEvent, DeveloperPlan, DeveloperSubscription } from '@/hooks/use-developer-billing';
+import { formatUzsAmount } from '@/lib/marketplace';
 
 type Props = {
   plans: DeveloperPlan[];
@@ -20,7 +21,7 @@ type Props = {
 };
 
 function money(value: number) {
-  return value === 0 ? 'Индивидуально' : `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум`;
+  return value === 0 ? 'Индивидуально' : formatUzsAmount(value);
 }
 
 function date(value?: string) {

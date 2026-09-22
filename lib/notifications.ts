@@ -1,3 +1,5 @@
+import { formatUzsAmount } from '@/lib/marketplace';
+
 export type NotificationPriority = 'normal' | 'high' | 'critical';
 
 export type NotificationPreferences = {
@@ -54,7 +56,7 @@ type SavedSearchRow = { id: string; name: string; filters_json: string; created_
 function boolean(value: unknown) { return value === true || value === 1 || value === '1' || value === 'true'; }
 function sqlDate(value: string) { return value.includes('T') ? value.replace('T', ' ').replace(/Z$/, '') : value; }
 function eventDate(value: string | null | undefined) { return value ? sqlDate(value) : new Date().toISOString().replace('T', ' ').replace('Z', ''); }
-function money(value: number) { return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум`; }
+function money(value: number) { return formatUzsAmount(value); }
 
 export async function notificationPreferences(database: D1Database, userId: string): Promise<NotificationPreferences> {
   await database.prepare(`INSERT OR IGNORE INTO notification_preferences (user_id) VALUES (?)`).bind(userId).run();

@@ -6,12 +6,13 @@ import { useMemo, useState } from 'react';
 import type { AdminDispute } from '@/hooks/use-admin-disputes';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatUzsAmount } from '@/lib/marketplace';
 
 const categories: Record<string, string> = { unit_unavailable: 'Квартира недоступна', terms_not_honored: 'Нарушены условия', developer_cancelled: 'Отмена застройщика', payment_issue: 'Проблема оплаты', other: 'Другая причина' };
 const statuses: Record<string, string> = { open: 'Новый', in_review: 'В работе', resolved_refund: 'Возврат', resolved_no_refund: 'Без возврата', cancelled: 'Отменён' };
 
 function money(value: number) {
-  return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум`;
+  return formatUzsAmount(value);
 }
 
 export function AdminDisputesPanel({ disputes, loading, error, processing, onRetry, onDecision }: {

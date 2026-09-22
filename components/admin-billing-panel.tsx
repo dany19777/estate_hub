@@ -5,6 +5,7 @@ import { AlertTriangle, CalendarClock, CheckCircle2, CircleDollarSign, Edit3, Re
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AdminBillingEvent, AdminBillingPlan, AdminSubscription, SecondaryBillingListing } from '@/hooks/use-admin-billing';
+import { formatUzsAmount } from '@/lib/marketplace';
 
 type Props = {
   plans: AdminBillingPlan[];
@@ -23,7 +24,7 @@ type Props = {
 };
 
 function money(value: number) {
-  return value >= 1_000_000 ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум` : `${new Intl.NumberFormat('ru-RU').format(value)} сум`;
+  return formatUzsAmount(value);
 }
 
 function date(value?: string | null) {

@@ -5,10 +5,11 @@ import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import type { DeveloperPromotion, PromotionComplex, PromotionListing, PromotionProduct } from '@/hooks/use-developer-promotions';
+import { formatUzsAmount } from '@/lib/marketplace';
 
 type Props = { products: PromotionProduct[]; complexes: PromotionComplex[]; listings: PromotionListing[]; promotions: DeveloperPromotion[]; loading: boolean; error: string; feedback: string; processing: string; onRetry: () => void; onPurchase: (productId: string, targetId: string) => Promise<string> };
 const surfaceNames: Record<string, string> = { search: 'Поиск', homepage: 'Главная', search_homepage: 'Поиск + главная', special: 'Спецкампания' };
-function money(value: number) { return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1_000_000)} млн сум`; }
+function money(value: number) { return formatUzsAmount(value); }
 function date(value: string) { return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value.replace(' ', 'T')}Z`)); }
 
 export function DeveloperPromotionsPanel({ products, complexes, listings, promotions, loading, error, feedback, processing, onRetry, onPurchase }: Props) {
