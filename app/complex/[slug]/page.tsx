@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { ChatDialog } from '@/components/chat-dialog';
+import { useBuyerPreferences } from '@/components/buyer-preferences';
 import { ComplexMap } from '@/components/complex-map';
 import { ComplexReviews } from '@/components/complex-reviews';
 import { InternalLink as Link } from '@/components/internal-link';
@@ -44,6 +45,7 @@ function formatPeriod(period: string) {
 }
 
 export default function ComplexPage() {
+  const { locale } = useBuyerPreferences();
   const params = useParams();
   const rawSlug = params.slug;
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug ?? '';
@@ -179,7 +181,7 @@ export default function ComplexPage() {
             </section>
 
             <section className="inventory-section" id="inventory">
-              <div className="inventory-heading"><div><span>Доступные предложения</span><h2>Квартиры в {summary.name}</h2><p>{inventory.length} из {listings.length} предложений подходят под условия</p></div><a href="#inventory-filters"><SlidersHorizontal /> Фильтры квартир</a></div>
+              <div className="inventory-heading"><div><span>Доступные предложения</span><h2>{locale === 'uz' ? `${summary.name} majmuasidagi kvartiralar` : <>Квартиры в {summary.name}</>}</h2><p>{locale === 'uz' ? `Shartlarga mos takliflar: ${inventory.length} / ${listings.length}` : <>{inventory.length} из {listings.length} предложений подходят под условия</>}</p></div><a href="#inventory-filters"><SlidersHorizontal /> Фильтры квартир</a></div>
               <div className="inventory-tabs">{(['Все', 'Первичный', 'Вторичный'] as const).map((tab) => <button type="button" className={inventoryTab === tab ? 'active' : ''} onClick={() => setInventoryTab(tab)} key={tab}>{tab} {tab === 'Все' ? listings.length : tab === 'Первичный' ? primaryCount : secondaryCount}</button>)}</div>
               <div className="inventory-filter-panel" id="inventory-filters">
                 <div className="inventory-filter-title"><span><SlidersHorizontal /> Уточнить выбор</span><button type="button" onClick={resetInventoryFilters}><RotateCcw /> Сбросить</button></div>
@@ -209,11 +211,11 @@ export default function ComplexPage() {
             </section>
 
             <ComplexReviews complexId={summary.id} complexName={summary.name} />
-            {similarComplexes.length > 0 && <section className="detail-section-card similar-complexes-section"><div className="complex-section-heading"><div><span>Можно сравнить</span><h2>Похожие жилые комплексы</h2></div><Link href="/catalog">Все ЖК <ArrowRight /></Link></div><div className="similar-complex-grid">{similarComplexes.map((complex) => <Link href={`/complex/${complex.slug}`} key={complex.id}><NextImage src={complex.image} width={420} height={250} unoptimized alt={complex.name} /><div><span>{complex.completionLabel}</span><h3>{complex.name}</h3><p>{complex.district} · {complex.availableUnits} квартир</p><strong>от {formatPriceMillions(complex.priceFrom)} сум</strong></div></Link>)}</div></section>}
+            {similarComplexes.length > 0 && <section className="detail-section-card similar-complexes-section"><div className="complex-section-heading"><div><span>Можно сравнить</span><h2>Похожие жилые комплексы</h2></div><Link href="/catalog">Все ЖК <ArrowRight /></Link></div><div className="similar-complex-grid">{similarComplexes.map((complex) => <Link href={`/complex/${complex.slug}`} key={complex.id}><NextImage src={complex.image} width={420} height={250} unoptimized alt={complex.name} /><div><span>{complex.completionLabel}</span><h3>{complex.name}</h3><p>{complex.district} · {complex.availableUnits} {locale === 'en' ? complex.availableUnits === 1 ? 'apartment' : 'apartments' : 'квартир'}</p><strong>{locale === 'uz' ? 'Boshlang‘ich narx: ' : 'от '}{formatPriceMillions(complex.priceFrom)} сум</strong></div></Link>)}</div></section>}
           </div>
 
           <aside className="detail-rail">
-            <div className="price-card"><span>Квартиры</span><strong>от {formatPriceMillions(summary.priceFrom)} сум</strong><p>от {formatPricePerSqm(summary.pricePerSqmFrom)}</p><a href="#inventory">Выбрать квартиру <ArrowRight /></a></div>
+            <div className="price-card"><span>{locale === 'uz' ? 'Kvartiralarning boshlang‘ich narxi' : 'Квартиры'}</span><strong>{locale === 'uz' ? '' : 'от '}{formatPriceMillions(summary.priceFrom)} сум</strong><p>{locale === 'uz' ? 'Boshlang‘ich narx: ' : 'от '}{formatPricePerSqm(summary.pricePerSqmFrom)}</p><a href="#inventory">Выбрать квартиру <ArrowRight /></a></div>
             <div className="developer-card"><div className="developer-card-head"><span>{summary.developer.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span><div><h3>{summary.developer}</h3><p><ShieldCheck /> Проверенный застройщик</p></div></div><div className="developer-stats"><span><strong>Проверен</strong>статус</span><span><strong>{summary.availableUnits}</strong>квартир</span><span><strong>{summary.rating.toFixed(1)}</strong>рейтинг</span></div><LeadRequestDialog type="consultation" complexId={summary.id} complexName={summary.name} trigger={<Button className="developer-message" variant="outline"><MessageCircle /> Получить консультацию</Button>} /></div>
             <div className="viewing-card"><span><CalendarDays /></span><h3>Записаться на просмотр</h3><p>Выберите дату и время — менеджер подтвердит визит.</p><div aria-label="Доступность записи"><span>1 день<br /><strong>Ближайший</strong></span><span className="active">30 дней<br /><strong>Доступно</strong></span><span>5 слотов<br /><strong>В день</strong></span></div>{firstPrimaryListing ? <LeadRequestDialog type="viewing" complexId={summary.id} complexName={summary.name} listingId={firstPrimaryListing.id} unitNumber={firstPrimaryListing.unitNumber} trigger={<Button>Выбрать время</Button>} /> : <Button disabled>Нет первичных квартир</Button>}</div>
             <div className="rating-card"><div><strong>{summary.rating.toFixed(1)}</strong><span><Star /><Star /><Star /><Star /><Star /></span><small>Проверенный рейтинг</small></div><p>Качество строительства <span>{Math.max(summary.rating - 0.1, 0).toFixed(1)}</span></p><p>Расположение <span>{Math.min(summary.rating + 0.1, 5).toFixed(1)}</span></p><p>Инфраструктура <span>{summary.rating.toFixed(1)}</span></p><a href="#reviews">Читать отзывы и оценки</a></div>

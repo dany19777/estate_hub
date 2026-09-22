@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { buyerPageMessages } from '@/components/buyer-page-translations';
 
 export type BuyerLocale = 'ru' | 'uz' | 'en';
 export type BuyerCurrency = 'UZS' | 'USD';
@@ -209,6 +210,7 @@ const messages = {
     квартиры: 'kvartira',
     квартира: 'kvartira',
     этаж: 'qavat',
+    ...buyerPageMessages.uz,
     район: 'tuman',
   },
   en: {
@@ -408,6 +410,7 @@ const messages = {
     квартира: 'apartment',
     этаж: 'floor',
     район: 'district',
+    ...buyerPageMessages.en,
   },
 } as const;
 
@@ -417,11 +420,43 @@ const languageTags: Record<BuyerLocale, string> = {
   en: 'en-US',
 };
 
+const compiledTranslations = Object.fromEntries(
+  (['uz', 'en'] as const).map((locale) => {
+    const dictionary = messages[locale] as Record<string, string>;
+    const alternatives = Object.keys(dictionary)
+      .sort((first, second) => second.length - first.length)
+      .map((source) => source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|');
+    return [
+      locale,
+      {
+        dictionary,
+        regex: new RegExp(
+          `(?<![\\p{L}\\p{N}])(${alternatives})(?![\\p{L}\\p{N}])`,
+          'gu',
+        ),
+      },
+    ];
+  }),
+) as Record<
+  Exclude<BuyerLocale, 'ru'>,
+  { dictionary: Record<string, string>; regex: RegExp }
+>;
+
 function translateText(value: string, locale: BuyerLocale) {
   if (locale === 'ru') return value;
-  const dictionary = messages[locale] as Record<string, string>;
+  if (!/[А-Яа-яЁё]/.test(value)) return value;
+  const { dictionary, regex } = compiledTranslations[locale];
   const trimmed = value.trim();
   if (!trimmed) return value;
+  const complexTitle = trimmed.match(
+    /^(.*?) — квартиры от (.+?)( \| EstateHub)$/,
+  );
+  if (complexTitle) {
+    return locale === 'en'
+      ? `${complexTitle[1]} — apartments from ${complexTitle[2]}${complexTitle[3]}`
+      : `${complexTitle[1]} — narxi ${complexTitle[2]} dan boshlanadigan kvartiralar${complexTitle[3]}`;
+  }
   const developmentCount = trimmed.match(/^(\d+) жилых комплексов$/);
   if (developmentCount) {
     return locale === 'en'
@@ -451,16 +486,7 @@ function translateText(value: string, locale: BuyerLocale) {
       : `Topshirilgan majmuada ${queryExample[1]} gacha, birinchi qavatda bo‘lmagan ikki xonali kvartira izlayapman`;
   }
   if (dictionary[trimmed]) return value.replace(trimmed, dictionary[trimmed]);
-  let translated = value;
-  for (const [source, target] of Object.entries(dictionary).sort(
-    ([first], [second]) => second.length - first.length,
-  )) {
-    const escaped = source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    translated = translated.replace(
-      new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'gu'),
-      target,
-    );
-  }
+  let translated = value.replace(regex, (source) => dictionary[source]);
   if (locale === 'en') {
     translated = translated
       .replace(/1\s+apartments/g, '1 apartment')
@@ -680,6 +706,7 @@ export function BuyerPreferencesProvider({
         node = walker.nextNode();
       }
     };
+    walk(document.head);
     walk(document.body);
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -689,6 +716,11 @@ export function BuyerPreferencesProvider({
       }
     });
     observer.observe(document.body, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    observer.observe(document.head, {
       childList: true,
       characterData: true,
       subtree: true,
