@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 export type DeveloperPlan = { id: string; code: string; name: string; inventory_limit: number; monthly_price_uzs: number; is_active: number };
 export type DeveloperBillingEvent = { id: string; event_type: string; amount_uzs: number; status: string; provider: string; provider_reference: string; metadata_json: string; period_start: string; period_end: string; created_at: string };
-export type DeveloperSubscription = { id: string; organization_id: string; plan_id: string; status: string; current_period_start: string; current_period_end: string; auto_renew: number; code: string; name: string; inventory_limit: number; monthly_price_uzs: number };
+export type DeveloperSubscription = { id: string; organization_id: string; plan_id: string; status: string; contract_paid: number; current_period_start: string; current_period_end: string; auto_renew: number; code: string; name: string; inventory_limit: number; monthly_price_uzs: number };
 
 type BillingData = {
   plans: DeveloperPlan[];
