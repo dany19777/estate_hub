@@ -1,6 +1,7 @@
 import { authorizationResponse, getAppSession } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { paymentProvider } from '@/lib/payment-provider';
+import { onlinePaymentsDisabledResponse, onlinePaymentsEnabled } from '@/lib/payment-mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,7 @@ type ReservationPaymentRow = {
 type ExistingOperation = { reservation_id: string; status: string };
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
   try {
     const session = await getAppSession(request);
     const { id } = await params;

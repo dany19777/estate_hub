@@ -649,6 +649,7 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_developer_subscriptions_status_end ON developer_subscriptions(status, current_period_end)`,
   `CREATE INDEX IF NOT EXISTS idx_billing_events_org_created ON billing_events(organization_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_billing_events_listing_created ON billing_events(listing_id, created_at)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_offline_payment_reference ON billing_events(provider, provider_reference) WHERE provider IN ('offline_bank_transfer', 'offline_card_transfer')`,
   `CREATE INDEX IF NOT EXISTS idx_secondary_purchases_listing_end ON secondary_listing_purchases(listing_id, period_end)`,
   `CREATE INDEX IF NOT EXISTS idx_secondary_purchases_status_end ON secondary_listing_purchases(status, period_end)`,
   `CREATE INDEX IF NOT EXISTS idx_secondary_owners_user_updated ON secondary_listing_owners(seller_user_id, updated_at)`,

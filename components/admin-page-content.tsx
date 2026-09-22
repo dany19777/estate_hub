@@ -268,8 +268,8 @@ export default function AdminDashboard() {
         throw new Error(payload.message || 'Не удалось сохранить решение.');
       setFeedback(
         decision === 'approve'
-          ? payload.nextStep === 'published'
-            ? 'Проверка пройдена: объявление опубликовано на сайте.'
+          ? payload.nextStep === 'pending_payment'
+            ? 'Проверка пройдена: объявление появится на сайте после подтверждения оплаты.'
             : payload.nextStep === 'pending_moderation'
               ? 'Проверка пройдена: ЖК передан на модерацию.'
               : 'Заявка одобрена.'
@@ -944,8 +944,8 @@ export default function AdminDashboard() {
               const message = await billing.updateConfig(feeUzs, periodDays);
               setFeedback(message);
             }}
-            onActivateSecondary={async (listingId) => {
-              const message = await billing.activateSecondary(listingId);
+            onActivateSecondary={async (listingId, claimId) => {
+              const message = await billing.activateSecondary(listingId, claimId);
               setFeedback(message);
             }}
           />

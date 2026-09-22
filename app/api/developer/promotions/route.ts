@@ -2,6 +2,7 @@ import { authorizationResponse, requirePermission } from '@/lib/auth';
 import { addDays, databaseNow } from '@/lib/billing';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { paymentProvider } from '@/lib/payment-provider';
+import { onlinePaymentsDisabledResponse, onlinePaymentsEnabled } from '@/lib/payment-mode';
 import { expirePromotions } from '@/lib/promotions';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
   try {
     const session = await requirePermission(request, 'MANAGE_PROMOTIONS');
     if (!session.organization) return Response.json({ error: 'organization_required', message: 'Кабинет не связан с организацией.' }, { status: 403 });

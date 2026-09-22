@@ -1,7 +1,6 @@
 import { authorizationResponse, requirePermission } from '@/lib/auth';
 import { addDays, databaseNow, expireBillingPeriods } from '@/lib/billing';
 import { ensureMarketplaceDatabase } from '@/lib/database';
-import { paymentProvider } from '@/lib/payment-provider';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +23,9 @@ async function adminBillingData(database: D1Database) {
       COALESCE(organization.name, CASE WHEN listing.seller_type = 'owner' THEN 'Частный собственник' ELSE 'Продавец' END) AS seller_name,
       (SELECT purchase.status FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id ORDER BY purchase.created_at DESC LIMIT 1) AS purchase_status,
       (SELECT purchase.period_end FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id ORDER BY purchase.created_at DESC LIMIT 1) AS paid_until
+      ,(SELECT event.id FROM billing_events event WHERE event.listing_id = listing.id AND event.status = 'pending' AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_claim_id
+      ,(SELECT event.provider FROM billing_events event WHERE event.listing_id = listing.id AND event.status = 'pending' AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_method
+      ,(SELECT event.provider_reference FROM billing_events event WHERE event.listing_id = listing.id AND event.status = 'pending' AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_reference
       FROM listings listing JOIN units unit ON unit.id = listing.unit_id JOIN complexes complex ON complex.id = listing.complex_id
       LEFT JOIN organizations organization ON organization.id = listing.seller_org_id
       WHERE listing.market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY')
@@ -93,7 +95,7 @@ export async function PATCH(request: Request) {
     if (action === 'update_secondary_config') {
       const feeUzs = Number(body.feeUzs);
       const periodDays = Number(body.periodDays);
-      if (!Number.isInteger(feeUzs) || feeUzs < 0 || !Number.isInteger(periodDays) || periodDays < 1 || periodDays > 365) {
+      if (!Number.isInteger(feeUzs) || feeUzs < 1 || !Number.isInteger(periodDays) || periodDays < 1 || periodDays > 365) {
         return Response.json({ error: 'validation_failed', message: 'Проверьте стоимость и период публикации.' }, { status: 400 });
       }
       await database.batch([
@@ -108,43 +110,38 @@ export async function PATCH(request: Request) {
 
     if (action === 'activate_secondary') {
       const listingId = typeof body.listingId === 'string' ? body.listingId : '';
-      const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
-      if (!listingId || !idempotencyKey) return Response.json({ error: 'validation_failed', message: 'Не хватает данных для оплаты публикации.' }, { status: 400 });
-      const duplicate = await database.prepare(`SELECT id FROM billing_events WHERE idempotency_key = ? LIMIT 1`).bind(idempotencyKey).first<{ id: string }>();
-      if (duplicate) return Response.json({ duplicate: true, message: 'Оплата уже обработана.', ...(await adminBillingData(database)) });
-      const [listing, config, latest] = await Promise.all([
-        database.prepare(`SELECT id, market_type, status FROM listings WHERE id = ? LIMIT 1`).bind(listingId).first<{ id: string; market_type: string; status: string }>(),
+      const claimId = typeof body.claimId === 'string' ? body.claimId : '';
+      if (!listingId || !claimId) return Response.json({ error: 'validation_failed', message: 'Выберите заявку на перевод.' }, { status: 400 });
+      const [listing, config, latest, claim] = await Promise.all([
+        database.prepare(`SELECT listing.id, listing.market_type, listing.status, owner.verification_status FROM listings listing JOIN secondary_listing_owners owner ON owner.listing_id = listing.id WHERE listing.id = ? LIMIT 1`).bind(listingId).first<{ id: string; market_type: string; status: string; verification_status: string }>(),
         database.prepare(`SELECT secondary_listing_fee_uzs, secondary_period_days FROM platform_billing_config WHERE id = 'default' LIMIT 1`)
           .first<{ secondary_listing_fee_uzs: number; secondary_period_days: number }>(),
         database.prepare(`SELECT period_end FROM secondary_listing_purchases WHERE listing_id = ? AND status = 'active' AND period_end > CURRENT_TIMESTAMP ORDER BY period_end DESC LIMIT 1`)
           .bind(listingId).first<{ period_end: string }>(),
+        database.prepare(`SELECT id, actor_user_id, amount_uzs, status, provider, provider_reference, event_type, idempotency_key FROM billing_events WHERE id = ? AND listing_id = ? LIMIT 1`).bind(claimId, listingId).first<{ id: string; actor_user_id: string; amount_uzs: number; status: string; provider: string; provider_reference: string; event_type: string; idempotency_key: string }>(),
       ]);
       if (!listing || !['SECONDARY_OWNER', 'SECONDARY_AGENCY'].includes(listing.market_type)) return Response.json({ error: 'not_found', message: 'Объявление вторичного рынка не найдено.' }, { status: 404 });
       if (listing.status === 'sold') return Response.json({ error: 'listing_sold', message: 'Проданное объявление нельзя продлить.' }, { status: 409 });
-      if (!config) return Response.json({ error: 'config_missing', message: 'Условия публикации не настроены.' }, { status: 409 });
+      if (!config || config.secondary_listing_fee_uzs < 1) return Response.json({ error: 'config_missing', message: 'Платный тариф публикации не настроен.' }, { status: 409 });
+      if (listing.verification_status !== 'approved' || !claim || claim.status !== 'pending' || !['offline_bank_transfer', 'offline_card_transfer'].includes(claim.provider)) return Response.json({ error: 'claim_unavailable', message: 'Заявка на перевод недоступна или объявление ещё не одобрено.' }, { status: 409 });
+      if (claim.amount_uzs !== Number(config.secondary_listing_fee_uzs)) return Response.json({ error: 'amount_changed', message: 'Тариф изменился после заявки. Сверьте сумму вручную и создайте новую заявку.' }, { status: 409 });
 
       const periodStart = latest?.period_end ?? databaseNow();
       const periodEnd = addDays(periodStart, Number(config.secondary_period_days));
-      const eventId = crypto.randomUUID();
       const purchaseId = crypto.randomUUID();
-      const eventType = latest ? 'secondary_renewal' : 'secondary_purchase';
-      const payment = await paymentProvider().chargeBilling({ billingId: eventId, amountUzs: Number(config.secondary_listing_fee_uzs), idempotencyKey, productType: 'secondary_listing' });
       await database.batch([
-        database.prepare(`INSERT INTO billing_events
-          (id, listing_id, actor_user_id, event_type, amount_uzs, status, provider, provider_reference, idempotency_key, period_start, period_end, metadata_json)
-          VALUES (?, ?, ?, ?, ?, 'paid', ?, ?, ?, ?, ?, ?)`)
-          .bind(eventId, listingId, session.user.id, eventType, Number(config.secondary_listing_fee_uzs), payment.provider, payment.reference, idempotencyKey, periodStart, periodEnd, JSON.stringify({ periodDays: config.secondary_period_days })),
+        database.prepare(`UPDATE billing_events SET status = 'paid', period_start = ?, period_end = ?, metadata_json = ? WHERE id = ? AND status = 'pending'`)
+          .bind(periodStart, periodEnd, JSON.stringify({ confirmedBy: session.user.id, periodDays: config.secondary_period_days }), claimId),
         database.prepare(`INSERT INTO secondary_listing_purchases
           (id, listing_id, purchaser_user_id, billing_event_id, period_start, period_end, price_uzs, status, idempotency_key)
           VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`)
-          .bind(purchaseId, listingId, session.user.id, eventId, periodStart, periodEnd, Number(config.secondary_listing_fee_uzs), idempotencyKey),
-        database.prepare(`UPDATE listings SET status = CASE WHEN status IN ('draft', 'paused', 'expired') THEN 'published' ELSE status END,
-          published_at = COALESCE(published_at, CURRENT_TIMESTAMP), expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(periodEnd, listingId),
+          .bind(purchaseId, listingId, claim.actor_user_id, claimId, periodStart, periodEnd, Number(config.secondary_listing_fee_uzs), claim.idempotency_key),
+        database.prepare(`UPDATE listings SET status = 'published', published_at = COALESCE(published_at, CURRENT_TIMESTAMP), expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(periodEnd, listingId),
         database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json)
           VALUES (?, 'user', ?, ?, 'listing', ?, ?)`)
-          .bind(crypto.randomUUID(), session.user.id, latest ? 'billing.secondary_renewed' : 'billing.secondary_activated', listingId, JSON.stringify({ periodEnd, amountUzs: config.secondary_listing_fee_uzs })),
+          .bind(crypto.randomUUID(), session.user.id, latest ? 'billing.secondary_renewed' : 'billing.secondary_activated', listingId, JSON.stringify({ periodEnd, amountUzs: config.secondary_listing_fee_uzs, method: claim.provider, reference: claim.provider_reference, claimId })),
       ]);
-      return Response.json({ message: latest ? 'Публикация продлена.' : 'Оплаченный период активирован.', ...(await adminBillingData(database)) });
+      return Response.json({ message: latest ? 'Перевод подтверждён, публикация продлена.' : 'Перевод подтверждён, объявление опубликовано.', ...(await adminBillingData(database)) });
     }
 
     return Response.json({ error: 'validation_failed', message: 'Неизвестное действие биллинга.' }, { status: 400 });

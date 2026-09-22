@@ -121,7 +121,7 @@ export async function PATCH(request: Request) {
       );
     }
     if (verification.subject_type === 'listing') {
-      const listingStatus = decision === 'reject' ? 'rejected' : 'published';
+      const listingStatus = decision === 'reject' ? 'rejected' : 'pending_moderation';
       statements.push(
         database.prepare(`UPDATE secondary_listing_owners SET verification_status = ?, rejection_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE listing_id = ?`)
           .bind(decision === 'approve' ? 'approved' : 'rejected', decision === 'reject' ? reason : null, verification.subject_id),
@@ -132,7 +132,7 @@ export async function PATCH(request: Request) {
     }
     await database.batch(statements);
     const nextStep = decision === 'approve' && verification.subject_type === 'complex' ? 'pending_moderation'
-      : decision === 'approve' && verification.subject_type === 'listing' ? 'published' : null;
+      : decision === 'approve' && verification.subject_type === 'listing' ? 'pending_payment' : null;
     return Response.json({ caseId, status, nextStep });
   } catch (error) {
     return failure(error, 'Failed to review verification');

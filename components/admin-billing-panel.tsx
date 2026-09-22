@@ -20,7 +20,7 @@ type Props = {
   onRetry: () => void;
   onUpdatePlan: (plan: AdminBillingPlan) => Promise<void>;
   onUpdateConfig: (feeUzs: number, periodDays: number) => Promise<void>;
-  onActivateSecondary: (listingId: string) => Promise<void>;
+  onActivateSecondary: (listingId: string, claimId: string) => Promise<void>;
 };
 
 function money(value: number) {
@@ -46,10 +46,18 @@ export function AdminBillingPanel({ plans, subscriptions, config, secondaryListi
   function editConfig() {
     if (!config) return;
     const fee = Number(window.prompt('Стоимость публикации вторичного объявления, сум', String(config.secondary_listing_fee_uzs)));
-    if (!Number.isInteger(fee) || fee < 0) return;
+    if (!Number.isInteger(fee) || fee < 1) return;
     const days = Number(window.prompt('Продолжительность оплаченного периода, дней', String(config.secondary_period_days)));
     if (!Number.isInteger(days) || days < 1 || days > 365) return;
     void onUpdateConfig(fee, days);
+  }
+
+  function confirmSecondary(item: SecondaryBillingListing) {
+    if (!item.payment_claim_id || !item.payment_reference) return;
+    const method = item.payment_method === 'offline_bank_transfer' ? 'счёт компании' : 'банковская карта';
+    const entered = window.prompt(`Проверьте поступление ${money(config?.secondary_listing_fee_uzs ?? 0)} на ${method} в банковской выписке. Введите номер операции ${item.payment_reference} для подтверждения:`);
+    if (entered?.trim() !== item.payment_reference) return;
+    void onActivateSecondary(item.id, item.payment_claim_id);
   }
 
   return (
@@ -74,7 +82,7 @@ export function AdminBillingPanel({ plans, subscriptions, config, secondaryListi
         <div className="admin-billing-block-heading"><div><h3>Публикации вторичного рынка</h3><p>{config ? `${money(config.secondary_listing_fee_uzs)} за ${config.secondary_period_days} дней. После срока объявление автоматически скрывается.` : 'Условия не настроены.'}</p></div><button type="button" onClick={editConfig} disabled={!config || processing === 'config'}><Edit3 /> Изменить условия</button></div>
         <Table className="admin-table"><TableHeader><TableRow><TableHead>Объявление</TableHead><TableHead>Продавец</TableHead><TableHead>Стоимость объекта</TableHead><TableHead>Период до</TableHead><TableHead>Статус</TableHead><TableHead>Действие</TableHead></TableRow></TableHeader><TableBody>
           {!loading && secondaryListings.length === 0 && <TableRow><TableCell colSpan={6}><div className="table-empty-state">Объявлений вторичного рынка пока нет.</div></TableCell></TableRow>}
-          {secondaryListings.map((item) => <TableRow key={item.id}><TableCell><div className="finance-object"><strong>{item.complex_name} · кв. {item.unit_number}</strong><small>{item.market_type === 'SECONDARY_OWNER' ? 'Собственник' : 'Агентство'}</small></div></TableCell><TableCell>{item.seller_name}</TableCell><TableCell>{money(item.price_uzs)}</TableCell><TableCell>{date(item.paid_until)}</TableCell><TableCell><Badge className={`billing-admin-status ${item.purchase_status === 'active' ? 'active' : 'past_due'}`}>{item.purchase_status === 'active' ? 'Оплачено' : item.purchase_status === 'expired' ? 'Истёк' : 'Не оплачен'}</Badge></TableCell><TableCell><button className="secondary-billing-action" type="button" disabled={processing === item.id || item.status === 'sold'} onClick={() => void onActivateSecondary(item.id)}>{processing === item.id ? 'Проводим…' : item.purchase_status === 'active' ? 'Продлить' : 'Оплатить период'}</button></TableCell></TableRow>)}
+          {secondaryListings.map((item) => <TableRow key={item.id}><TableCell><div className="finance-object"><strong>{item.complex_name} · кв. {item.unit_number}</strong><small>{item.market_type === 'SECONDARY_OWNER' ? 'Собственник' : 'Агентство'}</small></div></TableCell><TableCell>{item.seller_name}</TableCell><TableCell>{money(item.price_uzs)}</TableCell><TableCell>{date(item.paid_until)}</TableCell><TableCell><Badge className={`billing-admin-status ${item.purchase_status === 'active' ? 'active' : 'past_due'}`}>{item.purchase_status === 'active' ? 'Оплачено' : item.payment_claim_id ? 'Проверить перевод' : item.purchase_status === 'expired' ? 'Истёк' : 'Не оплачен'}</Badge></TableCell><TableCell>{item.payment_claim_id ? <div><small>{item.payment_method === 'offline_bank_transfer' ? 'Банк' : 'Карта'} · {item.payment_reference}</small><button className="secondary-billing-action" type="button" disabled={processing === item.id || item.status === 'sold'} onClick={() => confirmSecondary(item)}>{processing === item.id ? 'Сохраняем…' : 'Подтвердить поступление'}</button></div> : <span>Ожидаем перевод</span>}</TableCell></TableRow>)}
         </TableBody></Table>
       </div>
       <div className="billing-event-strip"><div><h3>Последние начисления</h3><span>{events.length} событий</span></div><div>{events.slice(0, 5).map((event) => <article key={event.id}><span><WalletCards /></span><p><strong>{event.organization_name ?? (event.complex_name ? `${event.complex_name} · кв. ${event.unit_number}` : 'Платёж')}</strong><small>{event.event_type === 'plan_change' ? 'Смена тарифа' : event.event_type === 'subscription_charge' ? 'Подписка' : event.event_type === 'secondary_renewal' ? 'Продление объявления' : 'Публикация объявления'}</small></p><em>{money(event.amount_uzs)}</em></article>)}</div></div>

@@ -1,5 +1,6 @@
 import { authorizationResponse, getAppSession } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { onlinePaymentsDisabledResponse, onlinePaymentsEnabled } from '@/lib/payment-mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,7 @@ function responseForReservation(reservation: ReservationRow, duplicate = false) 
 }
 
 export async function POST(request: Request) {
+  if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
   try {
     const session = await getAppSession(request);
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';

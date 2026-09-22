@@ -718,16 +718,15 @@ export async function ensureMarketplaceDatabase() {
       );
       await ensureCatalogGeography(database);
       await seedMarketplace(database);
-      // Older builds approved the seller documents but left the listing in a
-      // private intermediate state. Keep the public listing status aligned
-      // with the superadmin decision when an existing local database starts.
+      // Approval is separate from paid publication. Reconcile listings made
+      // public by older builds without a valid paid period.
       await database
-        .prepare(`UPDATE listings SET status = 'published',
-        published_at = COALESCE(published_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
-        WHERE status = 'pending_verification'
+        .prepare(`UPDATE listings SET status = 'pending_moderation', updated_at = CURRENT_TIMESTAMP
+        WHERE (status = 'published' OR (status = 'pending_verification' AND EXISTS
+          (SELECT 1 FROM secondary_listing_owners owner WHERE owner.listing_id = listings.id AND owner.verification_status = 'approved')))
           AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY')
-          AND EXISTS (SELECT 1 FROM secondary_listing_owners owner
-            WHERE owner.listing_id = listings.id AND owner.verification_status = 'approved')`)
+          AND NOT EXISTS (SELECT 1 FROM secondary_listing_purchases purchase
+            WHERE purchase.listing_id = listings.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)`)
         .run();
       await database.prepare('PRAGMA optimize').run();
     })().catch((error) => {
@@ -773,7 +772,8 @@ export async function readMarketplaceData() {
       LEFT JOIN secondary_listing_owners secondary_owner ON secondary_owner.listing_id = l.id
       WHERE l.status = 'published' AND u.availability_status = 'available'
         AND (l.seller_org_id IS NULL OR seller_org.verification_status = 'verified')
-        AND (l.market_type = 'PRIMARY_DEVELOPER' OR secondary_owner.verification_status = 'approved')
+        AND (l.market_type = 'PRIMARY_DEVELOPER' OR (secondary_owner.verification_status = 'approved' AND EXISTS
+          (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = l.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
       ORDER BY l.published_at DESC`)
       .all<ListingRow>(),
     database
@@ -910,7 +910,8 @@ export async function readComplexDetail(
       LEFT JOIN users seller_user ON seller_user.id = secondary_owner.seller_user_id
       WHERE l.complex_id = ? AND l.status = 'published' AND u.availability_status = 'available'
         AND (l.seller_org_id IS NULL OR o.verification_status = 'verified')
-        AND (l.market_type = 'PRIMARY_DEVELOPER' OR secondary_owner.verification_status = 'approved')
+        AND (l.market_type = 'PRIMARY_DEVELOPER' OR (secondary_owner.verification_status = 'approved' AND EXISTS
+          (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = l.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
       ORDER BY l.price_uzs ASC`)
       .bind(record.id)
       .all<ComplexListingRow>(),
@@ -1063,7 +1064,8 @@ export async function readListingDetail(
     WHERE listing.id = ? AND listing.status = 'published' AND unit.availability_status = 'available'
       AND complex.verification_status = 'verified'
       AND (listing.seller_org_id IS NULL OR organization.verification_status = 'verified')
-      AND (listing.market_type = 'PRIMARY_DEVELOPER' OR secondary_owner.verification_status = 'approved')
+      AND (listing.market_type = 'PRIMARY_DEVELOPER' OR (secondary_owner.verification_status = 'approved' AND EXISTS
+        (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
     LIMIT 1`)
     .bind(id)
     .first<ListingDetailRow>();

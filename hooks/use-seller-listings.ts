@@ -34,13 +34,14 @@ export type SellerListing = {
   document_reference: string;
   verification_status: 'submitted' | 'approved' | 'rejected';
   rejection_reason: string | null;
+  payment_claim_status: string | null;
   paid_until: string | null;
 };
 
 type SellerData = {
   listings: SellerListing[];
   complexes: SellerBuilding[];
-  billing: { feeUzs: number; periodDays: number };
+  billing: { feeUzs: number; periodDays: number; bankAccount: string; bankName: string; cardNumber: string; cardHolder: string };
 };
 
 export type CreateSellerListing = {
@@ -57,7 +58,7 @@ export type CreateSellerListing = {
   documentReference: string;
 };
 
-const emptyData: SellerData = { listings: [], complexes: [], billing: { feeUzs: 250_000, periodDays: 30 } };
+const emptyData: SellerData = { listings: [], complexes: [], billing: { feeUzs: 250_000, periodDays: 30, bankAccount: '', bankName: '', cardNumber: '', cardHolder: '' } };
 
 export function useSellerListings() {
   const [data, setData] = useState<SellerData>(emptyData);
@@ -100,11 +101,11 @@ export function useSellerListings() {
     } finally { setProcessing(''); }
   }, [refresh]);
 
-  const action = useCallback(async (listingId: string, name: 'purchase' | 'renew' | 'price' | 'sold' | 'resubmit', extra: Record<string, unknown> = {}) => {
+  const action = useCallback(async (listingId: string, name: 'submit_payment' | 'price' | 'sold' | 'resubmit', extra: Record<string, unknown> = {}) => {
     setProcessing(`${listingId}:${name}`); setError(''); setFeedback('');
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (name === 'purchase' || name === 'renew') headers['Idempotency-Key'] = crypto.randomUUID();
+      if (name === 'submit_payment') headers['Idempotency-Key'] = crypto.randomUUID();
       const response = await fetch('/api/seller/listings', { method: 'PATCH', headers, body: JSON.stringify({ listingId, action: name, ...extra }) });
       const payload = await response.json() as { message?: string };
       if (!response.ok) throw new Error(payload.message ?? 'Не удалось обновить объявление.');

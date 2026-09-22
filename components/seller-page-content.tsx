@@ -38,9 +38,9 @@ const statusMeta: Record<
     help: 'Специалист сверяет право собственности.',
   },
   pending_moderation: {
-    label: 'На модерации',
+    label: 'Ожидает оплаты',
     tone: 'blue',
-    help: 'Документы и оплата приняты, проверяем карточку.',
+    help: 'Документы одобрены. Объявление откроется после подтверждения перевода.',
   },
   published: {
     label: 'Опубликовано',
@@ -77,12 +77,14 @@ function ListingCard({
   listing,
   processing,
   onAction,
+  paymentConfigured,
 }: {
   listing: SellerListing;
   processing: string;
   onAction: (
-    name: 'purchase' | 'renew' | 'price' | 'sold' | 'resubmit',
+    name: 'submit_payment' | 'price' | 'sold' | 'resubmit',
   ) => void;
+  paymentConfigured: boolean;
 }) {
   const meta = statusMeta[listing.status] ?? {
     label: listing.status,
@@ -114,7 +116,8 @@ function ListingCard({
         </div>
         <div className="seller-listing-state">
           <span className={meta.tone}>{meta.label}</span>
-          <p>{listing.rejection_reason ?? meta.help}</p>
+          <p>{listing.rejection_reason ?? (listing.payment_claim_status === 'pending' ? 'Номер перевода получен. Ожидается сверка банковской выписки.' : meta.help)}</p>
+          {listing.verification_status === 'approved' && !paid && !paymentConfigured && <p>Реквизиты для перевода пока настраиваются. Объявление остаётся скрытым.</p>}
         </div>
         <div className="seller-listing-footer">
           <div>
@@ -126,22 +129,22 @@ function ListingCard({
             </strong>
           </div>
           <div className="seller-listing-actions">
-            {!paid && !['sold'].includes(listing.status) && (
+            {!paid && listing.verification_status === 'approved' && listing.payment_claim_status !== 'pending' && listing.status !== 'sold' && paymentConfigured && (
               <button
                 type="button"
-                onClick={() => onAction('purchase')}
+                onClick={() => onAction('submit_payment')}
                 disabled={Boolean(processing)}
               >
-                <CircleDollarSign /> Оплатить
+                <CircleDollarSign /> Реквизиты для оплаты
               </button>
             )}
-            {paid && ['published', 'expired'].includes(listing.status) && (
+            {paid && ['published', 'expired'].includes(listing.status) && listing.payment_claim_status !== 'pending' && paymentConfigured && (
               <button
                 type="button"
-                onClick={() => onAction('renew')}
+                onClick={() => onAction('submit_payment')}
                 disabled={Boolean(processing)}
               >
-                <RefreshCw /> Продлить
+                <RefreshCw /> Продлить переводом
               </button>
             )}
             {!['sold'].includes(listing.status) && (
@@ -242,9 +245,20 @@ export default function SellerPage() {
 
   const runAction = async (
     listing: SellerListing,
-    action: 'purchase' | 'renew' | 'price' | 'sold' | 'resubmit',
+    action: 'submit_payment' | 'price' | 'sold' | 'resubmit',
   ) => {
     const extra: Record<string, unknown> = {};
+    if (action === 'submit_payment') {
+      const options = [seller.billing.bankAccount && `1 — банк: ${seller.billing.bankName}, счёт ${seller.billing.bankAccount}`, seller.billing.cardNumber && `2 — карта: ${seller.billing.cardNumber}, ${seller.billing.cardHolder}`].filter(Boolean).join('\n');
+      const choice = window.prompt(`Стоимость: ${seller.billing.feeUzs.toLocaleString('ru-RU')} сум за ${seller.billing.periodDays} дней.\nПереведите точную сумму по реквизитам:\n${options}\n\nПосле перевода введите 1 или 2 для выбранного способа:`);
+      if (!choice) return;
+      const method = choice.trim() === '1' && seller.billing.bankAccount ? 'bank' : choice.trim() === '2' && seller.billing.cardNumber ? 'card' : '';
+      if (!method) return;
+      const reference = window.prompt('Укажите номер операции из банковского чека или выписки. Объявление опубликуют только после проверки поступления денег:')?.trim();
+      if (!reference) return;
+      extra.method = method;
+      extra.reference = reference;
+    }
     if (action === 'price') {
       const next = window.prompt(
         'Новая цена, млн сум',
@@ -297,8 +311,7 @@ export default function SellerPage() {
             </h1>
             <p>
               Выберите существующий ЖК, подтвердите право собственности и
-              оплатите размещение. Оплата не означает автоматическую публикацию:
-              каждое объявление проходит проверку.
+              после одобрения оплатите размещение переводом. Объявление появится в каталоге только после проверки поступления денег.
             </p>
             <a href="#create-listing">
               Создать объявление <ArrowRight />
@@ -427,6 +440,7 @@ export default function SellerPage() {
                 key={listing.id}
                 listing={listing}
                 processing={seller.processing}
+                paymentConfigured={Boolean(seller.billing.bankAccount || seller.billing.cardNumber)}
                 onAction={(action) => void runAction(listing, action)}
               />
             ))}
@@ -670,9 +684,7 @@ export default function SellerPage() {
               Отправить на проверку
             </button>
             <p className="seller-payment-note">
-              <Banknote /> Оплата размещения выполняется после создания
-              объявления в кабинете. Провайдер сейчас работает в безопасном
-              sandbox-режиме.
+              <Banknote /> Реквизиты для перевода станут доступны после одобрения объявления. Наличные не принимаются.
             </p>
           </form>
         </div>

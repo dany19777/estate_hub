@@ -19,13 +19,15 @@ export async function GET(request: Request) {
     const result = await database.prepare(`SELECT
       complex.id AS complex_id, complex.name, organization.name AS developer,
       workflow.status AS workflow_status, workflow.submitted_at,
-      COUNT(DISTINCT CASE WHEN listing.status = 'pending_moderation' THEN listing.id END) AS pending_listings
+      COUNT(DISTINCT CASE WHEN listing.status = 'pending_moderation' AND (listing.market_type = 'PRIMARY_DEVELOPER' OR EXISTS
+        (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)) THEN listing.id END) AS pending_listings
       FROM complexes complex
       JOIN organizations organization ON organization.id = complex.developer_org_id
       JOIN complex_publication_workflows workflow ON workflow.complex_id = complex.id
       LEFT JOIN listings listing ON listing.complex_id = complex.id
       WHERE complex.verification_status = 'verified'
-        AND (workflow.status = 'pending_moderation' OR listing.status = 'pending_moderation')
+        AND (workflow.status = 'pending_moderation' OR (listing.status = 'pending_moderation' AND (listing.market_type = 'PRIMARY_DEVELOPER' OR EXISTS
+          (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP))))
       GROUP BY complex.id, complex.name, organization.name, workflow.status, workflow.submitted_at
       ORDER BY workflow.submitted_at ASC, complex.name ASC`).all<ModerationRow>();
     return Response.json({ queue: result.results ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });
@@ -47,7 +49,8 @@ export async function PATCH(request: Request) {
     const database = await ensureMarketplaceDatabase();
     const item = await database.prepare(`SELECT complex.id, complex.developer_org_id, workflow.status,
       (SELECT COUNT(*) FROM listings WHERE complex_id = complex.id AND market_type = 'PRIMARY_DEVELOPER' AND status = 'pending_moderation') AS pending_primary,
-      (SELECT COUNT(*) FROM listings WHERE complex_id = complex.id AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY') AND status = 'pending_moderation') AS pending_secondary,
+      (SELECT COUNT(*) FROM listings listing WHERE complex_id = complex.id AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY') AND status = 'pending_moderation' AND EXISTS
+        (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)) AS pending_secondary,
       (SELECT COUNT(*) FROM listings listing
         WHERE listing.complex_id = complex.id AND listing.market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY') AND listing.status = 'pending_moderation'
           AND (NOT EXISTS (SELECT 1 FROM secondary_listing_owners owner WHERE owner.listing_id = listing.id AND owner.verification_status = 'approved')
@@ -83,7 +86,9 @@ export async function PATCH(request: Request) {
       database.prepare(`UPDATE listings SET status = ?, published_at = CASE WHEN ? = 'published' THEN CURRENT_TIMESTAMP ELSE published_at END,
         expires_at = CASE WHEN ? = 'published' AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY') THEN
           (SELECT purchase.period_end FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listings.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP ORDER BY purchase.period_end DESC LIMIT 1)
-          ELSE expires_at END, updated_at = CURRENT_TIMESTAMP WHERE complex_id = ? AND status = 'pending_moderation'`)
+          ELSE expires_at END, updated_at = CURRENT_TIMESTAMP WHERE complex_id = ? AND status = 'pending_moderation'
+          AND (market_type = 'PRIMARY_DEVELOPER' OR EXISTS (SELECT 1 FROM secondary_listing_purchases purchase
+            WHERE purchase.listing_id = listings.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP))`)
         .bind(listingDecision, listingDecision, listingDecision, complexId),
       database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, ?, 'complex', ?, ?)`)
         .bind(crypto.randomUUID(), session.user.id, decision === 'publish' ? 'moderation.published' : 'moderation.rejected', complexId, JSON.stringify({ pendingListings, pendingPrimary: Number(item.pending_primary), pendingSecondary: Number(item.pending_secondary) })),

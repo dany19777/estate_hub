@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 export type AdminBillingPlan = { id: string; code: string; name: string; inventory_limit: number; monthly_price_uzs: number; is_active: number; sort_order: number };
 export type AdminSubscription = { id: string; organization_id: string; organization_name: string; status: string; current_period_end: string; auto_renew: number; plan_id: string; code: string; plan_name: string; inventory_limit: number; monthly_price_uzs: number; active_inventory: number };
-export type SecondaryBillingListing = { id: string; status: string; market_type: string; price_uzs: number; expires_at: string | null; unit_number: string; complex_name: string; seller_name: string; purchase_status: string | null; paid_until: string | null };
+export type SecondaryBillingListing = { id: string; status: string; market_type: string; price_uzs: number; expires_at: string | null; unit_number: string; complex_name: string; seller_name: string; purchase_status: string | null; paid_until: string | null; payment_claim_id: string | null; payment_method: string | null; payment_reference: string | null };
 export type AdminBillingEvent = { id: string; event_type: string; amount_uzs: number; status: string; period_start: string; period_end: string; created_at: string; organization_name: string | null; complex_name: string | null; unit_number: string | null };
 
 type AdminBillingData = {
@@ -63,6 +63,6 @@ export function useAdminBilling() {
     ...data, loading, error, processing, refresh,
     updatePlan: (plan: AdminBillingPlan) => patch({ action: 'update_plan', planId: plan.id, name: plan.name, inventoryLimit: plan.inventory_limit, monthlyPriceUzs: plan.monthly_price_uzs, isActive: Boolean(plan.is_active) }, plan.id),
     updateConfig: (feeUzs: number, periodDays: number) => patch({ action: 'update_secondary_config', feeUzs, periodDays }, 'config'),
-    activateSecondary: (listingId: string) => patch({ action: 'activate_secondary', listingId }, listingId, true),
+    activateSecondary: (listingId: string, claimId: string) => patch({ action: 'activate_secondary', listingId, claimId }, listingId, true),
   };
 }
