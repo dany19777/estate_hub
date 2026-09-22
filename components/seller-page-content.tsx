@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, type ReactElement, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   BadgeCheck,
@@ -24,6 +24,8 @@ import { InternalLink as Link } from '@/components/internal-link';
 import { MarketplaceHeader } from '@/components/marketplace-header';
 import { PhoneVerificationDialog } from '@/components/phone-verification-dialog';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { usePhoneVerification } from '@/hooks/use-phone-verification';
 import { SellerListing, useSellerListings } from '@/hooks/use-seller-listings';
 import { formatPriceMillions } from '@/lib/marketplace';
@@ -73,19 +75,71 @@ function formatDate(value: string | null) {
   }).format(new Date(`${value.replace(' ', 'T')}Z`));
 }
 
+type SellerBilling = ReturnType<typeof useSellerListings>['billing'];
+
+function SecondaryPaymentDialog({ billing, trigger, onSubmit }: {
+  billing: SellerBilling;
+  trigger: ReactElement;
+  onSubmit: (method: 'bank' | 'card', reference: string) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [method, setMethod] = useState<'bank' | 'card'>(billing.bankAccount ? 'bank' : 'card');
+  const [reference, setReference] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submitPayment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await onSubmit(method, reference.trim());
+      setOpen(false);
+      setReference('');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Не удалось отправить номер операции.');
+    } finally { setBusy(false); }
+  }
+
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger render={trigger} />
+    <DialogContent className="seller-payment-dialog">
+      <DialogHeader>
+        <span className="seller-payment-eyebrow"><Banknote /> Публикация после одобрения</span>
+        <DialogTitle>Оплатить размещение</DialogTitle>
+        <DialogDescription>Переведите точную сумму по реквизитам. Номер операции отправьте после перевода — суперадмин сверит поступление по банковской выписке.</DialogDescription>
+      </DialogHeader>
+      <div className="seller-payment-summary"><span>Сумма за {billing.periodDays} дней</span><strong>{billing.feeUzs.toLocaleString('ru-RU')} сум</strong></div>
+      <form id="seller-payment-form" onSubmit={submitPayment} className="seller-payment-form">
+        <fieldset><legend>Способ перевода</legend>
+          {billing.bankAccount && <label className={method === 'bank' ? 'selected' : ''}><input type="radio" name="payment-method" checked={method === 'bank'} onChange={() => setMethod('bank')} /><span><strong>Банковский перевод</strong><small>{billing.bankName} · счёт {billing.bankAccount}</small></span></label>}
+          {billing.cardNumber && <label className={method === 'card' ? 'selected' : ''}><input type="radio" name="payment-method" checked={method === 'card'} onChange={() => setMethod('card')} /><span><strong>Перевод на карту</strong><small>{billing.cardNumber} · {billing.cardHolder}</small></span></label>}
+        </fieldset>
+        <label className="seller-payment-reference" htmlFor="seller-payment-reference">Номер банковской операции<Input id="seller-payment-reference" value={reference} onChange={(event) => setReference(event.target.value)} minLength={6} maxLength={100} placeholder="Из чека или выписки" required /></label>
+        <p className="seller-payment-hint">Наличные не принимаются. Отправка номера операции сама по себе не публикует объявление.</p>
+        {error && <p className="lead-request-error">{error}</p>}
+      </form>
+      <DialogFooter><DialogClose render={<Button variant="outline" disabled={busy} />}>Отмена</DialogClose><Button type="submit" form="seller-payment-form" disabled={busy || reference.trim().length < 6}>{busy ? 'Отправляем…' : 'Отправить на проверку'}</Button></DialogFooter>
+    </DialogContent>
+  </Dialog>;
+}
+
 function ListingCard({
   listing,
   processing,
   onAction,
-  paymentConfigured,
+  billing,
+  onPayment,
 }: {
   listing: SellerListing;
   processing: string;
   onAction: (
-    name: 'submit_payment' | 'price' | 'sold' | 'resubmit',
+    name: 'price' | 'sold' | 'resubmit',
   ) => void;
-  paymentConfigured: boolean;
+  billing: SellerBilling;
+  onPayment: (method: 'bank' | 'card', reference: string) => Promise<void>;
 }) {
+  const paymentConfigured = Boolean(billing.bankAccount || billing.cardNumber);
   const meta = statusMeta[listing.status] ?? {
     label: listing.status,
     tone: 'gray',
@@ -131,22 +185,10 @@ function ListingCard({
           </div>
           <div className="seller-listing-actions">
             {!paid && listing.verification_status === 'approved' && listing.payment_claim_status !== 'pending' && listing.status !== 'sold' && paymentConfigured && (
-              <button
-                type="button"
-                onClick={() => onAction('submit_payment')}
-                disabled={Boolean(processing)}
-              >
-                <CircleDollarSign /> Реквизиты для оплаты
-              </button>
+              <SecondaryPaymentDialog billing={billing} onSubmit={onPayment} trigger={<button type="button" disabled={Boolean(processing)}><CircleDollarSign /> Реквизиты для оплаты</button>} />
             )}
             {paid && ['published', 'expired'].includes(listing.status) && listing.payment_claim_status !== 'pending' && paymentConfigured && (
-              <button
-                type="button"
-                onClick={() => onAction('submit_payment')}
-                disabled={Boolean(processing)}
-              >
-                <RefreshCw /> Продлить переводом
-              </button>
+              <SecondaryPaymentDialog billing={billing} onSubmit={onPayment} trigger={<button type="button" disabled={Boolean(processing)}><RefreshCw /> Продлить переводом</button>} />
             )}
             {!['sold'].includes(listing.status) && (
               <button
@@ -246,20 +288,9 @@ export default function SellerPage() {
 
   const runAction = async (
     listing: SellerListing,
-    action: 'submit_payment' | 'price' | 'sold' | 'resubmit',
+    action: 'price' | 'sold' | 'resubmit',
   ) => {
     const extra: Record<string, unknown> = {};
-    if (action === 'submit_payment') {
-      const options = [seller.billing.bankAccount && `1 — банк: ${seller.billing.bankName}, счёт ${seller.billing.bankAccount}`, seller.billing.cardNumber && `2 — карта: ${seller.billing.cardNumber}, ${seller.billing.cardHolder}`].filter(Boolean).join('\n');
-      const choice = window.prompt(`Стоимость: ${seller.billing.feeUzs.toLocaleString('ru-RU')} сум за ${seller.billing.periodDays} дней.\nПереведите точную сумму по реквизитам:\n${options}\n\nПосле перевода введите 1 или 2 для выбранного способа:`);
-      if (!choice) return;
-      const method = choice.trim() === '1' && seller.billing.bankAccount ? 'bank' : choice.trim() === '2' && seller.billing.cardNumber ? 'card' : '';
-      if (!method) return;
-      const reference = window.prompt('Укажите номер операции из банковского чека или выписки. Объявление опубликуют только после проверки поступления денег:')?.trim();
-      if (!reference) return;
-      extra.method = method;
-      extra.reference = reference;
-    }
     if (action === 'price') {
       const next = window.prompt(
         'Новая цена, млн сум',
@@ -441,7 +472,8 @@ export default function SellerPage() {
                 key={listing.id}
                 listing={listing}
                 processing={seller.processing}
-                paymentConfigured={Boolean(seller.billing.bankAccount || seller.billing.cardNumber)}
+                billing={seller.billing}
+                onPayment={async (method, reference) => { await seller.action(listing.id, 'submit_payment', { method, reference }); }}
                 onAction={(action) => void runAction(listing, action)}
               />
             ))}

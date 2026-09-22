@@ -1539,7 +1539,7 @@ export default function DeveloperDashboard() {
                   })
                 }
               />{' '}
-              Разрешить онлайн-бронирование после публикации
+              Квартира доступна для заявки на консультацию
             </label>
             {unitMessage && (
               <p

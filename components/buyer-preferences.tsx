@@ -44,8 +44,8 @@ const messages = {
     'Все предложения': 'Barcha takliflar',
     'Проверенные квартиры и застройщики':
       'Tekshirilgan kvartiralar va quruvchilar',
-    'Сравнивайте реальные предложения, проверяйте историю цены и бронируйте квартиру онлайн до визита в офис продаж.':
-      'Haqiqiy takliflarni solishtiring, narx tarixini tekshiring va savdo ofisiga borishdan oldin kvartirani onlayn band qiling.',
+    'Сравнивайте реальные предложения, проверяйте историю цены и договаривайтесь о просмотре с продавцом.':
+      'Haqiqiy takliflarni solishtiring, narx tarixini tekshiring va sotuvchi bilan ko‘rish vaqtini kelishing.',
     'Проверенные продавцы': 'Tekshirilgan sotuvchilar',
     'Документы и права проходят проверку': 'Hujjatlar va huquqlar tekshiriladi',
     'Актуальная цена': 'Amaldagi narx',
@@ -54,9 +54,9 @@ const messages = {
     'Умный подбор': 'Aqlli tanlov',
     'AI превращает запрос в точные фильтры':
       'AI so‘rovni aniq filtrlarga aylantiradi',
-    'Онлайн-бронирование': 'Onlayn band qilish',
-    '5 минут на оплату и 72 часа резерва':
-      'To‘lov uchun 5 daqiqa va 72 soatlik band',
+    'Связь с продавцом': 'Sotuvchi bilan bog‘lanish',
+    'Заявка на просмотр и консультация без оплаты на сайте':
+      'Saytda to‘lovsiz ko‘rish so‘rovi va maslahat',
     'Жилые комплексы для вашей жизни': 'Hayotingiz uchun turar joy majmualari',
     'Сначала выберите комплекс — внутри собраны все доступные квартиры от застройщиков, владельцев и агентств.':
       'Avval majmuani tanlang — unda quruvchilar, egalar va agentliklarning barcha mavjud kvartiralari jamlangan.',
@@ -178,9 +178,9 @@ const messages = {
     'Проверьте и сравните': 'Tekshiring va solishtiring',
     'Смотрите цены, документы, продавца и доступные квартиры.':
       'Narxlar, hujjatlar, sotuvchi va mavjud kvartiralarni ko‘ring.',
-    'Свяжитесь или забронируйте': 'Bog‘laning yoki band qiling',
-    'Запишитесь на просмотр, задайте вопрос или оформите бронь.':
-      'Ko‘rishga yoziling, savol bering yoki band qiling.',
+    'Свяжитесь с продавцом': 'Sotuvchi bilan bog‘laning',
+    'Запишитесь на просмотр или задайте вопрос продавцу.':
+      'Ko‘rishga yoziling yoki sotuvchiga savol bering.',
     'Поддержка EstateHub': 'EstateHub yordam xizmati',
     'Мы поможем разобраться': 'Biz sizga yordam beramiz',
     'Опишите вопрос — обращение сохранится в системе и автоматически поступит на почту службы поддержки.':
@@ -242,8 +242,8 @@ const messages = {
     Застройщик: 'Developer',
     'Все предложения': 'All listings',
     'Проверенные квартиры и застройщики': 'Verified apartments and developers',
-    'Сравнивайте реальные предложения, проверяйте историю цены и бронируйте квартиру онлайн до визита в офис продаж.':
-      'Compare real listings, check price history and reserve an apartment online before visiting the sales office.',
+    'Сравнивайте реальные предложения, проверяйте историю цены и договаривайтесь о просмотре с продавцом.':
+      'Compare real listings, check price history and arrange a viewing with the seller.',
     'Проверенные продавцы': 'Verified sellers',
     'Документы и права проходят проверку':
       'Documents and ownership rights are verified',
@@ -253,9 +253,9 @@ const messages = {
     'Умный подбор': 'Smart matching',
     'AI превращает запрос в точные фильтры':
       'AI turns your request into precise filters',
-    'Онлайн-бронирование': 'Online reservation',
-    '5 минут на оплату и 72 часа резерва':
-      '5 minutes to pay and a 72-hour reservation',
+    'Связь с продавцом': 'Contact the seller',
+    'Заявка на просмотр и консультация без оплаты на сайте':
+      'Request a viewing or consultation without paying on the site',
     'Жилые комплексы для вашей жизни': 'Residential developments for your life',
     'Сначала выберите комплекс — внутри собраны все доступные квартиры от застройщиков, владельцев и агентств.':
       'Choose a development first to see all available apartments from developers, owners and agencies.',
@@ -377,9 +377,9 @@ const messages = {
     'Проверьте и сравните': 'Verify and compare',
     'Смотрите цены, документы, продавца и доступные квартиры.':
       'Review prices, documents, the seller and available apartments.',
-    'Свяжитесь или забронируйте': 'Contact or reserve',
-    'Запишитесь на просмотр, задайте вопрос или оформите бронь.':
-      'Schedule a viewing, ask a question or make a reservation.',
+    'Свяжитесь с продавцом': 'Contact the seller',
+    'Запишитесь на просмотр или задайте вопрос продавцу.':
+      'Schedule a viewing or ask the seller a question.',
     'Поддержка EstateHub': 'EstateHub support',
     'Мы поможем разобраться': 'We are here to help',
     'Опишите вопрос — обращение сохранится в системе и автоматически поступит на почту службы поддержки.':

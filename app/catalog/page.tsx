@@ -48,7 +48,7 @@ const marketContext = {
     label: 'Новостройки',
     title: 'Квартиры напрямую от застройщиков',
     description:
-      'Смотрите готовые и строящиеся комплексы, сроки сдачи и возможность онлайн-бронирования.',
+      'Смотрите готовые и строящиеся комплексы, сроки сдачи и доступные квартиры.',
   },
   Вторичный: {
     label: 'Вторичный рынок',
@@ -154,9 +154,7 @@ export default function CatalogPage() {
   const [verified, setVerified] = useState(
     () => searchParams.get('verified') !== 'false',
   );
-  const [reservable, setReservable] = useState(
-    () => searchParams.get('reservable') === 'true',
-  );
+  const reservable = false;
   const [specialOffer, setSpecialOffer] = useState(
     () => searchParams.get('specialOffer') === 'true',
   );
@@ -335,7 +333,6 @@ export default function CatalogPage() {
     setFinish('');
     setRemovedAiFilters([]);
     setVerified(true);
-    setReservable(false);
     setSpecialOffer(false);
     setSort('recommended');
   };
@@ -673,17 +670,6 @@ export default function CatalogPage() {
           </label>
           <label className="filter-check">
             <input
-              checked={reservable}
-              onChange={(event) => setReservable(event.target.checked)}
-              type="checkbox"
-            />
-            <span>
-              <Check />
-            </span>{' '}
-            Онлайн-бронирование
-          </label>
-          <label className="filter-check">
-            <input
               checked={specialOffer}
               onChange={(event) => setSpecialOffer(event.target.checked)}
               type="checkbox"
@@ -882,11 +868,6 @@ export default function CatalogPage() {
                       <span>{formatApartmentCount(item.availableUnits)}</span>
                       <span>{item.completionLabel}</span>
                     </div>
-                    {item.reservable && (
-                      <p className="reservation-available">
-                        <Check /> Доступно онлайн-бронирование
-                      </p>
-                    )}
                     <div className="result-card-footer">
                       <strong>
                         от {formatPriceMillions(item.priceFrom)} сум

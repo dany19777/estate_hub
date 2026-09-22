@@ -8997,6 +8997,59 @@ body:has(.site-header) .global-buyer-preferences {
   max-width: 430px !important;
   padding: 22px !important;
 }
+.seller-payment-dialog {
+  max-width: 520px !important;
+  padding: 24px !important;
+  border: 1px solid #dce5f4;
+  box-shadow: 0 24px 70px rgba(23, 48, 87, .16);
+}
+.seller-payment-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #205dcc;
+  background: #edf3ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.seller-payment-eyebrow svg { width: 15px; height: 15px; }
+.seller-payment-dialog [data-slot='dialog-title'] { font-size: 22px; color: #17263d; }
+.seller-payment-dialog [data-slot='dialog-description'] { line-height: 1.55; color: #66758c; }
+.seller-payment-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 17px;
+  border-radius: 13px;
+  color: #183452;
+  background: #eef4ff;
+}
+.seller-payment-summary strong { color: #205dcc; font-size: 23px; white-space: nowrap; }
+.seller-payment-form { display: grid; gap: 16px; }
+.seller-payment-form fieldset { display: grid; gap: 9px; border: 0; padding: 0; }
+.seller-payment-form legend { margin-bottom: 8px; font-weight: 700; color: #25344d; }
+.seller-payment-form fieldset label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid #dae4f1;
+  border-radius: 11px;
+  cursor: pointer;
+}
+.seller-payment-form fieldset label.selected { border-color: #2463eb; background: #f4f7ff; }
+.seller-payment-form fieldset input { margin-top: 3px; accent-color: #2463eb; }
+.seller-payment-form fieldset span { display: grid; gap: 4px; min-width: 0; }
+.seller-payment-form fieldset small { color: #64748b; overflow-wrap: anywhere; }
+.seller-payment-reference { display: grid; gap: 7px; color: #25344d; font-weight: 700; }
+.seller-payment-reference input { height: 44px; background: white; font-weight: 400; }
+.seller-payment-hint { color: #66758c; font-size: 12px; line-height: 1.45; }
+.developer-contract-account { display: grid; gap: 5px; padding: 13px 16px; border: 1px solid #dce5f4; border-radius: 11px; color: #25344d; overflow-wrap: anywhere; }
+.developer-contract-account small { color: #64748b; }
 .phone-verification-dialog [data-slot='dialog-header'] > span {
   width: max-content;
   color: #205dcc;

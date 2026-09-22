@@ -41,13 +41,13 @@ export function BuyerVerificationDialog({ trigger, onSubmitted }: { trigger: Rea
     <DialogTrigger render={trigger} />
     <DialogContent className="buyer-verification-dialog">
       {!submitted ? <>
-        <DialogHeader><Badge><ShieldCheck /> Проверка личности</Badge><DialogTitle>Подтвердите данные покупателя</DialogTitle><DialogDescription>Подтверждение требуется один раз перед первым платным бронированием. Полный номер документа EstateHub не сохраняет.</DialogDescription></DialogHeader>
+        <DialogHeader><Badge><ShieldCheck /> Проверка личности</Badge><DialogTitle>Подтвердите данные покупателя</DialogTitle><DialogDescription>Вы можете заранее отправить данные на проверку специалисту EstateHub. Полный номер документа не сохраняется.</DialogDescription></DialogHeader>
         <form id="buyer-verification-form" className="buyer-verification-form" onSubmit={submit}>
           <label htmlFor="identity-document-type">Документ<select id="identity-document-type" value={form.documentType} onChange={(event) => setForm({ ...form, documentType: event.target.value })}><option value="id_card">ID-карта</option><option value="passport">Паспорт</option></select></label>
           <label htmlFor="identity-document-number">Серия и номер<Input id="identity-document-number" value={form.documentNumber} onChange={(event) => setForm({ ...form, documentNumber: event.target.value.toUpperCase() })} placeholder="AA1234567" minLength={6} maxLength={20} required /></label>
           <label htmlFor="identity-birth-date">Дата рождения<Input id="identity-birth-date" type="date" value={form.birthDate} onChange={(event) => setForm({ ...form, birthDate: event.target.value })} required /></label>
           <div className="identity-provider-note"><FileCheck2 /><p><strong>Провайдер проверки подключается через защищённый адаптер</strong><small>В этой версии решение подтверждает специалист EstateHub.</small></p></div>
-          <label className="lead-consent"><input type="checkbox" checked={form.consent} onChange={(event) => setForm({ ...form, consent: event.target.checked })} required /> Я согласен на проверку личности для операций бронирования</label>
+          <label className="lead-consent"><input type="checkbox" checked={form.consent} onChange={(event) => setForm({ ...form, consent: event.target.checked })} required /> Я согласен на добровольную проверку личности в EstateHub</label>
           {error && <p className="lead-request-error">{error}</p>}
         </form>
         <DialogFooter><DialogClose render={<Button variant="outline" disabled={submitting} />}>Отмена</DialogClose><Button type="submit" form="buyer-verification-form" disabled={submitting || !form.consent}>{submitting ? 'Отправляем…' : 'Отправить на проверку'}</Button></DialogFooter>

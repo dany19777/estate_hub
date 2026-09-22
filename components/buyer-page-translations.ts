@@ -55,10 +55,10 @@ const phrases: Record<string, { uz: string; en: string }> = {
     uz: 'Faol bandlar yo‘q',
     en: 'No active reservations',
   },
-  'Когда вы оплатите онлайн-бронь, здесь появятся зафиксированная цена и срок визита.':
+  'Платное бронирование пока недоступно. Для просмотра квартиры оставьте заявку продавцу.':
     {
-      uz: 'Onlayn bandni to‘laganingizdan so‘ng, belgilangan narx va tashrif muddati shu yerda ko‘rinadi.',
-      en: 'Once you pay for an online reservation, the locked price and visit deadline will appear here.',
+      uz: 'Pulli band qilish hozircha mavjud emas. Kvartirani ko‘rish uchun sotuvchiga so‘rov yuboring.',
+      en: 'Paid reservations are not available yet. Contact the seller to arrange a viewing.',
     },
   'Выбрать квартиру': { uz: 'Kvartira tanlash', en: 'Choose an apartment' },
   'Сохранено для вас': { uz: 'Siz uchun saqlangan', en: 'Saved for you' },
@@ -87,9 +87,9 @@ const phrases: Record<string, { uz: string; en: string }> = {
     uz: 'Shaxsingizni oldindan tasdiqlang',
     en: 'Verify your identity early',
   },
-  'Проверка обязательна перед первой платной бронью.': {
-    uz: 'Birinchi pulli banddan oldin tekshiruvdan o‘tish shart.',
-    en: 'Verification is required before your first paid reservation.',
+  'Проверку личности можно пройти заранее.': {
+    uz: 'Shaxsingizni oldindan tasdiqlashingiz mumkin.',
+    en: 'You can verify your identity in advance.',
   },
   'Готовность профиля': { uz: 'Profil tayyorligi', en: 'Profile readiness' },
   'Пройти проверку': { uz: 'Tekshiruvdan o‘tish', en: 'Start verification' },
@@ -97,9 +97,9 @@ const phrases: Record<string, { uz: string; en: string }> = {
     uz: 'Shaxs tasdiqlangan',
     en: 'Identity verified',
   },
-  'Вы можете пользоваться платным онлайн-бронированием.': {
-    uz: 'Pulli onlayn band qilishdan foydalanishingiz mumkin.',
-    en: 'You can use paid online reservations.',
+  'Ваши данные подтверждены для обращения к продавцам.': {
+    uz: 'Sotuvchilarga murojaat qilish uchun maʼlumotlaringiz tasdiqlandi.',
+    en: 'Your details are verified for contacting sellers.',
   },
   Подтверждено: { uz: 'Tasdiqlangan', en: 'Verified' },
   'Нужны новые данные': {
@@ -1022,10 +1022,10 @@ Object.assign(phrases, {
     uz: 'Samarqanddagi kvartiralar',
     en: 'Apartments in Samarkand',
   },
-  'Смотрите готовые и строящиеся комплексы, сроки сдачи и возможность онлайн-бронирования.':
+  'Смотрите готовые и строящиеся комплексы, сроки сдачи и доступные квартиры.':
     {
-      uz: 'Tayyor va qurilayotgan majmualarni, topshirish muddatlarini va onlayn band qilish imkoniyatini ko‘ring.',
-      en: 'Explore completed and upcoming developments, completion dates and online reservations.',
+      uz: 'Tayyor va qurilayotgan majmualarni, topshirish muddatlarini va mavjud kvartiralarni ko‘ring.',
+      en: 'Explore completed and upcoming developments, completion dates and available apartments.',
     },
   'Сравнивайте предложения в сданных домах, состояние квартиры и историю актуальной цены.':
     {
@@ -1116,14 +1116,14 @@ Object.assign(phrases, {
     uz: 'Xaridor ma’lumotlarini tasdiqlang',
     en: 'Confirm buyer details',
   },
-  'Подтверждение требуется один раз перед первым платным бронированием. Полный номер документа EstateHub не сохраняет.':
+  'Вы можете заранее отправить данные на проверку специалисту EstateHub. Полный номер документа не сохраняется.':
     {
-      uz: 'Tasdiq birinchi pulli banddan oldin bir marta kerak. EstateHub hujjatning to‘liq raqamini saqlamaydi.',
-      en: 'Verification is needed once before your first paid reservation. EstateHub does not store the full document number.',
+      uz: 'Maʼlumotlaringizni EstateHub mutaxassisiga oldindan tekshiruv uchun yuborishingiz mumkin. Hujjatning to‘liq raqami saqlanmaydi.',
+      en: 'You can send your details for an advance check by an EstateHub specialist. The full document number is not stored.',
     },
-  'Я согласен на проверку личности для операций бронирования': {
-    uz: 'Band qilish uchun shaxsni tekshirishga roziman',
-    en: 'I consent to identity verification for reservations',
+  'Я согласен на добровольную проверку личности в EstateHub': {
+    uz: 'EstateHubʼda shaxsimni ixtiyoriy tekshirishga roziman',
+    en: 'I consent to optional identity verification in EstateHub',
   },
   'Провайдер проверки подключается через защищённый адаптер': {
     uz: 'Tekshiruv provayderi himoyalangan adapter orqali ulanadi',
@@ -1684,13 +1684,38 @@ Object.assign(phrases, {
   },
   'Не удалось сохранить': { uz: 'Saqlab bo‘lmadi', en: 'Could not save' },
   'Ошибка отправки': { uz: 'Yuborishda xatolik', en: 'Sending failed' },
-  'Проверенные жилые комплексы, реальные цены и онлайн-бронирование квартир в Самарканде.':
+  'Проверенные жилые комплексы, реальные цены и запись на просмотр квартир в Самарканде.':
     {
-      uz: 'Samarqanddagi tekshirilgan turar joy majmualari, haqiqiy narxlar va kvartiralarni onlayn band qilish.',
-      en: 'Verified developments, real prices and online apartment reservations in Samarkand.',
+      uz: 'Samarqanddagi tekshirilgan turar joy majmualari, haqiqiy narxlar va kvartiralarni ko‘rishga yozilish.',
+      en: 'Verified developments, real prices and apartment viewing requests in Samarkand.',
     },
   'Создание объявления': { uz: 'E’lon yaratish', en: 'Create listing' },
   'Специальное предложение': { uz: 'Maxsus taklif', en: 'Special offer' },
+  'Условия просмотра и сделки согласуются с продавцом.': { uz: 'Ko‘rish va bitim shartlari sotuvchi bilan kelishiladi.', en: 'Arrange the viewing and sale terms with the seller.' },
+  'Оставьте заявку — застройщик свяжется с вами для консультации.': { uz: 'So‘rov qoldiring — quruvchi maslahat uchun siz bilan bog‘lanadi.', en: 'Send a request and the developer will contact you for a consultation.' },
+  'Теперь доступны персональные функции EstateHub. Онлайн-бронирование пока не подключено; для просмотра квартиры свяжитесь с продавцом.': { uz: 'EstateHub shaxsiy funksiyalari mavjud. Onlayn band qilish hali yoqilmagan; kvartirani ko‘rish uchun sotuvchi bilan bog‘laning.', en: 'EstateHub personal features are now available. Online reservations are not enabled yet; contact the seller to arrange a viewing.' },
+  'Документы одобрены. Объявление откроется после подтверждения перевода.': { uz: 'Hujjatlar tasdiqlandi. E’lon pul o‘tkazmasi tasdiqlangach ochiladi.', en: 'Documents approved. The listing will go live after the transfer is verified.' },
+  'Не удалось отправить номер операции.': { uz: 'Operatsiya raqamini yuborib bo‘lmadi.', en: 'Could not submit the transaction reference.' },
+  'Публикация после одобрения': { uz: 'Tasdiqdan keyingi e’lon', en: 'Publication after approval' },
+  'Оплатить размещение': { uz: 'E’lon joylash uchun to‘lash', en: 'Pay for publication' },
+  'Переведите точную сумму по реквизитам. Номер операции отправьте после перевода — суперадмин сверит поступление по банковской выписке.': { uz: 'Aniq summani rekvizitlarga o‘tkazing. So‘ng operatsiya raqamini yuboring — superadmin tushumni bank ko‘chirmasi bilan solishtiradi.', en: 'Transfer the exact amount to the details shown. Then submit the transaction reference; the superadmin will verify the funds in the bank statement.' },
+  'Сумма за': { uz: 'To‘lov miqdori:', en: 'Amount for' },
+  дней: { uz: 'kun', en: 'days' },
+  'Способ перевода': { uz: 'O‘tkazma usuli', en: 'Transfer method' },
+  'Банковский перевод': { uz: 'Bank o‘tkazmasi', en: 'Bank transfer' },
+  '· счёт': { uz: '· hisob', en: '· account' },
+  'Перевод на карту': { uz: 'Kartaga o‘tkazma', en: 'Card transfer' },
+  'Номер банковской операции': { uz: 'Bank operatsiyasi raqami', en: 'Bank transaction reference' },
+  'Из чека или выписки': { uz: 'Chek yoki ko‘chirmadan', en: 'From the receipt or statement' },
+  'Наличные не принимаются. Отправка номера операции сама по себе не публикует объявление.': { uz: 'Naqd pul qabul qilinmaydi. Operatsiya raqamini yuborishning o‘zi e’lonni chop etmaydi.', en: 'Cash is not accepted. Submitting a transaction reference does not publish the listing.' },
+  'Номер перевода получен. Ожидается сверка банковской выписки.': { uz: 'O‘tkazma raqami olindi. Bank ko‘chirmasi tekshirilmoqda.', en: 'Transaction reference received. Awaiting bank statement verification.' },
+  'Перевод не подтверждён:': { uz: 'O‘tkazma tasdiqlanmadi:', en: 'Transfer not verified:' },
+  'уточните данные и отправьте номер операции повторно': { uz: 'ma’lumotlarni aniqlashtirib, operatsiya raqamini qayta yuboring', en: 'check the details and resubmit the transaction reference' },
+  'Реквизиты для перевода пока настраиваются. Объявление остаётся скрытым.': { uz: 'O‘tkazma rekvizitlari sozlanmoqda. E’lon yashirin qoladi.', en: 'Transfer details are being set up. The listing remains hidden.' },
+  'Реквизиты для оплаты': { uz: 'To‘lov rekvizitlari', en: 'Payment details' },
+  'Продлить переводом': { uz: 'O‘tkazma orqali uzaytirish', en: 'Renew by transfer' },
+  'Выберите существующий ЖК, подтвердите право собственности и после одобрения оплатите размещение переводом. Объявление появится в каталоге только после проверки поступления денег.': { uz: 'Mavjud majmuani tanlang, mulk huquqini tasdiqlang va ma’qullangach e’lon joylash uchun pul o‘tkazing. E’lon mablag‘ kelib tushgani tekshirilgandan keyingina katalogda paydo bo‘ladi.', en: 'Choose an existing development, verify ownership, then pay for publication by transfer after approval. The listing appears in the catalog only after the funds are verified.' },
+  'Реквизиты для перевода станут доступны после одобрения объявления. Наличные не принимаются.': { uz: 'O‘tkazma rekvizitlari e’lon tasdiqlangach ochiladi. Naqd pul qabul qilinmaydi.', en: 'Transfer details become available after the listing is approved. Cash is not accepted.' },
 });
 
 export const buyerPageMessages = {

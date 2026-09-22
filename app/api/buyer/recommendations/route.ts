@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     const { complexes, listings } = await readMarketplaceData();
     const catalog = buildCatalog(complexes, listings, query);
     const selected = catalog.items.length ? catalog.items : catalog.alternatives;
-    const recommendations = selected.map((item) => ({ ...item, reasons: [query.district === item.district ? `Район ${item.district}` : '', query.rooms && item.minRooms <= query.rooms && item.maxRooms >= query.rooms ? `${query.rooms}-комнатные варианты` : '', query.maxPrice && item.priceFrom <= query.maxPrice ? 'В пределах сохранённого бюджета' : '', item.completionStatus === 'completed' ? 'ЖК сдан' : '', item.reservable ? 'Есть онлайн-бронь' : ''].filter(Boolean).slice(0, 3) }));
+    const recommendations = selected.map((item) => ({ ...item, reasons: [query.district === item.district ? `Район ${item.district}` : '', query.rooms && item.minRooms <= query.rooms && item.maxRooms >= query.rooms ? `${query.rooms}-комнатные варианты` : '', query.maxPrice && item.priceFrom <= query.maxPrice ? 'В пределах сохранённого бюджета' : '', item.completionStatus === 'completed' ? 'ЖК сдан' : '', item.reservable ? 'Можно связаться с застройщиком' : ''].filter(Boolean).slice(0, 3) }));
     return Response.json({ basis: saved ? { type: 'saved_search', label: saved.name } : behavior ? { type: 'favorites', label: `Интерес к району ${behavior.district}` } : { type: 'catalog', label: 'Проверенные предложения Самарканда' }, recommendations, disclosure: 'Рекомендации рассчитаны по сохранённым критериям и действиям в EstateHub. Они не являются инвестиционной рекомендацией.' }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     console.error('Failed to build buyer recommendations', error);

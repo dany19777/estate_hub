@@ -1,8 +1,12 @@
 'use client';
 
+import { type FormEvent, useState } from 'react';
 import { AlertCircle, Check, CreditCard, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import type { DeveloperBillingEvent, DeveloperPlan, DeveloperSubscription } from '@/hooks/use-developer-billing';
 import { formatUzsAmount } from '@/lib/marketplace';
 
@@ -40,16 +44,23 @@ function eventStatus(event: DeveloperBillingEvent) {
 }
 
 export function DeveloperBillingPanel({ plans, subscription, usage, events, paymentDetails, loading, error, feedback, processing, onRetry, onSubmitContract }: Props) {
+  const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [contractReference, setContractReference] = useState('');
+  const [transferReference, setTransferReference] = useState('');
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const percent = usage.limit ? Math.min(100, Math.round(usage.activeInventory / usage.limit * 100)) : 0;
   const pending = events.some((event) => event.status === 'pending' && ['subscription_charge', 'plan_change'].includes(event.event_type));
-  function requestContract(planId: string) {
-    const plan = plans.find((item) => item.id === planId);
-    if (!plan || !paymentDetails.bankAccount || pending) return;
-    const contractReference = window.prompt(`Выбран тариф «${plan.name}»: ${money(plan.monthly_price_uzs)} за 30 дней. Подписанный договор и перевод на ${paymentDetails.bankName}, счёт ${paymentDetails.bankAccount} обязательны. Введите номер подписанного договора:`)?.trim();
-    if (!contractReference) return;
-    const transferReference = window.prompt('После перевода точной суммы укажите номер банковской операции из выписки:')?.trim();
-    if (!transferReference) return;
-    void onSubmitContract(planId, contractReference, transferReference);
+  const selectedPlan = plans.find((item) => item.id === selectedPlanId);
+  async function submitContract(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedPlan) return;
+    setSubmitting(true); setFormError('');
+    try {
+      await onSubmitContract(selectedPlan.id, contractReference.trim(), transferReference.trim());
+      setSelectedPlanId(''); setContractReference(''); setTransferReference('');
+    } catch (reason) { setFormError(reason instanceof Error ? reason.message : 'Не удалось отправить заявку.'); }
+    finally { setSubmitting(false); }
   }
   return (
     <section className="dashboard-panel developer-billing-panel" id="developer-billing">
@@ -58,15 +69,29 @@ export function DeveloperBillingPanel({ plans, subscription, usage, events, paym
       {feedback && <div className="dashboard-operation-state success"><Check /><span>{feedback}</span></div>}
       {loading ? <div className="table-empty-state">Загружаем тариф…</div> : <>
         <div className="developer-billing-summary">
-          <article><span><ShieldCheck /></span><div><small>Текущий тариф</small><strong>{subscription?.name ?? 'Не подключён'}</strong><em>до {date(subscription?.current_period_end)}</em></div><button type="button" onClick={() => subscription && requestContract(subscription.plan_id)} disabled={!subscription || !paymentDetails.bankAccount || pending || Boolean(processing)}><RefreshCw /> {pending ? 'Проверяем перевод' : 'Продлить по договору'}</button></article>
+          <article><span><ShieldCheck /></span><div><small>Текущий тариф</small><strong>{subscription?.name ?? 'Не подключён'}</strong><em>до {date(subscription?.current_period_end)}</em></div><button type="button" onClick={() => subscription && setSelectedPlanId(subscription.plan_id)} disabled={!subscription || !paymentDetails.bankAccount || pending || Boolean(processing)}><RefreshCw /> {pending ? 'Проверяем перевод' : 'Продлить по договору'}</button></article>
           <article className="inventory-usage"><div><small>Активный инвентарь</small><strong>{usage.activeInventory} из {usage.limit}</strong></div><div className="inventory-meter"><i style={{ width: `${percent}%` }} /></div><p>Опубликованные и забронированные квартиры занимают слот. Проданные и архивные — нет.</p></article>
         </div>
         <div className="developer-plan-grid">{plans.map((plan) => {
           const current = subscription?.plan_id === plan.id;
-          return <article className={current ? 'current' : ''} key={plan.id}><div><span>{current ? <Check /> : <Sparkles />}</span><small>{plan.code}</small></div><h3>{plan.name}</h3><strong>{money(plan.monthly_price_uzs)}<em>{plan.monthly_price_uzs ? ' / месяц' : ''}</em></strong><p>До {plan.inventory_limit} активных квартир</p><button type="button" disabled={current || !paymentDetails.bankAccount || pending || Boolean(processing) || plan.monthly_price_uzs < 1} onClick={() => requestContract(plan.id)}>{current ? 'Текущий тариф' : 'Выбрать по договору'}</button></article>;
+          return <article className={current ? 'current' : ''} key={plan.id}><div><span>{current ? <Check /> : <Sparkles />}</span><small>{plan.code}</small></div><h3>{plan.name}</h3><strong>{money(plan.monthly_price_uzs)}<em>{plan.monthly_price_uzs ? ' / месяц' : ''}</em></strong><p>До {plan.inventory_limit} активных квартир</p><button type="button" disabled={current || !paymentDetails.bankAccount || pending || Boolean(processing) || plan.monthly_price_uzs < 1} onClick={() => setSelectedPlanId(plan.id)}>{current ? 'Текущий тариф' : 'Выбрать по договору'}</button></article>;
         })}</div>
         <div className="developer-billing-history"><div><h3>История переводов</h3><span>{events.length} операций</span></div>{events.length === 0 ? <p>После подачи договора и перевода заявка появится здесь.</p> : events.slice(0, 6).map((event) => <article key={event.id}><span><CreditCard /></span><div><strong>{event.event_type === 'plan_change' ? 'Смена тарифа' : 'Продление подписки'}</strong><small>{event.provider_reference} · {eventStatus(event)}</small></div><p><strong>{money(event.amount_uzs)}</strong><small>{date(event.created_at)}</small></p></article>)}</div>
       </>}
+      <Dialog open={Boolean(selectedPlanId)} onOpenChange={(open) => { if (!open) { setSelectedPlanId(''); setFormError(''); } }}>
+        <DialogContent className="seller-payment-dialog developer-contract-dialog">
+          <DialogHeader><span className="seller-payment-eyebrow"><ShieldCheck /> Договор с EstateHub</span><DialogTitle>Подтвердить тариф</DialogTitle><DialogDescription>Сначала подпишите договор и переведите указанную сумму. Подписка активируется только после проверки суперадмином.</DialogDescription></DialogHeader>
+          <div className="seller-payment-summary"><span>{selectedPlan?.name} · 30 дней</span><strong>{selectedPlan ? money(selectedPlan.monthly_price_uzs) : '—'}</strong></div>
+          <div className="developer-contract-account"><small>Получатель: {paymentDetails.bankName}</small><strong>Счёт {paymentDetails.bankAccount}</strong></div>
+          <form id="developer-contract-form" className="seller-payment-form" onSubmit={submitContract}>
+            <label className="seller-payment-reference" htmlFor="developer-contract-reference">Номер подписанного договора<Input id="developer-contract-reference" value={contractReference} onChange={(event) => setContractReference(event.target.value)} minLength={6} maxLength={100} required /></label>
+            <label className="seller-payment-reference" htmlFor="developer-transfer-reference">Номер банковской операции<Input id="developer-transfer-reference" value={transferReference} onChange={(event) => setTransferReference(event.target.value)} minLength={6} maxLength={100} required /></label>
+            <p className="seller-payment-hint">Суперадмин сверит подписанный договор, сумму и поступление денег по выписке. Заявка сама по себе не меняет тариф.</p>
+            {formError && <p className="lead-request-error">{formError}</p>}
+          </form>
+          <DialogFooter><DialogClose render={<Button variant="outline" disabled={submitting} />}>Отмена</DialogClose><Button type="submit" form="developer-contract-form" disabled={submitting || contractReference.trim().length < 6 || transferReference.trim().length < 6}>{submitting ? 'Отправляем…' : 'Отправить на проверку'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
