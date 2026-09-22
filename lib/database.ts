@@ -718,6 +718,17 @@ export async function ensureMarketplaceDatabase() {
       );
       await ensureCatalogGeography(database);
       await seedMarketplace(database);
+      // Older builds approved the seller documents but left the listing in a
+      // private intermediate state. Keep the public listing status aligned
+      // with the superadmin decision when an existing local database starts.
+      await database
+        .prepare(`UPDATE listings SET status = 'published',
+        published_at = COALESCE(published_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
+        WHERE status = 'pending_verification'
+          AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY')
+          AND EXISTS (SELECT 1 FROM secondary_listing_owners owner
+            WHERE owner.listing_id = listings.id AND owner.verification_status = 'approved')`)
+        .run();
       await database.prepare('PRAGMA optimize').run();
     })().catch((error) => {
       initialization = null;

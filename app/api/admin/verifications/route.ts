@@ -90,13 +90,11 @@ export async function PATCH(request: Request) {
     if (!['submitted', 'in_review'].includes(verification.status)) return Response.json({ error: 'already_reviewed', message: 'По этой заявке решение уже принято.' }, { status: 409 });
     if (['buyer', 'listing'].includes(verification.subject_type) && decision === 'reject' && reason.length < 3) return Response.json({ error: 'reason_required', message: 'Укажите причину отказа.' }, { status: 400 });
 
-    let listingHasActivePayment = false;
     if (verification.subject_type === 'listing') {
-      const owner = await database.prepare(`SELECT owner.listing_id,
-        EXISTS(SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = owner.listing_id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP) AS has_active_payment
-        FROM secondary_listing_owners owner WHERE owner.listing_id = ? LIMIT 1`).bind(verification.subject_id).first<{ listing_id: string; has_active_payment: number }>();
+      const owner = await database.prepare(`SELECT owner.listing_id, listing.market_type
+        FROM secondary_listing_owners owner JOIN listings listing ON listing.id = owner.listing_id
+        WHERE owner.listing_id = ? AND listing.market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY') LIMIT 1`).bind(verification.subject_id).first<{ listing_id: string; market_type: string }>();
       if (!owner) return Response.json({ error: 'not_found', message: 'Данные продавца для объявления не найдены.' }, { status: 404 });
-      listingHasActivePayment = Boolean(owner.has_active_payment);
     }
 
     const status = decision === 'approve' ? 'approved' : 'rejected';
@@ -123,16 +121,18 @@ export async function PATCH(request: Request) {
       );
     }
     if (verification.subject_type === 'listing') {
-      const listingStatus = decision === 'reject' ? 'rejected' : listingHasActivePayment ? 'pending_moderation' : 'pending_verification';
+      const listingStatus = decision === 'reject' ? 'rejected' : 'published';
       statements.push(
         database.prepare(`UPDATE secondary_listing_owners SET verification_status = ?, rejection_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE listing_id = ?`)
           .bind(decision === 'approve' ? 'approved' : 'rejected', decision === 'reject' ? reason : null, verification.subject_id),
-        database.prepare(`UPDATE listings SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY')`)
-          .bind(listingStatus, verification.subject_id),
+        database.prepare(`UPDATE listings SET status = ?, published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE published_at END,
+          updated_at = CURRENT_TIMESTAMP WHERE id = ? AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY')`)
+          .bind(listingStatus, listingStatus, verification.subject_id),
       );
     }
     await database.batch(statements);
-    const nextStep = decision === 'approve' && verification.subject_type === 'complex' || decision === 'approve' && verification.subject_type === 'listing' && listingHasActivePayment ? 'pending_moderation' : null;
+    const nextStep = decision === 'approve' && verification.subject_type === 'complex' ? 'pending_moderation'
+      : decision === 'approve' && verification.subject_type === 'listing' ? 'published' : null;
     return Response.json({ caseId, status, nextStep });
   } catch (error) {
     return failure(error, 'Failed to review verification');

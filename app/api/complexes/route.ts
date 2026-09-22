@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     };
     const { complexes, listings } = await readMarketplaceData();
     return Response.json(buildCatalog(complexes, listings, query), {
-      headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=120' },
+      headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
     console.error('Failed to load marketplace catalog', error);

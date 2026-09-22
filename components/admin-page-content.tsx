@@ -269,9 +269,11 @@ export default function AdminDashboard() {
         throw new Error(payload.message || 'Не удалось сохранить решение.');
       setFeedback(
         decision === 'approve'
-          ? payload.nextStep === 'pending_moderation'
-            ? 'Проверка пройдена: ЖК передан на модерацию.'
-            : 'Заявка одобрена.'
+          ? payload.nextStep === 'published'
+            ? 'Проверка пройдена: объявление опубликовано на сайте.'
+            : payload.nextStep === 'pending_moderation'
+              ? 'Проверка пройдена: ЖК передан на модерацию.'
+              : 'Заявка одобрена.'
           : 'Заявка отклонена.',
       );
       await loadDashboard();
