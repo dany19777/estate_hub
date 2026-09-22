@@ -31,7 +31,7 @@ async function payload(database: D1Database, userId: string) {
       owner.contact_phone, owner.document_type, owner.document_reference, owner.verification_status, owner.rejection_reason,
       (SELECT event.status FROM billing_events event WHERE event.listing_id = listing.id AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_claim_status,
       (SELECT json_extract(event.metadata_json, '$.rejectionReason') FROM billing_events event WHERE event.listing_id = listing.id AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_claim_reason,
-      (SELECT purchase.period_end FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id AND purchase.status = 'active' ORDER BY purchase.period_end DESC LIMIT 1) AS paid_until
+      (SELECT purchase.period_end FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.listing_id = listing.id AND purchase.status = 'active' ORDER BY purchase.period_end DESC LIMIT 1) AS paid_until
       FROM secondary_listing_owners owner JOIN listings listing ON listing.id = owner.listing_id
       JOIN units unit ON unit.id = listing.unit_id JOIN complexes complex ON complex.id = listing.complex_id
       WHERE owner.seller_user_id = ? ORDER BY listing.created_at DESC`).bind(userId).all(),
@@ -128,7 +128,7 @@ export async function PATCH(request: Request) {
     if (action === 'resubmit') {
       const reference = typeof body.documentReference === 'string' ? body.documentReference.trim().slice(0, 120) : '';
       if (listing.verification_status === 'approved' && listing.status === 'rejected') {
-        const payment = await database.prepare(`SELECT id FROM secondary_listing_purchases WHERE listing_id = ? AND status = 'active' AND period_end > CURRENT_TIMESTAMP LIMIT 1`).bind(listingId).first();
+        const payment = await database.prepare(`SELECT purchase.id FROM secondary_listing_purchases purchase JOIN billing_events event ON event.id = purchase.billing_event_id WHERE event.status = 'paid' AND event.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.listing_id = ? AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP LIMIT 1`).bind(listingId).first();
         if (!payment) return Response.json({ error: 'payment_required', message: 'Срок оплаты закончился. Сначала продлите публикацию.' }, { status: 409 });
         await database.batch([
           database.prepare(`UPDATE listings SET status = 'pending_moderation', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(listingId),

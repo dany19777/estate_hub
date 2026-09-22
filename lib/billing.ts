@@ -12,8 +12,9 @@ export async function expireBillingPeriods(database: D1Database) {
         AND status = 'published'
         AND EXISTS (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listings.id)
         AND NOT EXISTS (
-          SELECT 1 FROM secondary_listing_purchases purchase
-          WHERE purchase.listing_id = listings.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP
+          SELECT 1 FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id
+          WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer')
+            AND purchase.listing_id = listings.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP
         )`),
   ]);
 }

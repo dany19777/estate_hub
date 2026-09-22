@@ -26,8 +26,8 @@ async function adminBillingData(database: D1Database) {
     database.prepare(`SELECT listing.id, listing.status, listing.market_type, listing.price_uzs, listing.expires_at,
       unit.unit_number, complex.name AS complex_name,
       COALESCE(organization.name, CASE WHEN listing.seller_type = 'owner' THEN 'Частный собственник' ELSE 'Продавец' END) AS seller_name,
-      (SELECT purchase.status FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id ORDER BY purchase.created_at DESC LIMIT 1) AS purchase_status,
-      (SELECT purchase.period_end FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id ORDER BY purchase.created_at DESC LIMIT 1) AS paid_until
+      (SELECT purchase.status FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.listing_id = listing.id ORDER BY purchase.created_at DESC LIMIT 1) AS purchase_status,
+      (SELECT purchase.period_end FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.listing_id = listing.id ORDER BY purchase.created_at DESC LIMIT 1) AS paid_until
       ,(SELECT event.id FROM billing_events event WHERE event.listing_id = listing.id AND event.status = 'pending' AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_claim_id
       ,(SELECT event.provider FROM billing_events event WHERE event.listing_id = listing.id AND event.status = 'pending' AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_method
       ,(SELECT event.provider_reference FROM billing_events event WHERE event.listing_id = listing.id AND event.status = 'pending' AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_reference
@@ -41,10 +41,13 @@ async function adminBillingData(database: D1Database) {
       LEFT JOIN listings listing ON listing.id = event.listing_id LEFT JOIN complexes complex ON complex.id = listing.complex_id
       LEFT JOIN units unit ON unit.id = listing.unit_id ORDER BY event.created_at DESC LIMIT 20`).all(),
     database.prepare(`SELECT
-      COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_uzs ELSE 0 END), 0) AS revenue,
-      (SELECT COUNT(*) FROM developer_subscriptions WHERE status IN ('active', 'trialing') AND current_period_end > CURRENT_TIMESTAMP) AS active_subscriptions,
-      (SELECT COUNT(*) FROM secondary_listing_purchases WHERE status = 'active' AND period_end > CURRENT_TIMESTAMP) AS active_secondary,
-      (SELECT COUNT(*) FROM secondary_listing_purchases WHERE status = 'active' AND period_end BETWEEN CURRENT_TIMESTAMP AND datetime('now', '+7 days')) AS expiring_secondary
+      COALESCE(SUM(CASE WHEN status = 'paid' AND provider IN ('offline_bank_transfer', 'offline_card_transfer') THEN amount_uzs ELSE 0 END), 0) AS revenue,
+      (SELECT COUNT(*) FROM developer_subscriptions subscription WHERE subscription.status = 'active' AND subscription.current_period_end > CURRENT_TIMESTAMP
+        AND EXISTS (SELECT 1 FROM developer_subscription_activations activation JOIN billing_events event ON event.id = activation.billing_event_id
+          WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid' AND event.provider = 'offline_bank_transfer'
+            AND event.period_start <= CURRENT_TIMESTAMP AND event.period_end > CURRENT_TIMESTAMP)) AS active_subscriptions,
+      (SELECT COUNT(*) FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP) AS active_secondary,
+      (SELECT COUNT(*) FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.status = 'active' AND purchase.period_end BETWEEN CURRENT_TIMESTAMP AND datetime('now', '+7 days')) AS expiring_secondary
       FROM billing_events`).first(),
   ]);
   return {
@@ -118,7 +121,7 @@ export async function PATCH(request: Request) {
       const claimId = typeof body.claimId === 'string' ? body.claimId : '';
       const [claim, subscription] = await Promise.all([
         database.prepare(`SELECT id, amount_uzs, status, provider, provider_reference, metadata_json FROM billing_events WHERE id = ? AND organization_id = ? AND event_type IN ('subscription_charge', 'plan_change') LIMIT 1`).bind(claimId, organizationId).first<{ id: string; amount_uzs: number; status: string; provider: string; provider_reference: string; metadata_json: string }>(),
-        database.prepare(`SELECT id, current_period_end FROM developer_subscriptions WHERE organization_id = ? LIMIT 1`).bind(organizationId).first<{ id: string; current_period_end: string }>(),
+        database.prepare(`SELECT id, status, current_period_end FROM developer_subscriptions WHERE organization_id = ? LIMIT 1`).bind(organizationId).first<{ id: string; status: string; current_period_end: string }>(),
       ]);
       if (!claim || claim.status !== 'pending' || claim.provider !== 'offline_bank_transfer' || !subscription) return Response.json({ error: 'claim_unavailable', message: 'Заявка на оплату недоступна.' }, { status: 409 });
       const metadata = JSON.parse(claim.metadata_json) as { planId?: string; contractReference?: string };
@@ -128,7 +131,7 @@ export async function PATCH(request: Request) {
       const usage = await database.prepare(`SELECT COUNT(*) AS count FROM listings WHERE seller_org_id = ? AND market_type = 'PRIMARY_DEVELOPER' AND status IN ('published', 'reserved')`).bind(organizationId).first<{ count: number }>();
       if (Number(usage?.count ?? 0) > plan.inventory_limit) return Response.json({ error: 'inventory_limit', message: 'Число активных квартир превышает лимит тарифа.' }, { status: 409 });
       const now = databaseNow();
-      const periodStart = subscription.current_period_end > now ? subscription.current_period_end : now;
+      const periodStart = subscription.status === 'active' && subscription.current_period_end > now ? subscription.current_period_end : now;
       const periodEnd = addDays(periodStart, 30);
       await database.batch([
         database.prepare(`INSERT INTO developer_subscription_activations (billing_event_id, organization_id, confirmed_by) VALUES (?, ?, ?)`).bind(claimId, organizationId, session.user.id),
@@ -160,7 +163,7 @@ export async function PATCH(request: Request) {
         database.prepare(`SELECT listing.id, listing.market_type, listing.status, owner.verification_status FROM listings listing JOIN secondary_listing_owners owner ON owner.listing_id = listing.id WHERE listing.id = ? LIMIT 1`).bind(listingId).first<{ id: string; market_type: string; status: string; verification_status: string }>(),
         database.prepare(`SELECT secondary_listing_fee_uzs, secondary_period_days FROM platform_billing_config WHERE id = 'default' LIMIT 1`)
           .first<{ secondary_listing_fee_uzs: number; secondary_period_days: number }>(),
-        database.prepare(`SELECT period_end FROM secondary_listing_purchases WHERE listing_id = ? AND status = 'active' AND period_end > CURRENT_TIMESTAMP ORDER BY period_end DESC LIMIT 1`)
+        database.prepare(`SELECT purchase.period_end FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.listing_id = ? AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP ORDER BY purchase.period_end DESC LIMIT 1`)
           .bind(listingId).first<{ period_end: string }>(),
         database.prepare(`SELECT id, actor_user_id, amount_uzs, status, provider, provider_reference, event_type, idempotency_key FROM billing_events WHERE id = ? AND listing_id = ? LIMIT 1`).bind(claimId, listingId).first<{ id: string; actor_user_id: string; amount_uzs: number; status: string; provider: string; provider_reference: string; event_type: string; idempotency_key: string }>(),
       ]);

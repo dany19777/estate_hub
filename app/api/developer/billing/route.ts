@@ -29,6 +29,9 @@ async function developerBillingData(database: D1Database, organizationId: string
       FROM subscription_plans WHERE is_active = 1 ORDER BY sort_order ASC`).all(),
     database.prepare(`SELECT subscription.id, subscription.organization_id, subscription.plan_id,
       subscription.status, subscription.current_period_start, subscription.current_period_end, subscription.auto_renew,
+      EXISTS (SELECT 1 FROM developer_subscription_activations activation JOIN billing_events event ON event.id = activation.billing_event_id
+        WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid' AND event.provider = 'offline_bank_transfer'
+          AND event.period_start <= CURRENT_TIMESTAMP AND event.period_end > CURRENT_TIMESTAMP) AS contract_paid,
       plan.code, plan.name, plan.inventory_limit, plan.monthly_price_uzs
       FROM developer_subscriptions subscription
       JOIN subscription_plans plan ON plan.id = subscription.plan_id

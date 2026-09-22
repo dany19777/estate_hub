@@ -725,8 +725,9 @@ export async function ensureMarketplaceDatabase() {
         WHERE (status = 'published' OR (status = 'pending_verification' AND EXISTS
           (SELECT 1 FROM secondary_listing_owners owner WHERE owner.listing_id = listings.id AND owner.verification_status = 'approved')))
           AND market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY')
-          AND NOT EXISTS (SELECT 1 FROM secondary_listing_purchases purchase
-            WHERE purchase.listing_id = listings.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)`)
+          AND NOT EXISTS (SELECT 1 FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id
+            WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer')
+              AND purchase.listing_id = listings.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)`)
         .run();
       await database.prepare('PRAGMA optimize').run();
     })().catch((error) => {
@@ -773,7 +774,7 @@ export async function readMarketplaceData() {
       WHERE l.status = 'published' AND u.availability_status = 'available'
         AND (l.seller_org_id IS NULL OR seller_org.verification_status = 'verified')
         AND (l.market_type = 'PRIMARY_DEVELOPER' OR (secondary_owner.verification_status = 'approved' AND EXISTS
-          (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = l.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
+          (SELECT 1 FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.listing_id = l.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
       ORDER BY l.published_at DESC`)
       .all<ListingRow>(),
     database
@@ -911,7 +912,7 @@ export async function readComplexDetail(
       WHERE l.complex_id = ? AND l.status = 'published' AND u.availability_status = 'available'
         AND (l.seller_org_id IS NULL OR o.verification_status = 'verified')
         AND (l.market_type = 'PRIMARY_DEVELOPER' OR (secondary_owner.verification_status = 'approved' AND EXISTS
-          (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = l.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
+          (SELECT 1 FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.listing_id = l.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
       ORDER BY l.price_uzs ASC`)
       .bind(record.id)
       .all<ComplexListingRow>(),
@@ -1065,7 +1066,7 @@ export async function readListingDetail(
       AND complex.verification_status = 'verified'
       AND (listing.seller_org_id IS NULL OR organization.verification_status = 'verified')
       AND (listing.market_type = 'PRIMARY_DEVELOPER' OR (secondary_owner.verification_status = 'approved' AND EXISTS
-        (SELECT 1 FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
+        (SELECT 1 FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.listing_id = listing.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP)))
     LIMIT 1`)
     .bind(id)
     .first<ListingDetailRow>();
