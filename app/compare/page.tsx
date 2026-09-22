@@ -1,9 +1,10 @@
 'use client';
 
-import { ArrowLeft, Bot, Check, Home, Scale, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Bot, Check, Scale, Sparkles, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { InternalLink as Link } from '@/components/internal-link';
+import { MarketplaceHeader } from '@/components/marketplace-header';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useComparisonAnalysis } from '@/hooks/use-comparison-analysis';
 import { formatPriceMillions } from '@/lib/marketplace';
@@ -12,7 +13,7 @@ export default function ComparePage() {
   const { items, error, toggle } = useComparisons();
   const ai = useComparisonAnalysis();
   return <main className="compare-page">
-    <header className="detail-header"><Link className="catalog-brand" href="/"><span><Home /></span>Estate<em>Hub</em></Link><nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav><Link href="/profile">Профиль</Link></header>
+    <MarketplaceHeader />
     <section className="compare-shell">
       <Link className="compare-back" href="/catalog"><ArrowLeft /> Вернуться в каталог</Link>
       <div className="compare-heading"><div><span><Scale /> Подбор по параметрам</span><h1>Сравнение квартир</h1><p>До четырёх реальных предложений: цены и характеристики берутся из опубликованного реестра.</p></div><strong>{items.length} / 4</strong></div>

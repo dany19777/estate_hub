@@ -4,7 +4,7 @@ import NextImage from 'next/image';
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, Bell, BellRing, Building2, CalendarDays, Car, CheckCircle2,
+  ArrowLeft, ArrowRight, BellRing, Building2, CalendarDays, Car, CheckCircle2,
   Eye, FileText, Heart, Home, MapPin, Maximize2, MessageCircle, RotateCcw, Scale,
   School, Search, Share2, ShieldCheck, SlidersHorizontal, Sparkles, Star, Trees, UserRound,
 } from 'lucide-react';
@@ -14,6 +14,7 @@ import { ComplexMap } from '@/components/complex-map';
 import { ComplexReviews } from '@/components/complex-reviews';
 import { InternalLink as Link } from '@/components/internal-link';
 import { LeadRequestDialog } from '@/components/lead-request-dialog';
+import { MarketplaceHeader } from '@/components/marketplace-header';
 import { ReservationDialog } from '@/components/reservation-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,13 +115,7 @@ export default function ComplexPage() {
     else await navigator.clipboard.writeText(window.location.href);
   };
 
-  const renderHeader = () => (
-    <header className="detail-header">
-      <Link className="catalog-brand" href="/"><span><Building2 /></span>Estate<em>Hub</em></Link>
-      <nav><Link href="/catalog?market=all">Купить</Link><Link href="/catalog?market=primary">Новостройки</Link><Link href="/catalog?market=secondary">Вторичный рынок</Link></nav>
-      <div><Link href="/profile" aria-label="Уведомления"><Bell /></Link><Link href="/profile" aria-label="Личный кабинет"><UserRound /></Link></div>
-    </header>
-  );
+  const renderHeader = () => <MarketplaceHeader />;
 
   if (loading) return <main className="complex-page">{renderHeader()}<div className="detail-shell"><output className="catalog-state detail-state"><span className="catalog-loader" /><span><strong>Загружаем жилой комплекс</strong><small>Проверяем квартиры, цены и продавцов.</small></span></output></div></main>;
   if (error || !data) return <main className="complex-page">{renderHeader()}<div className="detail-shell"><div className="catalog-state detail-state error-state"><div><strong>Жилой комплекс недоступен</strong><p>{error ?? 'Объект не найден.'}</p></div><Button variant="outline" onClick={retry}>Попробовать снова</Button><Button nativeButton={false} render={<Link href="/catalog" />}>Вернуться в каталог</Button></div></div></main>;

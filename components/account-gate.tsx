@@ -1,14 +1,17 @@
 'use client';
 import { useEffect } from 'react';
-import { ArrowLeft, Building2, Headphones, ShieldCheck } from 'lucide-react';
+import { Headphones, ShieldCheck } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { LogoutButton } from '@/components/logout-button';
 import { InternalLink as Link } from '@/components/internal-link';
+import { MarketplaceHeader } from '@/components/marketplace-header';
 export function AccountGate({
   permission,
+  showSessionBar = true,
   children,
 }: {
   permission?: string;
+  showSessionBar?: boolean;
   children: React.ReactNode;
 }) {
   const { session, loading, error, unauthenticated } = useSession();
@@ -32,17 +35,7 @@ export function AccountGate({
     if (permission === 'VIEW_DEVELOPER_DASHBOARD')
       return (
         <main className="developer-access-page">
-          <header className="developer-access-header shell">
-            <Link className="developer-access-brand" href="/">
-              <span>
-                <Building2 />
-              </span>
-              Estate<strong>Hub</strong>
-            </Link>
-            <Link href="/account">
-              <ArrowLeft /> Мой кабинет
-            </Link>
-          </header>
+          <MarketplaceHeader />
           <section
             className="developer-access-card"
             aria-labelledby="developer-access-title"
@@ -102,11 +95,13 @@ export function AccountGate({
   }
   return (
     <>
-      <div className="account-session-bar">
-        <Link href="/">EstateHub</Link>
-        <span>{session.user.email}</span>
-        <LogoutButton />
-      </div>
+      {showSessionBar && (
+        <div className="account-session-bar">
+          <Link href="/">EstateHub</Link>
+          <span>{session.user.email}</span>
+          <LogoutButton />
+        </div>
+      )}
       {children}
     </>
   );

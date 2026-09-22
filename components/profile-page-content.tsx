@@ -17,7 +17,6 @@ import {
   Heart,
   Home,
   Inbox,
-  LogOut,
   MessageCircle,
   Search,
   Scale,
@@ -38,6 +37,7 @@ import { PhoneVerificationDialog } from '@/components/phone-verification-dialog'
 import { NotificationCenter } from '@/components/notification-center';
 import { BuyerWatchlistPanel } from '@/components/buyer-watchlist-panel';
 import { InternalLink as Link } from '@/components/internal-link';
+import { MarketplaceHeader } from '@/components/marketplace-header';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useComparisons } from '@/hooks/use-comparisons';
 import { useSavedSearches } from '@/hooks/use-saved-searches';
@@ -205,43 +205,7 @@ export default function BuyerProfile() {
   };
   return (
     <main className="buyer-profile-page">
-      <header className="profile-header">
-        <Link className="catalog-brand" href="/">
-          <span>
-            <Building2 />
-          </span>
-          Estate<em>Hub</em>
-        </Link>
-        <nav>
-          <Link href="/catalog?market=all">Купить</Link>
-          <Link href="/catalog?market=primary">Новостройки</Link>
-          <Link href="/catalog?market=secondary">Вторичный рынок</Link>
-          {canOpenDeveloper && <Link href="/developer">Кабинет компании</Link>}
-          {canOpenAdmin && <Link href="/admin">Админ-панель</Link>}
-        </nav>
-        <div>
-          <button
-            className="profile-header-notifications"
-            type="button"
-            onClick={() => setActive('Уведомления')}
-            aria-label="Открыть уведомления"
-          >
-            <Bell />
-            {notifications.unreadCount > 0 && (
-              <i>{notifications.unreadCount}</i>
-            )}
-          </button>
-          <span>{profileInitials}</span>
-          <div>
-            <strong>{profileName}</strong>
-            <small>
-              {session?.phoneVerification.phone ??
-                session?.user.email ??
-                'Аккаунт EstateHub'}
-            </small>
-          </div>
-        </div>
-      </header>
+      <MarketplaceHeader />
       <div className="profile-layout">
         <aside className="profile-sidebar">
           <div className="profile-person">
@@ -354,6 +318,7 @@ export default function BuyerProfile() {
                 {item.label}
               </button>
             ))}
+            <LogoutButton className="profile-mobile-logout" />
           </nav>
 
           {active === 'Сравнения' && (
