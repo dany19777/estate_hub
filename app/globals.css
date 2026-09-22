@@ -13605,12 +13605,21 @@ body:has(.site-header) .global-buyer-preferences {
 .developer-access-help p { margin: 5px 0 8px; color: #61728a; font-size: 12px; line-height: 1.6; }
 .developer-access-help a { color: #1d55cf; font-size: 12px; font-weight: 750; }
 .developer-access-home {
-  display: block;
-  width: fit-content;
-  margin: 22px auto 0;
-  color: #64748b;
-  font-size: 12px;
+  display: flex;
+  width: min(100%, 620px);
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  margin: 18px auto 0;
+  padding: 12px 20px;
+  border-radius: 10px;
+  color: white;
+  background: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background 0.2s ease;
 }
+.developer-access-home:hover { background: #1d4ed8; }
 @media (max-width: 580px) {
   .developer-access-page { padding-right: 16px; padding-left: 16px; }
   .developer-access-header { height: 72px; }
