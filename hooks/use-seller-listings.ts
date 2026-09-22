@@ -35,6 +35,7 @@ export type SellerListing = {
   verification_status: 'submitted' | 'approved' | 'rejected';
   rejection_reason: string | null;
   payment_claim_status: string | null;
+  payment_claim_reason: string | null;
   paid_until: string | null;
 };
 

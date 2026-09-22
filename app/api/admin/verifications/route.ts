@@ -1,4 +1,4 @@
-import { authorizationResponse, requirePermission } from '@/lib/auth';
+import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await requirePermission(request, 'REVIEW_VERIFICATION');
+    const session = await requirePlatformPermission(request, 'REVIEW_VERIFICATION');
     const body = await request.json() as Record<string, unknown>;
     const caseId = typeof body.caseId === 'string' ? body.caseId : '';
     const decision = body.decision === 'approve' || body.decision === 'reject' ? body.decision : null;

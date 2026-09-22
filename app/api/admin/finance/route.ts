@@ -1,4 +1,4 @@
-import { authorizationResponse, requirePermission } from '@/lib/auth';
+import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { paymentProvider } from '@/lib/payment-provider';
 
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await requirePermission(request, 'MANAGE_FINANCE');
+    const session = await requirePlatformPermission(request, 'MANAGE_FINANCE');
     const payload = await request.json() as { operationId?: unknown };
     const operationId = typeof payload.operationId === 'string' ? payload.operationId : '';
     if (!operationId) return Response.json({ error: 'validation_failed', message: 'Операция не выбрана.' }, { status: 400 });

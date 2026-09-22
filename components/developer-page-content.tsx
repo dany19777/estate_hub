@@ -857,13 +857,13 @@ export default function DeveloperDashboard() {
                 subscription={developerBilling.subscription}
                 usage={developerBilling.usage}
                 events={developerBilling.events}
+                paymentDetails={developerBilling.paymentDetails}
                 loading={developerBilling.loading}
                 error={developerBilling.error}
                 feedback={developerBilling.feedback}
                 processing={developerBilling.processing}
                 onRetry={() => void developerBilling.refresh()}
-                onChangePlan={developerBilling.changePlan}
-                onRenew={developerBilling.renew}
+                onSubmitContract={developerBilling.submitContract}
               />
 
               <section

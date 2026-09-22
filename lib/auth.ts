@@ -209,6 +209,13 @@ export async function requireVerifiedPhone(request: Request) {
   return session;
 }
 
+export async function requirePlatformPermission(request: Request, permission: Permission) {
+  const session = await requirePermission(request, permission);
+  if (!session.permissions.includes('VIEW_ADMIN') || session.platformRoles.length === 0)
+    throw new AuthorizationError(403, 'Доступно только сотруднику платформы.', 'platform_role_required');
+  return session;
+}
+
 export async function requirePermission(
   request: Request,
   permission: Permission,

@@ -1,4 +1,4 @@
-import { authorizationResponse, requirePermission } from '@/lib/auth';
+import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { expirePromotions } from '@/lib/promotions';
 
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await requirePermission(request, 'MANAGE_PROMOTIONS');
+    const session = await requirePlatformPermission(request, 'MANAGE_PROMOTIONS');
     const body = await request.json() as Record<string, unknown>;
     const action = typeof body.action === 'string' ? body.action : '';
     const database = await ensureMarketplaceDatabase();

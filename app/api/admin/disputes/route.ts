@@ -1,4 +1,4 @@
-import { authorizationResponse, requirePermission } from '@/lib/auth';
+import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { paymentProvider } from '@/lib/payment-provider';
 
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await requirePermission(request, 'MANAGE_FINANCE');
+    const session = await requirePlatformPermission(request, 'MANAGE_FINANCE');
     const payload = await request.json() as Record<string, unknown>;
     const disputeId = typeof payload.disputeId === 'string' ? payload.disputeId : '';
     const action = payload.action === 'start_review' || payload.action === 'approve_refund' || payload.action === 'reject' ? payload.action : '';

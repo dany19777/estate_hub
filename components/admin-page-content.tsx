@@ -944,6 +944,14 @@ export default function AdminDashboard() {
               const message = await billing.updateConfig(feeUzs, periodDays);
               setFeedback(message);
             }}
+            onActivateDeveloper={async (organizationId, claimId) => {
+              const message = await billing.activateDeveloper(organizationId, claimId);
+              setFeedback(message);
+            }}
+            onRejectPaymentClaim={async (claimId, reason) => {
+              const message = await billing.rejectPaymentClaim(claimId, reason);
+              setFeedback(message);
+            }}
             onActivateSecondary={async (listingId, claimId) => {
               const message = await billing.activateSecondary(listingId, claimId);
               setFeedback(message);

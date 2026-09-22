@@ -6,6 +6,8 @@ import { ensureMarketplaceDatabase } from '@/lib/database';
 export const dynamic = 'force-dynamic';
 
 type SecondaryPaymentEnv = Cloudflare.Env & {
+  PLATFORM_PAYMENT_BANK_ACCOUNT?: string;
+  PLATFORM_PAYMENT_BANK_NAME?: string;
   SECONDARY_PAYMENT_BANK_ACCOUNT?: string;
   SECONDARY_PAYMENT_BANK_NAME?: string;
   SECONDARY_PAYMENT_CARD_NUMBER?: string;
@@ -28,6 +30,7 @@ async function payload(database: D1Database, userId: string) {
       unit.unit_number, unit.rooms, unit.area_sqm, unit.floor_number, unit.total_floors, unit.finish, unit.availability_status,
       owner.contact_phone, owner.document_type, owner.document_reference, owner.verification_status, owner.rejection_reason,
       (SELECT event.status FROM billing_events event WHERE event.listing_id = listing.id AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_claim_status,
+      (SELECT json_extract(event.metadata_json, '$.rejectionReason') FROM billing_events event WHERE event.listing_id = listing.id AND event.event_type IN ('secondary_purchase', 'secondary_renewal') ORDER BY event.created_at DESC LIMIT 1) AS payment_claim_reason,
       (SELECT purchase.period_end FROM secondary_listing_purchases purchase WHERE purchase.listing_id = listing.id AND purchase.status = 'active' ORDER BY purchase.period_end DESC LIMIT 1) AS paid_until
       FROM secondary_listing_owners owner JOIN listings listing ON listing.id = owner.listing_id
       JOIN units unit ON unit.id = listing.unit_id JOIN complexes complex ON complex.id = listing.complex_id
@@ -38,7 +41,7 @@ async function payload(database: D1Database, userId: string) {
       ORDER BY complex.name, building.name`).all(),
     database.prepare(`SELECT secondary_listing_fee_uzs, secondary_period_days FROM platform_billing_config WHERE id = 'default' LIMIT 1`).first<{ secondary_listing_fee_uzs: number; secondary_period_days: number }>(),
   ]);
-  return { listings: listingResult.results ?? [], complexes: complexResult.results ?? [], billing: { feeUzs: Number(config?.secondary_listing_fee_uzs ?? 250_000), periodDays: Number(config?.secondary_period_days ?? 30), bankAccount: paymentEnv.SECONDARY_PAYMENT_BANK_ACCOUNT ?? '', bankName: paymentEnv.SECONDARY_PAYMENT_BANK_NAME ?? '', cardNumber: paymentEnv.SECONDARY_PAYMENT_CARD_NUMBER ?? '', cardHolder: paymentEnv.SECONDARY_PAYMENT_CARD_HOLDER ?? '' } };
+  return { listings: listingResult.results ?? [], complexes: complexResult.results ?? [], billing: { feeUzs: Number(config?.secondary_listing_fee_uzs ?? 250_000), periodDays: Number(config?.secondary_period_days ?? 30), bankAccount: paymentEnv.PLATFORM_PAYMENT_BANK_ACCOUNT ?? paymentEnv.SECONDARY_PAYMENT_BANK_ACCOUNT ?? '', bankName: paymentEnv.PLATFORM_PAYMENT_BANK_NAME ?? paymentEnv.SECONDARY_PAYMENT_BANK_NAME ?? '', cardNumber: paymentEnv.SECONDARY_PAYMENT_CARD_NUMBER ?? '', cardHolder: paymentEnv.SECONDARY_PAYMENT_CARD_HOLDER ?? '' } };
 }
 
 export async function GET(request: Request) {
@@ -147,7 +150,7 @@ export async function PATCH(request: Request) {
     if (listing.verification_status !== 'approved' || listing.status === 'sold') return Response.json({ error: 'approval_required', message: 'Сначала требуется одобрение объявления.' }, { status: 409 });
     const method = body.method === 'bank' ? 'offline_bank_transfer' : body.method === 'card' ? 'offline_card_transfer' : '';
     const reference = typeof body.reference === 'string' ? body.reference.trim() : '';
-    const configured = method === 'offline_bank_transfer' ? paymentEnv.SECONDARY_PAYMENT_BANK_ACCOUNT : paymentEnv.SECONDARY_PAYMENT_CARD_NUMBER;
+    const configured = method === 'offline_bank_transfer' ? paymentEnv.PLATFORM_PAYMENT_BANK_ACCOUNT ?? paymentEnv.SECONDARY_PAYMENT_BANK_ACCOUNT : paymentEnv.SECONDARY_PAYMENT_CARD_NUMBER;
     if (!method || !configured || reference.length < 6 || reference.length > 100 || !/^[\p{L}\p{N} ._\/-]+$/u.test(reference)) return Response.json({ error: 'validation_failed', message: 'Выберите доступный способ оплаты и укажите номер банковской операции.' }, { status: 400 });
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
     if (!validKey(idempotencyKey)) return Response.json({ error: 'idempotency_required', message: 'Повторите отправку.' }, { status: 400 });

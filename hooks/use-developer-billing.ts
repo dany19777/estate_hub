@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export type DeveloperPlan = { id: string; code: string; name: string; inventory_limit: number; monthly_price_uzs: number; is_active: number };
-export type DeveloperBillingEvent = { id: string; event_type: string; amount_uzs: number; status: string; provider: string; provider_reference: string; period_start: string; period_end: string; created_at: string };
+export type DeveloperBillingEvent = { id: string; event_type: string; amount_uzs: number; status: string; provider: string; provider_reference: string; metadata_json: string; period_start: string; period_end: string; created_at: string };
 export type DeveloperSubscription = { id: string; organization_id: string; plan_id: string; status: string; current_period_start: string; current_period_end: string; auto_renew: number; code: string; name: string; inventory_limit: number; monthly_price_uzs: number };
 
 type BillingData = {
@@ -11,9 +11,10 @@ type BillingData = {
   subscription: DeveloperSubscription | null;
   usage: { activeInventory: number; limit: number };
   events: DeveloperBillingEvent[];
+  paymentDetails: { bankName: string; bankAccount: string };
 };
 
-const emptyData: BillingData = { plans: [], subscription: null, usage: { activeInventory: 0, limit: 0 }, events: [] };
+const emptyData: BillingData = { plans: [], subscription: null, usage: { activeInventory: 0, limit: 0 }, events: [], paymentDetails: { bankName: '', bankAccount: '' } };
 
 export function useDeveloperBilling() {
   const [data, setData] = useState<BillingData>(emptyData);
@@ -41,15 +42,15 @@ export function useDeveloperBilling() {
     return () => window.clearTimeout(task);
   }, [refresh]);
 
-  const update = useCallback(async (action: 'change_plan' | 'renew', planId?: string) => {
-    setProcessing(planId || action);
+  const update = useCallback(async (planId: string, contractReference: string, transferReference: string) => {
+    setProcessing(planId);
     setError('');
     setFeedback('');
     try {
       const response = await fetch('/api/developer/billing', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({ action, planId }),
+        body: JSON.stringify({ planId, contractReference, transferReference }),
       });
       const payload = await response.json() as BillingData & { message?: string };
       if (!response.ok) throw new Error(payload.message || 'Не удалось обновить подписку.');
@@ -65,5 +66,5 @@ export function useDeveloperBilling() {
     }
   }, []);
 
-  return { ...data, loading, error, feedback, processing, refresh, changePlan: (planId: string) => update('change_plan', planId), renew: () => update('renew') };
+  return { ...data, loading, error, feedback, processing, refresh, submitContract: update };
 }

@@ -117,6 +117,7 @@ function ListingCard({
         <div className="seller-listing-state">
           <span className={meta.tone}>{meta.label}</span>
           <p>{listing.rejection_reason ?? (listing.payment_claim_status === 'pending' ? 'Номер перевода получен. Ожидается сверка банковской выписки.' : meta.help)}</p>
+          {listing.payment_claim_status === 'failed' && <p>Перевод не подтверждён: {listing.payment_claim_reason ?? 'уточните данные и отправьте номер операции повторно'}.</p>}
           {listing.verification_status === 'approved' && !paid && !paymentConfigured && <p>Реквизиты для перевода пока настраиваются. Объявление остаётся скрытым.</p>}
         </div>
         <div className="seller-listing-footer">

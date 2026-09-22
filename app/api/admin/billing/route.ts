@@ -1,4 +1,4 @@
-import { authorizationResponse, requirePermission } from '@/lib/auth';
+import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
 import { addDays, databaseNow, expireBillingPeriods } from '@/lib/billing';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
@@ -11,6 +11,11 @@ async function adminBillingData(database: D1Database) {
     database.prepare(`SELECT subscription.id, subscription.organization_id, organization.name AS organization_name,
       subscription.status, subscription.current_period_end, subscription.auto_renew,
       plan.id AS plan_id, plan.code, plan.name AS plan_name, plan.inventory_limit, plan.monthly_price_uzs,
+      (SELECT event.id FROM billing_events event WHERE event.organization_id = subscription.organization_id AND event.status = 'pending' AND event.event_type IN ('subscription_charge', 'plan_change') ORDER BY event.created_at DESC LIMIT 1) AS payment_claim_id,
+      (SELECT event.provider_reference FROM billing_events event WHERE event.organization_id = subscription.organization_id AND event.status = 'pending' AND event.event_type IN ('subscription_charge', 'plan_change') ORDER BY event.created_at DESC LIMIT 1) AS payment_reference,
+      (SELECT json_extract(event.metadata_json, '$.contractReference') FROM billing_events event WHERE event.organization_id = subscription.organization_id AND event.status = 'pending' AND event.event_type IN ('subscription_charge', 'plan_change') ORDER BY event.created_at DESC LIMIT 1) AS contract_reference,
+      (SELECT event.amount_uzs FROM billing_events event WHERE event.organization_id = subscription.organization_id AND event.status = 'pending' AND event.event_type IN ('subscription_charge', 'plan_change') ORDER BY event.created_at DESC LIMIT 1) AS payment_amount,
+      (SELECT requested.name FROM billing_events event JOIN subscription_plans requested ON requested.id = json_extract(event.metadata_json, '$.planId') WHERE event.organization_id = subscription.organization_id AND event.status = 'pending' AND event.event_type IN ('subscription_charge', 'plan_change') ORDER BY event.created_at DESC LIMIT 1) AS requested_plan_name,
       (SELECT COUNT(*) FROM listings listing WHERE listing.seller_org_id = subscription.organization_id
         AND listing.market_type = 'PRIMARY_DEVELOPER' AND listing.status IN ('published', 'reserved')) AS active_inventory
       FROM developer_subscriptions subscription
@@ -69,7 +74,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await requirePermission(request, 'MANAGE_BILLING');
+    const session = await requirePlatformPermission(request, 'MANAGE_BILLING');
     const body = await request.json() as Record<string, unknown>;
     const action = typeof body.action === 'string' ? body.action : '';
     const database = await ensureMarketplaceDatabase();
@@ -106,6 +111,45 @@ export async function PATCH(request: Request) {
           .bind(crypto.randomUUID(), session.user.id, JSON.stringify({ feeUzs, periodDays })),
       ]);
       return Response.json({ message: 'Условия вторичного рынка обновлены.', ...(await adminBillingData(database)) });
+    }
+
+    if (action === 'activate_developer') {
+      const organizationId = typeof body.organizationId === 'string' ? body.organizationId : '';
+      const claimId = typeof body.claimId === 'string' ? body.claimId : '';
+      const [claim, subscription] = await Promise.all([
+        database.prepare(`SELECT id, amount_uzs, status, provider, provider_reference, metadata_json FROM billing_events WHERE id = ? AND organization_id = ? AND event_type IN ('subscription_charge', 'plan_change') LIMIT 1`).bind(claimId, organizationId).first<{ id: string; amount_uzs: number; status: string; provider: string; provider_reference: string; metadata_json: string }>(),
+        database.prepare(`SELECT id, current_period_end FROM developer_subscriptions WHERE organization_id = ? LIMIT 1`).bind(organizationId).first<{ id: string; current_period_end: string }>(),
+      ]);
+      if (!claim || claim.status !== 'pending' || claim.provider !== 'offline_bank_transfer' || !subscription) return Response.json({ error: 'claim_unavailable', message: 'Заявка на оплату недоступна.' }, { status: 409 });
+      const metadata = JSON.parse(claim.metadata_json) as { planId?: string; contractReference?: string };
+      if (!metadata.planId || !metadata.contractReference) return Response.json({ error: 'contract_missing', message: 'Номер договора отсутствует.' }, { status: 409 });
+      const plan = await database.prepare(`SELECT id, monthly_price_uzs, inventory_limit FROM subscription_plans WHERE id = ? AND is_active = 1 LIMIT 1`).bind(metadata.planId).first<{ id: string; monthly_price_uzs: number; inventory_limit: number }>();
+      if (!plan || plan.monthly_price_uzs !== claim.amount_uzs || claim.amount_uzs < 1) return Response.json({ error: 'amount_changed', message: 'Проверьте сумму и тариф; условия изменились после заявки.' }, { status: 409 });
+      const usage = await database.prepare(`SELECT COUNT(*) AS count FROM listings WHERE seller_org_id = ? AND market_type = 'PRIMARY_DEVELOPER' AND status IN ('published', 'reserved')`).bind(organizationId).first<{ count: number }>();
+      if (Number(usage?.count ?? 0) > plan.inventory_limit) return Response.json({ error: 'inventory_limit', message: 'Число активных квартир превышает лимит тарифа.' }, { status: 409 });
+      const now = databaseNow();
+      const periodStart = subscription.current_period_end > now ? subscription.current_period_end : now;
+      const periodEnd = addDays(periodStart, 30);
+      await database.batch([
+        database.prepare(`INSERT INTO developer_subscription_activations (billing_event_id, organization_id, confirmed_by) VALUES (?, ?, ?)`).bind(claimId, organizationId, session.user.id),
+        database.prepare(`UPDATE billing_events SET status = 'paid', period_start = ?, period_end = ?, metadata_json = ? WHERE id = ? AND status = 'pending'`).bind(periodStart, periodEnd, JSON.stringify({ ...metadata, confirmedBy: session.user.id }), claimId),
+        database.prepare(`UPDATE developer_subscriptions SET plan_id = ?, status = 'active', current_period_start = ?, current_period_end = ?, auto_renew = 0, updated_at = CURRENT_TIMESTAMP WHERE organization_id = ?`).bind(plan.id, periodStart, periodEnd, organizationId),
+        database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'billing.developer_activated', 'organization', ?, ?)`).bind(crypto.randomUUID(), session.user.id, organizationId, JSON.stringify({ claimId, contractReference: metadata.contractReference, transferReference: claim.provider_reference, amountUzs: claim.amount_uzs, periodEnd })),
+      ]);
+      return Response.json({ message: 'Договор и перевод подтверждены; подписка активна.', ...(await adminBillingData(database)) });
+    }
+
+    if (action === 'reject_payment_claim') {
+      const claimId = typeof body.claimId === 'string' ? body.claimId : '';
+      const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 300) : '';
+      if (!claimId || reason.length < 5) return Response.json({ error: 'validation_failed', message: 'Укажите причину отклонения перевода.' }, { status: 400 });
+      const claim = await database.prepare(`SELECT id, listing_id, organization_id, status, provider, metadata_json FROM billing_events WHERE id = ? LIMIT 1`).bind(claimId).first<{ id: string; listing_id: string | null; organization_id: string | null; status: string; provider: string; metadata_json: string }>();
+      if (!claim || claim.status !== 'pending' || !['offline_bank_transfer', 'offline_card_transfer'].includes(claim.provider)) return Response.json({ error: 'claim_unavailable', message: 'Заявка уже обработана.' }, { status: 409 });
+      await database.batch([
+        database.prepare(`UPDATE billing_events SET status = 'failed', metadata_json = ? WHERE id = ? AND status = 'pending'`).bind(JSON.stringify({ ...JSON.parse(claim.metadata_json), rejectionReason: reason, rejectedBy: session.user.id }), claimId),
+        database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'billing.payment_claim_rejected', ?, ?, ?)`).bind(crypto.randomUUID(), session.user.id, claim.listing_id ? 'listing' : 'organization', claim.listing_id ?? claim.organization_id, JSON.stringify({ claimId, reason })),
+      ]);
+      return Response.json({ message: 'Заявка на перевод отклонена.', ...(await adminBillingData(database)) });
     }
 
     if (action === 'activate_secondary') {
