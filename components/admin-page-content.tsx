@@ -926,6 +926,7 @@ export default function AdminDashboard() {
           />
 
           <AdminBillingPanel
+            sandboxMode={billing.sandboxMode}
             plans={billing.plans}
             subscriptions={billing.subscriptions}
             config={billing.config}
@@ -946,6 +947,10 @@ export default function AdminDashboard() {
             }}
             onActivateDeveloper={async (organizationId, claimId) => {
               const message = await billing.activateDeveloper(organizationId, claimId);
+              setFeedback(message);
+            }}
+            onActivateDemoDeveloper={async (organizationId, planId) => {
+              const message = await billing.activateDemoDeveloper(organizationId, planId);
               setFeedback(message);
             }}
             onRejectPaymentClaim={async (claimId, reason) => {

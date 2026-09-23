@@ -1,16 +1,20 @@
 import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
 import { addDays, databaseNow, expireBillingPeriods } from '@/lib/billing';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { localSandboxEnabled } from '@/lib/local-sandbox';
 
 export const dynamic = 'force-dynamic';
 
-async function adminBillingData(database: D1Database) {
+async function adminBillingData(database: D1Database, sandboxEnabled = false) {
   await expireBillingPeriods(database);
   const [plans, subscriptions, config, secondaryListings, events, totals] = await Promise.all([
     database.prepare(`SELECT id, code, name, inventory_limit, monthly_price_uzs, is_active, sort_order FROM subscription_plans ORDER BY sort_order ASC`).all(),
     database.prepare(`SELECT subscription.id, subscription.organization_id, organization.name AS organization_name,
       subscription.status, subscription.current_period_end, subscription.auto_renew,
       plan.id AS plan_id, plan.code, plan.name AS plan_name, plan.inventory_limit, plan.monthly_price_uzs,
+      EXISTS (SELECT 1 FROM developer_subscription_activations activation JOIN billing_events demo ON demo.id = activation.billing_event_id
+        WHERE activation.organization_id = subscription.organization_id AND demo.status = 'paid' AND demo.provider = 'sandbox_local'
+          AND demo.period_start <= CURRENT_TIMESTAMP AND demo.period_end > CURRENT_TIMESTAMP AND ${sandboxEnabled ? 1 : 0} = 1) AS sandbox_active,
       (SELECT event.id FROM billing_events event WHERE event.organization_id = subscription.organization_id AND event.status = 'pending' AND event.event_type IN ('subscription_charge', 'plan_change') ORDER BY event.created_at DESC LIMIT 1) AS payment_claim_id,
       (SELECT event.provider_reference FROM billing_events event WHERE event.organization_id = subscription.organization_id AND event.status = 'pending' AND event.event_type IN ('subscription_charge', 'plan_change') ORDER BY event.created_at DESC LIMIT 1) AS payment_reference,
       (SELECT json_extract(event.metadata_json, '$.contractReference') FROM billing_events event WHERE event.organization_id = subscription.organization_id AND event.status = 'pending' AND event.event_type IN ('subscription_charge', 'plan_change') ORDER BY event.created_at DESC LIMIT 1) AS contract_reference,
@@ -35,7 +39,7 @@ async function adminBillingData(database: D1Database) {
       LEFT JOIN organizations organization ON organization.id = listing.seller_org_id
       WHERE listing.market_type IN ('SECONDARY_OWNER', 'SECONDARY_AGENCY')
       ORDER BY CASE WHEN listing.expires_at IS NULL THEN 0 ELSE 1 END, listing.expires_at ASC, complex.name ASC`).all(),
-    database.prepare(`SELECT event.id, event.event_type, event.amount_uzs, event.status, event.period_start, event.period_end, event.created_at,
+    database.prepare(`SELECT event.id, event.event_type, event.amount_uzs, event.status, event.provider, event.period_start, event.period_end, event.created_at,
       organization.name AS organization_name, complex.name AS complex_name, unit.unit_number
       FROM billing_events event LEFT JOIN organizations organization ON organization.id = event.organization_id
       LEFT JOIN listings listing ON listing.id = event.listing_id LEFT JOIN complexes complex ON complex.id = listing.complex_id
@@ -44,14 +48,15 @@ async function adminBillingData(database: D1Database) {
       COALESCE(SUM(CASE WHEN status = 'paid' AND provider IN ('offline_bank_transfer', 'offline_card_transfer') THEN amount_uzs ELSE 0 END), 0) AS revenue,
       (SELECT COUNT(*) FROM developer_subscriptions subscription WHERE subscription.status = 'active' AND subscription.current_period_end > CURRENT_TIMESTAMP
         AND EXISTS (SELECT 1 FROM developer_subscription_activations activation JOIN billing_events event ON event.id = activation.billing_event_id
-          WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid' AND event.provider = 'offline_bank_transfer'
+          WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid'
+            AND (event.provider = 'offline_bank_transfer' OR (event.provider = 'sandbox_local' AND ${sandboxEnabled ? 1 : 0} = 1))
             AND event.period_start <= CURRENT_TIMESTAMP AND event.period_end > CURRENT_TIMESTAMP)) AS active_subscriptions,
       (SELECT COUNT(*) FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP) AS active_secondary,
       (SELECT COUNT(*) FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id WHERE payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer') AND purchase.status = 'active' AND purchase.period_end BETWEEN CURRENT_TIMESTAMP AND datetime('now', '+7 days')) AS expiring_secondary
       FROM billing_events`).first(),
   ]);
   return {
-    plans: plans.results ?? [], subscriptions: subscriptions.results ?? [], config,
+    plans: plans.results ?? [], subscriptions: subscriptions.results ?? [], config, sandboxMode: sandboxEnabled,
     secondaryListings: secondaryListings.results ?? [], events: events.results ?? [],
     stats: {
       revenue: Number((totals as { revenue?: number } | null)?.revenue ?? 0),
@@ -64,9 +69,9 @@ async function adminBillingData(database: D1Database) {
 
 export async function GET(request: Request) {
   try {
-    await requirePermission(request, 'VIEW_ADMIN');
+    const session = await requirePermission(request, 'VIEW_ADMIN');
     const database = await ensureMarketplaceDatabase();
-    return Response.json(await adminBillingData(database), { headers: { 'Cache-Control': 'private, no-store' } });
+    return Response.json(await adminBillingData(database, localSandboxEnabled(request) && session.platformRoles.includes('SUPERADMIN')), { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const response = authorizationResponse(error);
     if (response) return response;
@@ -81,6 +86,36 @@ export async function PATCH(request: Request) {
     const body = await request.json() as Record<string, unknown>;
     const action = typeof body.action === 'string' ? body.action : '';
     const database = await ensureMarketplaceDatabase();
+
+    if (action === 'activate_demo_developer') {
+      if (!localSandboxEnabled(request) || !session.platformRoles.includes('SUPERADMIN')) {
+        return Response.json({ error: 'forbidden', message: 'Тестовая активация доступна только суперадмину на localhost.' }, { status: 403 });
+      }
+      const organizationId = typeof body.organizationId === 'string' ? body.organizationId : '';
+      const planId = typeof body.planId === 'string' ? body.planId : '';
+      const [subscription, plan, usage, pending] = await Promise.all([
+        database.prepare(`SELECT id, plan_id, status, current_period_end FROM developer_subscriptions WHERE organization_id = ? LIMIT 1`).bind(organizationId).first<{ id: string; plan_id: string; status: string; current_period_end: string }>(),
+        database.prepare(`SELECT id, inventory_limit FROM subscription_plans WHERE id = ? AND is_active = 1 AND monthly_price_uzs > 0 LIMIT 1`).bind(planId).first<{ id: string; inventory_limit: number }>(),
+        database.prepare(`SELECT COUNT(*) AS count FROM listings WHERE seller_org_id = ? AND market_type = 'PRIMARY_DEVELOPER' AND status IN ('published', 'reserved')`).bind(organizationId).first<{ count: number }>(),
+        database.prepare(`SELECT id FROM billing_events WHERE organization_id = ? AND status = 'pending' AND event_type IN ('subscription_charge', 'plan_change') LIMIT 1`).bind(organizationId).first(),
+      ]);
+      if (!subscription || !plan) return Response.json({ error: 'not_found', message: 'Подписка или тариф не найдены.' }, { status: 404 });
+      if (pending) return Response.json({ error: 'claim_pending', message: 'Сначала обработайте ожидающую заявку на реальный перевод.' }, { status: 409 });
+      if (Number(usage?.count ?? 0) > plan.inventory_limit) return Response.json({ error: 'inventory_limit', message: 'Для этого тарифа слишком много активных квартир.' }, { status: 409 });
+      const now = databaseNow();
+      const start = subscription.status === 'active' && subscription.current_period_end > now ? subscription.current_period_end : now;
+      const end = addDays(start, 30);
+      const eventId = crypto.randomUUID();
+      await database.batch([
+        database.prepare(`INSERT INTO billing_events (id, organization_id, actor_user_id, event_type, amount_uzs, status, provider, provider_reference, idempotency_key, period_start, period_end, metadata_json)
+          VALUES (?, ?, ?, ?, 0, 'paid', 'sandbox_local', ?, ?, ?, ?, ?)`)
+          .bind(eventId, organizationId, session.user.id, planId === subscription.plan_id ? 'subscription_charge' : 'plan_change', `LOCAL-DEMO-${eventId}`, eventId, start, end, JSON.stringify({ planId, demo: true })),
+        database.prepare(`INSERT INTO developer_subscription_activations (billing_event_id, organization_id, confirmed_by) VALUES (?, ?, ?)`).bind(eventId, organizationId, session.user.id),
+        database.prepare(`UPDATE developer_subscriptions SET plan_id = ?, status = 'active', current_period_start = ?, current_period_end = ?, auto_renew = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(planId, start, end, subscription.id),
+        database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'billing.developer_demo_activated', 'organization', ?, ?)`).bind(crypto.randomUUID(), session.user.id, organizationId, JSON.stringify({ planId, end, eventId })),
+      ]);
+      return Response.json({ message: 'Тестовая подписка активирована на 30 дней без платежа.', ...(await adminBillingData(database, true)) });
+    }
 
     if (action === 'update_plan') {
       const planId = typeof body.planId === 'string' ? body.planId : '';
@@ -97,7 +132,7 @@ export async function PATCH(request: Request) {
       await database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json)
         VALUES (?, 'user', ?, 'billing.plan_updated', 'subscription_plan', ?, ?)`)
         .bind(crypto.randomUUID(), session.user.id, planId, JSON.stringify({ name, inventoryLimit, monthlyPriceUzs, isActive: Boolean(isActive) })).run();
-      return Response.json({ message: 'Параметры тарифа сохранены.', ...(await adminBillingData(database)) });
+      return Response.json({ message: 'Параметры тарифа сохранены.', ...(await adminBillingData(database, localSandboxEnabled(request))) });
     }
 
     if (action === 'update_secondary_config') {
@@ -113,7 +148,7 @@ export async function PATCH(request: Request) {
           VALUES (?, 'user', ?, 'billing.secondary_config_updated', 'billing_config', 'default', ?)`)
           .bind(crypto.randomUUID(), session.user.id, JSON.stringify({ feeUzs, periodDays })),
       ]);
-      return Response.json({ message: 'Условия вторичного рынка обновлены.', ...(await adminBillingData(database)) });
+      return Response.json({ message: 'Условия вторичного рынка обновлены.', ...(await adminBillingData(database, localSandboxEnabled(request))) });
     }
 
     if (action === 'activate_developer') {
@@ -139,7 +174,7 @@ export async function PATCH(request: Request) {
         database.prepare(`UPDATE developer_subscriptions SET plan_id = ?, status = 'active', current_period_start = ?, current_period_end = ?, auto_renew = 0, updated_at = CURRENT_TIMESTAMP WHERE organization_id = ?`).bind(plan.id, periodStart, periodEnd, organizationId),
         database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'billing.developer_activated', 'organization', ?, ?)`).bind(crypto.randomUUID(), session.user.id, organizationId, JSON.stringify({ claimId, contractReference: metadata.contractReference, transferReference: claim.provider_reference, amountUzs: claim.amount_uzs, periodEnd })),
       ]);
-      return Response.json({ message: 'Договор и перевод подтверждены; подписка активна.', ...(await adminBillingData(database)) });
+      return Response.json({ message: 'Договор и перевод подтверждены; подписка активна.', ...(await adminBillingData(database, localSandboxEnabled(request))) });
     }
 
     if (action === 'reject_payment_claim') {
@@ -152,7 +187,7 @@ export async function PATCH(request: Request) {
         database.prepare(`UPDATE billing_events SET status = 'failed', metadata_json = ? WHERE id = ? AND status = 'pending'`).bind(JSON.stringify({ ...JSON.parse(claim.metadata_json), rejectionReason: reason, rejectedBy: session.user.id }), claimId),
         database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'billing.payment_claim_rejected', ?, ?, ?)`).bind(crypto.randomUUID(), session.user.id, claim.listing_id ? 'listing' : 'organization', claim.listing_id ?? claim.organization_id, JSON.stringify({ claimId, reason })),
       ]);
-      return Response.json({ message: 'Заявка на перевод отклонена.', ...(await adminBillingData(database)) });
+      return Response.json({ message: 'Заявка на перевод отклонена.', ...(await adminBillingData(database, localSandboxEnabled(request))) });
     }
 
     if (action === 'activate_secondary') {
@@ -188,7 +223,7 @@ export async function PATCH(request: Request) {
           VALUES (?, 'user', ?, ?, 'listing', ?, ?)`)
           .bind(crypto.randomUUID(), session.user.id, latest ? 'billing.secondary_renewed' : 'billing.secondary_activated', listingId, JSON.stringify({ periodEnd, amountUzs: config.secondary_listing_fee_uzs, method: claim.provider, reference: claim.provider_reference, claimId })),
       ]);
-      return Response.json({ message: latest ? 'Перевод подтверждён, публикация продлена.' : 'Перевод подтверждён, объявление опубликовано.', ...(await adminBillingData(database)) });
+      return Response.json({ message: latest ? 'Перевод подтверждён, публикация продлена.' : 'Перевод подтверждён, объявление опубликовано.', ...(await adminBillingData(database, localSandboxEnabled(request))) });
     }
 
     return Response.json({ error: 'validation_failed', message: 'Неизвестное действие биллинга.' }, { status: 400 });

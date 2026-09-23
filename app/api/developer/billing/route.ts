@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers';
 import { authorizationResponse, requirePermission } from '@/lib/auth';
 import { addDays, databaseNow, expireBillingPeriods } from '@/lib/billing';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { localSandboxEnabled } from '@/lib/local-sandbox';
 import { paymentProvider } from '@/lib/payment-provider';
 import { onlinePaymentsDisabledResponse, onlinePaymentsEnabled } from '@/lib/payment-mode';
 
@@ -22,7 +23,7 @@ type SubscriptionRow = {
   monthly_price_uzs: number;
 };
 
-async function developerBillingData(database: D1Database, organizationId: string) {
+async function developerBillingData(database: D1Database, organizationId: string, sandboxEnabled: boolean) {
   await expireBillingPeriods(database);
   const [plans, subscription, usage, events] = await Promise.all([
     database.prepare(`SELECT id, code, name, inventory_limit, monthly_price_uzs, is_active
@@ -30,8 +31,12 @@ async function developerBillingData(database: D1Database, organizationId: string
     database.prepare(`SELECT subscription.id, subscription.organization_id, subscription.plan_id,
       subscription.status, subscription.current_period_start, subscription.current_period_end, subscription.auto_renew,
       EXISTS (SELECT 1 FROM developer_subscription_activations activation JOIN billing_events event ON event.id = activation.billing_event_id
-        WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid' AND event.provider = 'offline_bank_transfer'
-          AND event.period_start <= CURRENT_TIMESTAMP AND event.period_end > CURRENT_TIMESTAMP) AS contract_paid,
+        WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid'
+          AND event.period_start <= CURRENT_TIMESTAMP AND event.period_end > CURRENT_TIMESTAMP
+          AND (event.provider = 'offline_bank_transfer' OR (event.provider = 'sandbox_local' AND ${sandboxEnabled ? 1 : 0} = 1))) AS contract_paid,
+      EXISTS (SELECT 1 FROM developer_subscription_activations activation JOIN billing_events event ON event.id = activation.billing_event_id
+        WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid' AND event.provider = 'sandbox_local'
+          AND event.period_start <= CURRENT_TIMESTAMP AND event.period_end > CURRENT_TIMESTAMP AND ${sandboxEnabled ? 1 : 0} = 1) AS sandbox_active,
       plan.code, plan.name, plan.inventory_limit, plan.monthly_price_uzs
       FROM developer_subscriptions subscription
       JOIN subscription_plans plan ON plan.id = subscription.plan_id
@@ -65,7 +70,7 @@ export async function POST(request: Request) {
     const contractReference = typeof body.contractReference === 'string' ? body.contractReference.trim() : '';
     const transferReference = typeof body.transferReference === 'string' ? body.transferReference.trim() : '';
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
-    const validReference = (value: string) => value.length >= 6 && value.length <= 100 && /^[\p{L}\p{N} ._\/-]+$/u.test(value);
+    const validReference = (value: string) => value.length >= 6 && value.length <= 100 && /^[\p{L}\p{N} ._/-]+$/u.test(value);
     if (!planId || !validReference(contractReference) || !validReference(transferReference) || !/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) return Response.json({ error: 'validation_failed', message: 'Укажите тариф, номер подписанного договора и номер банковского перевода.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();
     const [plan, subscription, pending, duplicate, duplicateReference, usage] = await Promise.all([
@@ -76,7 +81,7 @@ export async function POST(request: Request) {
       database.prepare(`SELECT id FROM billing_events WHERE provider = 'offline_bank_transfer' AND provider_reference = ? LIMIT 1`).bind(transferReference).first(),
       database.prepare(`SELECT COUNT(*) AS count FROM listings WHERE seller_org_id = ? AND market_type = 'PRIMARY_DEVELOPER' AND status IN ('published', 'reserved')`).bind(session.organization.id).first<{ count: number }>(),
     ]);
-    if (duplicate) return Response.json({ duplicate: true, message: 'Заявка уже получена.', ...(await developerBillingData(database, session.organization.id)) });
+    if (duplicate) return Response.json({ duplicate: true, message: 'Заявка уже получена.', ...(await developerBillingData(database, session.organization.id, localSandboxEnabled(request))) });
     if (!plan || !subscription || plan.monthly_price_uzs < 1) return Response.json({ error: 'plan_unavailable', message: 'Платный тариф не найден.' }, { status: 409 });
     if (Number(usage?.count ?? 0) > plan.inventory_limit) return Response.json({ error: 'inventory_limit', message: 'Для выбранного тарифа нужно сначала сократить число активных квартир.' }, { status: 409 });
     if (pending) return Response.json({ error: 'claim_pending', message: 'Предыдущая заявка на оплату ещё проверяется.' }, { status: 409 });
@@ -86,7 +91,7 @@ export async function POST(request: Request) {
       database.prepare(`INSERT INTO billing_events (id, organization_id, actor_user_id, event_type, amount_uzs, status, provider, provider_reference, idempotency_key, period_start, period_end, metadata_json) VALUES (?, ?, ?, ?, ?, 'pending', 'offline_bank_transfer', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)`).bind(eventId, session.organization.id, session.user.id, planId === subscription.plan_id ? 'subscription_charge' : 'plan_change', plan.monthly_price_uzs, transferReference, idempotencyKey, JSON.stringify({ planId, contractReference })),
       database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'billing.developer_claimed', 'organization', ?, ?)`).bind(crypto.randomUUID(), session.user.id, session.organization.id, JSON.stringify({ eventId, contractReference, transferReference, planId })),
     ]);
-    return Response.json({ message: 'Номер договора и перевода отправлены на проверку. Доступ обновится после подтверждения суперадмином.', ...(await developerBillingData(database, session.organization.id)) });
+    return Response.json({ message: 'Номер договора и перевода отправлены на проверку. Доступ обновится после подтверждения суперадмином.', ...(await developerBillingData(database, session.organization.id, localSandboxEnabled(request))) });
   } catch (error) {
     const response = authorizationResponse(error);
     if (response) return response;
@@ -100,7 +105,7 @@ export async function GET(request: Request) {
     const session = await requirePermission(request, 'VIEW_DEVELOPER_DASHBOARD');
     if (!session.organization) return Response.json({ error: 'organization_required', message: 'Кабинет не связан с организацией.' }, { status: 403 });
     const database = await ensureMarketplaceDatabase();
-    return Response.json(await developerBillingData(database, session.organization.id), { headers: { 'Cache-Control': 'private, no-store' } });
+    return Response.json(await developerBillingData(database, session.organization.id, localSandboxEnabled(request)), { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const response = authorizationResponse(error);
     if (response) return response;
@@ -118,7 +123,7 @@ export async function PATCH(request: Request) {
     if (!idempotencyKey) return Response.json({ error: 'idempotency_required', message: 'Повторите действие: отсутствует ключ операции.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();
     const duplicate = await database.prepare(`SELECT id FROM billing_events WHERE idempotency_key = ? LIMIT 1`).bind(idempotencyKey).first<{ id: string }>();
-    if (duplicate) return Response.json({ duplicate: true, message: 'Платёж уже обработан.', ...(await developerBillingData(database, session.organization.id)) });
+    if (duplicate) return Response.json({ duplicate: true, message: 'Платёж уже обработан.', ...(await developerBillingData(database, session.organization.id, localSandboxEnabled(request))) });
 
     const body = await request.json() as Record<string, unknown>;
     const action = body.action === 'change_plan' || body.action === 'renew' ? body.action : null;
@@ -158,7 +163,7 @@ export async function PATCH(request: Request) {
         VALUES (?, 'user', ?, ?, 'developer_subscription', ?, ?)`)
         .bind(crypto.randomUUID(), session.user.id, action === 'renew' ? 'billing.subscription_renewed' : 'billing.plan_changed', subscription.id, JSON.stringify({ planId: plan.id, periodEnd, amountUzs: plan.monthly_price_uzs })),
     ]);
-    return Response.json({ message: action === 'renew' ? 'Подписка продлена на 30 дней.' : `Тариф ${plan.name} подключён.`, ...(await developerBillingData(database, session.organization.id)) });
+    return Response.json({ message: action === 'renew' ? 'Подписка продлена на 30 дней.' : `Тариф ${plan.name} подключён.`, ...(await developerBillingData(database, session.organization.id, localSandboxEnabled(request))) });
   } catch (error) {
     const response = authorizationResponse(error);
     if (response) return response;

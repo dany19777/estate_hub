@@ -1,5 +1,6 @@
 import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { localSandboxEnabled } from '@/lib/local-sandbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,7 +65,8 @@ export async function PATCH(request: Request) {
       const [subscription, activeUsage] = await Promise.all([
         database.prepare(`SELECT subscription.status, subscription.current_period_end, plan.name, plan.inventory_limit,
           EXISTS (SELECT 1 FROM developer_subscription_activations activation JOIN billing_events event ON event.id = activation.billing_event_id
-            WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid' AND event.provider = 'offline_bank_transfer'
+            WHERE activation.organization_id = subscription.organization_id AND event.status = 'paid'
+              AND (event.provider = 'offline_bank_transfer' OR (event.provider = 'sandbox_local' AND ${localSandboxEnabled(request) ? 1 : 0} = 1))
               AND event.period_start <= CURRENT_TIMESTAMP AND event.period_end > CURRENT_TIMESTAMP) AS contract_paid
           FROM developer_subscriptions subscription JOIN subscription_plans plan ON plan.id = subscription.plan_id
           WHERE subscription.organization_id = ? LIMIT 1`).bind(item.developer_org_id)
