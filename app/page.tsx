@@ -29,7 +29,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import type { ComplexSummary } from '@/lib/marketplace';
 import {
   formatApartmentCount,
-  formatPriceMillions,
+  formatComplexStartingPrice,
   marketLabel,
 } from '@/lib/marketplace';
 
@@ -106,7 +106,7 @@ function ComplexCard({
           )}
         </div>
         <div className="card-bottom">
-          <strong>от {formatPriceMillions(complex.priceFrom)} сум</strong>
+          <strong>{formatComplexStartingPrice(complex)}</strong>
           <span className="card-open-icon" aria-hidden="true">
             <ArrowRight />
           </span>

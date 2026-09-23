@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { readComplexDetail } from '@/lib/database';
-import { formatPriceMillions } from '@/lib/marketplace';
+import { formatComplexStartingPrice } from '@/lib/marketplace';
 
 type ComplexLayoutProps = Readonly<{
   children: React.ReactNode;
@@ -14,8 +14,8 @@ export async function generateMetadata({ params }: ComplexLayoutProps): Promise<
   if (!detail) return { title: 'Жилой комплекс не найден | EstateHub' };
 
   const { summary } = detail;
-  const title = `${summary.name} — квартиры от ${formatPriceMillions(summary.priceFrom)} сум | EstateHub`;
-  const description = `${summary.completionLabel}. ${summary.availableUnits} квартир в продаже в районе ${summary.district}: проверенные продавцы, история цены и запись на просмотр.`;
+  const title = `${summary.name} — ${formatComplexStartingPrice(summary)} | EstateHub`;
+  const description = summary.availableUnits > 0 ? `${summary.completionLabel}. ${summary.availableUnits} квартир в продаже в районе ${summary.district}: проверенные продавцы, история цены и запись на просмотр.` : `${summary.completionLabel}. Жилой комплекс в районе ${summary.district} прошёл модерацию EstateHub. Предложения квартир появятся позже.`;
 
   return {
     title,

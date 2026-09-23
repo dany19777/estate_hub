@@ -33,7 +33,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import type { ComplexSummary, SellerType } from '@/lib/marketplace';
 import {
   formatApartmentCount,
-  formatPriceMillions,
+  formatComplexStartingPrice,
   marketLabel,
 } from '@/lib/marketplace';
 
@@ -743,8 +743,7 @@ export default function CatalogPage() {
                     <small>Пример {index + 1}</small>
                     <strong>{item.name}</strong>
                     <span>
-                      {marketLabel(item.marketTypes)} · от{' '}
-                      {formatPriceMillions(item.priceFrom)} сум
+                      {marketLabel(item.marketTypes)} · {formatComplexStartingPrice(item)}
                     </span>
                   </div>
                 </article>
@@ -797,8 +796,7 @@ export default function CatalogPage() {
                       <span>
                         <strong>{item.name}</strong>
                         <small>
-                          {item.district} · от{' '}
-                          {formatPriceMillions(item.priceFrom)} сум
+                          {item.district} · {formatComplexStartingPrice(item)}
                         </small>
                       </span>
                       <ArrowRight />
@@ -859,18 +857,18 @@ export default function CatalogPage() {
                       <ShieldCheck /> Проверенный застройщик
                     </p>
                     <div className="result-facts">
-                      <span>
+                      {item.availableUnits > 0 && <span>
                         {item.minRooms === item.maxRooms
                           ? item.minRooms
                           : `${item.minRooms}–${item.maxRooms}`}{' '}
                         комн.
-                      </span>
+                      </span>}
                       <span>{formatApartmentCount(item.availableUnits)}</span>
                       <span>{item.completionLabel}</span>
                     </div>
                     <div className="result-card-footer">
                       <strong>
-                        от {formatPriceMillions(item.priceFrom)} сум
+                        {formatComplexStartingPrice(item)}
                       </strong>
                       <span className="result-card-details">
                         Подробнее <ArrowRight />
@@ -920,7 +918,7 @@ export default function CatalogPage() {
                       <span>{activeSelection.completionLabel}</span>
                     </div>
                     <strong>
-                      от {formatPriceMillions(activeSelection.priceFrom)} сум
+                      {formatComplexStartingPrice(activeSelection)}
                     </strong>
                     <Link href={`/complex/${activeSelection.slug}`}>
                       Открыть комплекс <ArrowRight />

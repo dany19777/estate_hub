@@ -143,7 +143,22 @@ export function buildCatalog(complexes: ComplexRecord[], listings: ListingRecord
       if (wantsNotFirstFloor && listing.floorNumber <= 1) return false;
       return true;
     });
-    if (matchingListings.length === 0) return [];
+    // A moderated complex can be published before its first apartment. Keep it
+    // discoverable in the complex catalog, but never pretend it matches filters
+    // that require an actual published listing.
+    if (matchingListings.length === 0) {
+      const hasPublishedListings = listings.some((listing) => listing.complexId === complex.id);
+      if (hasPublishedListings || effectiveMarket === 'secondary' ||
+        (effectiveSeller && effectiveSeller !== 'developer') || rooms || minPrice || maxPrice ||
+        minArea || maxArea || minFloor || maxFloor || finish || query.reservable ||
+        wantsReservable || wantsNotFirstFloor) return [];
+      const promotionWeight = query.surface === 'homepage' ? complex.promotionHomepageWeight : complex.promotionSearchWeight;
+      const { promotionSearchWeight: _searchWeight, promotionHomepageWeight: _homepageWeight, ...publicComplex } = complex;
+      return [{ ...publicComplex, priceFrom: 0, pricePerSqmFrom: 0, availableUnits: 0,
+        largestArea: 0, newestPublishedAt: '', minRooms: 0, maxRooms: 0,
+        marketTypes: ['PRIMARY_DEVELOPER'], reservable: false,
+        sponsored: promotionWeight > 0, sponsoredLabel: promotionWeight > 0 ? (complex.specialOfferLabel ?? 'Реклама') : null, promotionWeight }];
+    }
     const prices = matchingListings.map((listing) => listing.priceUzs), roomValues = matchingListings.map((listing) => listing.rooms);
     const promotionWeight = query.surface === 'homepage' ? complex.promotionHomepageWeight : complex.promotionSearchWeight;
     const { promotionSearchWeight: _searchWeight, promotionHomepageWeight: _homepageWeight, ...publicComplex } = complex;
@@ -153,9 +168,12 @@ export function buildCatalog(complexes: ComplexRecord[], listings: ListingRecord
       sponsored: promotionWeight > 0, sponsoredLabel: promotionWeight > 0 ? (complex.specialOfferLabel ?? 'Реклама') : null, promotionWeight }];
   });
   const sorted = [...items].sort((a, b) => {
-    if (query.sort === 'price_asc') return a.priceFrom - b.priceFrom;
-    if (query.sort === 'price_desc') return b.priceFrom - a.priceFrom;
-    if (query.sort === 'price_per_sqm') return a.pricePerSqmFrom - b.pricePerSqmFrom;
+    if (query.sort === 'price_asc' || query.sort === 'price_desc' || query.sort === 'price_per_sqm') {
+      if (!a.availableUnits || !b.availableUnits) return Number(Boolean(b.availableUnits)) - Number(Boolean(a.availableUnits));
+      if (query.sort === 'price_asc') return a.priceFrom - b.priceFrom;
+      if (query.sort === 'price_desc') return b.priceFrom - a.priceFrom;
+      return a.pricePerSqmFrom - b.pricePerSqmFrom;
+    }
     if (query.sort === 'area_desc') return b.largestArea - a.largestArea;
     if (query.sort === 'newest') return b.newestPublishedAt.localeCompare(a.newestPublishedAt);
     return b.promotionWeight - a.promotionWeight || Number(b.featured) - Number(a.featured) || b.rating - a.rating;

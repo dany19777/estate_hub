@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 
 import type { ComplexSummary } from '@/lib/marketplace';
-import { formatPriceMillions } from '@/lib/marketplace';
+import { formatComplexStartingPrice } from '@/lib/marketplace';
 
 type ComplexMapProps = {
   items: ComplexSummary[];
@@ -15,7 +15,7 @@ type ComplexMapProps = {
 function markerIcon(library: typeof Leaflet, item: ComplexSummary, selected: boolean) {
   return library.divIcon({
     className: 'estate-map-marker-wrapper',
-    html: `<span class="estate-map-marker${selected ? ' selected' : ''}">${formatPriceMillions(item.priceFrom)}</span>`,
+    html: `<span class="estate-map-marker${selected ? ' selected' : ''}">${formatComplexStartingPrice(item)}</span>`,
     iconSize: [76, 34],
     iconAnchor: [38, 17],
   });
@@ -90,7 +90,7 @@ export function ComplexMap({ items, selectedId, onSelect }: ComplexMapProps) {
       const marker = library.marker(point, {
         icon: markerIcon(library, item, false),
         keyboard: true,
-        title: `${item.name}, от ${formatPriceMillions(item.priceFrom)} сум`,
+        title: `${item.name}, ${formatComplexStartingPrice(item)}`,
         riseOnHover: true,
       }).addTo(map);
       marker.on('click', () => {

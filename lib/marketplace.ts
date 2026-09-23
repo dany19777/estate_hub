@@ -242,6 +242,7 @@ export function formatPricePerSqm(priceUzs: number) {
 }
 
 export function formatApartmentCount(count: number) {
+  if (count === 0) return 'Предложений пока нет';
   const mod10 = count % 10;
   const mod100 = count % 100;
   const noun =
@@ -251,6 +252,10 @@ export function formatApartmentCount(count: number) {
         ? 'квартиры'
         : 'квартир';
   return `${count} ${noun}`;
+}
+
+export function formatComplexStartingPrice(complex: ComplexSummary) {
+  return complex.availableUnits > 0 ? `от ${formatPriceMillions(complex.priceFrom)} сум` : 'Цены пока не указаны';
 }
 
 export function marketLabel(marketTypes: MarketType[]) {
