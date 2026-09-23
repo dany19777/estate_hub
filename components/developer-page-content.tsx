@@ -37,7 +37,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import {
   Table,
   TableBody,
@@ -60,6 +59,7 @@ import { DeveloperReservationsPanel } from '@/components/developer-reservations-
 import { DeveloperBillingPanel } from '@/components/developer-billing-panel';
 import { DeveloperPromotionsPanel } from '@/components/developer-promotions-panel';
 import { DeveloperReviewsPanel } from '@/components/developer-reviews-panel';
+import { DeveloperWorkspacePanels } from '@/components/developer-workspace-panels';
 import { useDeveloperBilling } from '@/hooks/use-developer-billing';
 import { useDeveloperPromotions } from '@/hooks/use-developer-promotions';
 import { useDeveloperMessages } from '@/hooks/use-developer-messages';
@@ -71,13 +71,11 @@ const navGroups: Array<{
   items: Array<{
     icon: LucideIcon;
     label: string;
-    active?: boolean;
-    count?: number;
   }>;
 }> = [
   {
     label: 'Главное',
-    items: [{ icon: LayoutDashboard, label: 'Дашборд', active: true }],
+    items: [{ icon: LayoutDashboard, label: 'Дашборд' }],
   },
   {
     label: 'Управление',
@@ -85,7 +83,7 @@ const navGroups: Array<{
       { icon: Building2, label: 'Жилые комплексы' },
       { icon: Home, label: 'Квартиры' },
       { icon: CalendarDays, label: 'Бронирования' },
-      { icon: Users, label: 'Клиенты и лиды', count: 24 },
+      { icon: Users, label: 'Клиенты и лиды' },
       { icon: ListChecks, label: 'Просмотры' },
       { icon: MessageCircle, label: 'Сообщения' },
       { icon: MessageSquareText, label: 'Отзывы' },
@@ -224,6 +222,7 @@ export default function DeveloperDashboard() {
   const [leadProcessing, setLeadProcessing] = useState('');
   const [leadFeedback, setLeadFeedback] = useState('');
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [workspaceRevision, setWorkspaceRevision] = useState(0);
   const developerMessages = useDeveloperMessages();
   const developerReservations = useDeveloperReservations();
   const developerBilling = useDeveloperBilling();
@@ -239,14 +238,20 @@ export default function DeveloperDashboard() {
     const target: Record<string, string> = {
       Дашборд: 'developer-dashboard-top',
       'Жилые комплексы': 'developer-projects',
-      Квартиры: 'developer-projects',
+      Квартиры: 'developer-units',
       Бронирования: 'developer-reservations',
       'Клиенты и лиды': 'developer-leads',
-      Просмотры: 'developer-leads',
+      Просмотры: 'developer-viewings',
       Сообщения: 'developer-messages',
       Отзывы: 'developer-reviews',
+      Сделки: 'developer-deals',
+      Документы: 'developer-documents',
       Продвижение: 'developer-promotions',
+      Медиа: 'developer-media',
+      Аналитика: 'developer-analytics',
+      Команда: 'developer-team',
       'Тариф и оплата': 'developer-billing',
+      Настройки: 'developer-settings',
     };
     const id = target[label];
     if (!id) return;
@@ -407,6 +412,7 @@ export default function DeveloperDashboard() {
         throw new Error(payload.message || 'Не удалось создать ЖК.');
       setCreateMessage(payload.message || 'ЖК создан.');
       await loadDashboard();
+      setWorkspaceRevision((revision) => revision + 1);
       setTimeout(() => {
         setCreateOpen(false);
         setCreateMessage('');
@@ -436,6 +442,7 @@ export default function DeveloperDashboard() {
         throw new Error(payload.message || 'Не удалось добавить квартиру.');
       setUnitMessage(payload.message || 'Квартира добавлена.');
       await loadDashboard();
+      setWorkspaceRevision((revision) => revision + 1);
       setTimeout(() => {
         setUnitOpen(false);
         setUnitMessage('');
@@ -474,6 +481,7 @@ export default function DeveloperDashboard() {
         throw new Error(payload.message || 'Не удалось обновить заявку.');
       setLeadFeedback(payload.message || 'Заявка обновлена.');
       await loadLeads();
+      setWorkspaceRevision((revision) => revision + 1);
     } catch (error) {
       setLeadFeedback(
         error instanceof Error ? error.message : 'Не удалось обновить заявку.',
@@ -501,7 +509,12 @@ export default function DeveloperDashboard() {
             <X />
           </button>
         </div>
-        <div className="company-mini-card">
+        <button
+          className="company-mini-card"
+          type="button"
+          onClick={() => navigateSection('Настройки')}
+          aria-label="Открыть настройки компании"
+        >
           <span>SD</span>
           <div>
             <strong>{dashboard?.organization?.name ?? 'Компания'}</strong>
@@ -509,8 +522,8 @@ export default function DeveloperDashboard() {
               <ShieldCheck /> Рабочий кабинет
             </small>
           </div>
-          <ChevronDown />
-        </div>
+          <Settings />
+        </button>
         <nav>
           {navGroups.map((group) => (
             <div className="developer-nav-group" key={group.label}>
@@ -536,9 +549,9 @@ export default function DeveloperDashboard() {
                                       promotion.status,
                                     ),
                                 ).length
-                              : item.label === 'Тариф и оплата'
-                                ? `${developerBilling.usage.activeInventory}/${developerBilling.usage.limit}`
-                                : item.count;
+                                : item.label === 'Тариф и оплата'
+                                  ? `${developerBilling.usage.activeInventory}/${developerBilling.usage.limit}`
+                                  : undefined;
                 return (
                   <button
                     className={activeNav === item.label ? 'active' : ''}
@@ -586,8 +599,8 @@ export default function DeveloperDashboard() {
             <span>{activeNav}</span>
           </div>
           <div>
-            <Link href="/">
-              Посмотреть профиль <ArrowUpRight />
+            <Link href={dashboard?.projects[0] ? `/complex/${dashboard.projects[0].slug}` : '/'}>
+              Посмотреть ЖК <ArrowUpRight />
             </Link>
             <button
               type="button"
@@ -597,14 +610,18 @@ export default function DeveloperDashboard() {
             >
               <Bell />
             </button>
-            <Link className="topbar-company" href="/profile">
+            <button
+              className="topbar-company"
+              type="button"
+              onClick={() => navigateSection('Настройки')}
+            >
               <span>SD</span>
               <div>
                 <strong>{dashboard?.organization?.name ?? 'Компания'}</strong>
                 <small>Застройщик</small>
               </div>
               <ArrowUpRight />
-            </Link>
+            </button>
           </div>
         </header>
 
@@ -628,7 +645,7 @@ export default function DeveloperDashboard() {
                 onClick={() =>
                   setPeriod(
                     period === 'Последние 7 дней'
-                      ? 'Этот месяц'
+                      ? 'Последние 30 дней'
                       : 'Последние 7 дней',
                   )
                 }
@@ -1056,106 +1073,15 @@ export default function DeveloperDashboard() {
                 </Table>
               </section>
 
-              <div className="analytics-grid">
-                <section className="dashboard-panel chart-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>Пример отчёта: просмотры</h2>
-                      <p>Демонстрационные данные</p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled
-                      title="Выбор периода появится вместе с реальной аналитикой"
-                    >
-                      Неделя <ChevronDown />
-                    </button>
-                  </div>
-                  <div className="dashboard-line-chart">
-                    <span className="chart-value">
-                      2 450<small>16 авг</small>
-                    </span>
-                    <svg
-                      viewBox="0 0 600 220"
-                      aria-label="Пример графика просмотров за неделю"
-                    >
-                      <defs>
-                        <linearGradient
-                          id="devLine"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop stopColor="#4d7cff" stopOpacity=".3" />
-                          <stop
-                            offset="1"
-                            stopColor="#4d7cff"
-                            stopOpacity="0"
-                          />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M5 190 C55 160 73 119 119 148 S176 103 224 123 S290 62 337 96 S403 49 449 62 S526 89 595 25 L595 218 L5 218 Z"
-                        fill="url(#devLine)"
-                      />
-                      <path
-                        d="M5 190 C55 160 73 119 119 148 S176 103 224 123 S290 62 337 96 S403 49 449 62 S526 89 595 25"
-                        fill="none"
-                        stroke="#4d7cff"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div>
-                      <span>12 авг</span>
-                      <span>13 авг</span>
-                      <span>14 авг</span>
-                      <span>15 авг</span>
-                      <span>16 авг</span>
-                      <span>17 авг</span>
-                      <span>18 авг</span>
-                    </div>
-                  </div>
-                </section>
-                <section className="dashboard-panel chart-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>Воронка обращений</h2>
-                      <p>
-                        {leadData?.stats.total ?? 0} заявок ·{' '}
-                        {leadData?.stats.viewings ?? 0} просмотров
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled
-                      title="Выбор периода появится вместе с реальной аналитикой"
-                    >
-                      Неделя <ChevronDown />
-                    </button>
-                  </div>
-                  <div className="bar-chart" aria-label="Активность обращений">
-                    {[
-                      32,
-                      46,
-                      38,
-                      65,
-                      52,
-                      Math.max(
-                        18,
-                        Math.min(95, (leadData?.stats.total ?? 0) * 12),
-                      ),
-                      44,
-                    ].map((value, index) => (
-                      <div key={index}>
-                        <i style={{ height: `${value}%` }} />
-                        <span>{12 + index} авг</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
+              <DeveloperWorkspacePanels
+                period={period}
+                revision={workspaceRevision}
+                onAddUnit={() => setUnitOpen(true)}
+                onLeadUpdated={async () => {
+                  await loadLeads();
+                  setWorkspaceRevision((revision) => revision + 1);
+                }}
+              />
             </div>
 
             <aside className="dashboard-rail">
@@ -1180,18 +1106,11 @@ export default function DeveloperDashboard() {
                     объявлений
                   </span>
                 </div>
-                <div className="profile-progress">
-                  <span>
-                    Профиль заполнен <strong>70%</strong>
-                  </span>
-                  <Progress value={70} />
-                </div>
                 <button
                   type="button"
-                  disabled
-                  title="Редактирование профиля — следующий этап"
+                  onClick={() => navigateSection('Настройки')}
                 >
-                  Редактировать профиль
+                  Настройки компании
                 </button>
               </section>
               <section className="quick-actions">
@@ -1230,16 +1149,14 @@ export default function DeveloperDashboard() {
                   </button>
                   <button
                     type="button"
-                    disabled
-                    title="Будет подключено следующим этапом"
+                    onClick={() => navigateSection('Аналитика')}
                   >
                     <FileText />
-                    <span>Сформировать отчёт</span>
+                    <span>Аналитика</span>
                   </button>
                   <button
                     type="button"
-                    disabled
-                    title="Будет подключено следующим этапом"
+                    onClick={() => navigateSection('Медиа')}
                   >
                     <ImageIcon />
                     <span>Медиа</span>
