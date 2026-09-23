@@ -11000,6 +11000,40 @@ body:has(.site-header) .global-buyer-preferences {
 }
 .unit-dialog {
   max-width: 930px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+.project-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+.developer-table td .project-row-actions > button,
+.developer-table td .project-row-actions > a {
+  display: inline-flex;
+  min-height: 39px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #334c74;
+  border-radius: 10px;
+  color: #dce8ff;
+  background: #173668;
+  font-size: 14px;
+  font-weight: 650;
+}
+.developer-table td .project-row-actions > a {
+  width: 39px;
+  padding: 0;
+  border-color: #26364a;
+  color: #91a5c1;
+  background: transparent;
+}
+.developer-table td .project-row-actions svg {
+  width: 17px;
+  height: 17px;
 }
 .unit-dialog .developer-dialog-form label {
   grid-column: auto;

@@ -267,6 +267,19 @@ export default function DeveloperDashboard() {
     );
   }
 
+  function openUnitDialog(complexId?: string) {
+    const eligibleProjects = dashboard?.projects.filter(
+      (project) => !['rejected', 'archived'].includes(project.workflow_status),
+    ) ?? [];
+    const selectedId = complexId ?? (eligibleProjects.some((project) => project.id === unitForm.complexId)
+      ? unitForm.complexId
+      : eligibleProjects[0]?.id ?? '');
+    if (!selectedId) return;
+    setUnitForm((current) => ({ ...current, complexId: selectedId }));
+    setUnitMessage('');
+    setUnitOpen(true);
+  }
+
   async function loadDashboard() {
     setLoadError('');
     try {
@@ -285,7 +298,9 @@ export default function DeveloperDashboard() {
       }));
       setUnitForm((current) => ({
         ...current,
-        complexId: current.complexId || payload.projects[0]?.id || '',
+        complexId: payload.projects.some((project) => project.id === current.complexId && !['rejected', 'archived'].includes(project.workflow_status))
+          ? current.complexId
+          : payload.projects.find((project) => !['rejected', 'archived'].includes(project.workflow_status))?.id ?? '',
       }));
     } catch (error) {
       setLoadError(
@@ -819,13 +834,20 @@ export default function DeveloperDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Link
-                              href={`/complex/${project.slug}`}
-                              aria-label={`Открыть ${project.name}`}
-                              title="Открыть публичную страницу"
-                            >
-                              <MoreHorizontal />
-                            </Link>
+                            <div className="project-row-actions">
+                              {!['rejected', 'archived'].includes(project.workflow_status) && (
+                                <button type="button" onClick={() => openUnitDialog(project.id)} aria-label={`Добавить квартиру в ${project.name}`}>
+                                  <Plus /> Квартира
+                                </button>
+                              )}
+                              {project.workflow_status === 'published' && <Link
+                                href={`/complex/${project.slug}`}
+                                aria-label={`Открыть ${project.name}`}
+                                title="Открыть публичную страницу"
+                              >
+                                <MoreHorizontal />
+                              </Link>}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -1076,7 +1098,7 @@ export default function DeveloperDashboard() {
               <DeveloperWorkspacePanels
                 period={period}
                 revision={workspaceRevision}
-                onAddUnit={() => setUnitOpen(true)}
+                onAddUnit={() => openUnitDialog()}
                 onLeadUpdated={async () => {
                   await loadLeads();
                   setWorkspaceRevision((revision) => revision + 1);
@@ -1122,8 +1144,8 @@ export default function DeveloperDashboard() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setUnitOpen(true)}
-                    disabled={!dashboard?.projects.length}
+                    onClick={() => openUnitDialog()}
+                    disabled={!dashboard?.projects.some((project) => !['rejected', 'archived'].includes(project.workflow_status))}
                     title={
                       dashboard?.projects.length
                         ? 'Добавить квартиру и объявление'
