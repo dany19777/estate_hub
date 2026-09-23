@@ -12381,6 +12381,25 @@ body:has(.site-header) .global-buyer-preferences {
   color: #68798f;
   font-size: 6px;
 }
+.developer-leads-table .developer-lead-openable {
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+.developer-leads-table .developer-lead-openable:hover,
+.developer-leads-table .developer-lead-openable:focus-visible {
+  background: #1a2a3f;
+}
+.developer-leads-table .developer-lead-openable:focus-visible {
+  outline: 2px solid #5c8dff;
+  outline-offset: -2px;
+}
+.developer-leads-table [data-slot='table-cell'] > .lead-message-preview {
+  max-width: 220px;
+  overflow: hidden;
+  color: #a6b6ca;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .lead-customer-cell {
   display: flex;
   min-width: 145px;
@@ -12478,6 +12497,71 @@ body:has(.site-header) .global-buyer-preferences {
 .developer-table td .lead-row-actions > button:disabled {
   opacity: 0.45;
   cursor: wait;
+}
+.developer-lead-detail-dialog {
+  max-width: 560px;
+  max-height: min(85vh, 760px);
+  overflow-y: auto;
+}
+.developer-lead-detail {
+  display: grid;
+  gap: 16px;
+}
+.developer-lead-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: #91a2b7;
+  font-size: 12px;
+}
+.developer-lead-detail-meta .lead-status {
+  height: auto;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+.developer-lead-detail section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid #293b52;
+  border-radius: 10px;
+  background: #132237;
+}
+.developer-lead-detail h3 {
+  margin: 0;
+  color: #91a5c0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.developer-lead-detail p {
+  margin: 0;
+  color: #e6eef9;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.developer-lead-detail .developer-lead-question {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.developer-lead-detail strong,
+.developer-lead-detail a {
+  color: #e6eef9;
+  font-size: 13px;
+}
+.developer-lead-detail a {
+  width: fit-content;
+  color: #8db1ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.developer-lead-detail-dialog .developer-lead-close {
+  border-color: #344964;
+  color: #dbe7f7;
+  background: #17283e;
 }
 .dashboard-operation-state.success {
   border-color: #24543f;

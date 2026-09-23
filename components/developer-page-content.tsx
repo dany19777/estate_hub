@@ -223,6 +223,7 @@ export default function DeveloperDashboard() {
   const [leadError, setLeadError] = useState('');
   const [leadProcessing, setLeadProcessing] = useState('');
   const [leadFeedback, setLeadFeedback] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const developerMessages = useDeveloperMessages();
   const developerReservations = useDeveloperReservations();
   const developerBilling = useDeveloperBilling();
@@ -232,6 +233,7 @@ export default function DeveloperDashboard() {
     (total, conversation) => total + Number(conversation.unread_count),
     0,
   );
+  const selectedLead = leadData?.leads.find((lead) => lead.id === selectedLeadId);
 
   function navigateSection(label: string) {
     const target: Record<string, string> = {
@@ -920,7 +922,20 @@ export default function DeveloperDashboard() {
                         new Date(lead.created_at.replace(' ', 'T') + 'Z'),
                       );
                       return (
-                        <TableRow key={lead.id}>
+                        <TableRow
+                          key={lead.id}
+                          className="developer-lead-openable"
+                          onClick={() => setSelectedLeadId(lead.id)}
+                          onKeyDown={(event) => {
+                            if (event.target !== event.currentTarget) return;
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              setSelectedLeadId(lead.id);
+                            }
+                          }}
+                          tabIndex={0}
+                          aria-label={`Открыть заявку: ${lead.customer_name}, ${lead.lead_type === 'viewing' ? 'просмотр' : 'консультация'}`}
+                        >
                           <TableCell>
                             <div className="lead-customer-cell">
                               <span>
@@ -955,6 +970,11 @@ export default function DeveloperDashboard() {
                                 {lead.requested_date} · {lead.time_slot}
                               </small>
                             )}
+                            {lead.message?.trim() && (
+                              <small className="lead-message-preview">
+                                {lead.message.trim()}
+                              </small>
+                            )}
                           </TableCell>
                           <TableCell>
                             <strong>{lead.complex_name}</strong>
@@ -979,13 +999,24 @@ export default function DeveloperDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="lead-row-actions">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelectedLeadId(lead.id);
+                                }}
+                                aria-label={`Открыть заявку ${lead.customer_name}`}
+                              >
+                                <MessageSquareText /> Открыть
+                              </button>
                               {lead.status === 'new' &&
                                 (lead.lead_type === 'viewing' ? (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      void updateLead(lead, 'confirm_viewing')
-                                    }
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void updateLead(lead, 'confirm_viewing');
+                                    }}
                                     disabled={leadProcessing === lead.id}
                                   >
                                     <CalendarDays /> Подтвердить
@@ -993,9 +1024,10 @@ export default function DeveloperDashboard() {
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      void updateLead(lead, 'contacted')
-                                    }
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void updateLead(lead, 'contacted');
+                                    }}
                                     disabled={leadProcessing === lead.id}
                                   >
                                     <Phone /> Связались
@@ -1005,7 +1037,10 @@ export default function DeveloperDashboard() {
                                 <button
                                   className="close"
                                   type="button"
-                                  onClick={() => void updateLead(lead, 'lost')}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void updateLead(lead, 'lost');
+                                  }}
                                   disabled={leadProcessing === lead.id}
                                   aria-label={`Закрыть заявку ${lead.customer_name}`}
                                 >
@@ -1257,6 +1292,107 @@ export default function DeveloperDashboard() {
           </div>
         </div>
       </section>
+
+      <Dialog
+        open={Boolean(selectedLead)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedLeadId(null);
+        }}
+      >
+        <DialogContent className="developer-dialog developer-lead-detail-dialog">
+          {selectedLead && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedLead.lead_type === 'viewing'
+                    ? 'Заявка на просмотр'
+                    : 'Заявка на консультацию'}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedLead.complex_name}
+                  {selectedLead.unit_number
+                    ? ` · Квартира № ${selectedLead.unit_number}`
+                    : ''}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="developer-lead-detail">
+                <div className="developer-lead-detail-meta">
+                  <Badge className={`lead-status ${selectedLead.status}`}>
+                    {leadStatus[selectedLead.status] ?? selectedLead.status}
+                  </Badge>
+                  <time>
+                    {new Intl.DateTimeFormat('ru-RU', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }).format(
+                      new Date(selectedLead.created_at.replace(' ', 'T') + 'Z'),
+                    )}
+                  </time>
+                </div>
+                <section>
+                  <h3>Вопрос клиента</h3>
+                  <p className="developer-lead-question">
+                    {selectedLead.message?.trim() ||
+                      'Клиент не добавил вопрос к заявке.'}
+                  </p>
+                </section>
+                <section>
+                  <h3>Контактные данные</h3>
+                  <strong>{selectedLead.customer_name}</strong>
+                  <a href={`tel:${selectedLead.phone}`}>{selectedLead.phone}</a>
+                  {selectedLead.email && (
+                    <a href={`mailto:${selectedLead.email}`}>
+                      {selectedLead.email}
+                    </a>
+                  )}
+                </section>
+                {selectedLead.requested_date && (
+                  <section>
+                    <h3>Желаемое время просмотра</h3>
+                    <p>
+                      {selectedLead.requested_date}
+                      {selectedLead.time_slot
+                        ? ` · ${selectedLead.time_slot}`
+                        : ''}
+                    </p>
+                  </section>
+                )}
+              </div>
+              <DialogFooter>
+                {selectedLead.status === 'new' && (
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      void updateLead(
+                        selectedLead,
+                        selectedLead.lead_type === 'viewing'
+                          ? 'confirm_viewing'
+                          : 'contacted',
+                      )
+                    }
+                    disabled={leadProcessing === selectedLead.id}
+                  >
+                    {selectedLead.lead_type === 'viewing'
+                      ? 'Подтвердить просмотр'
+                      : 'Отметить, что связались'}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="developer-lead-close"
+                  onClick={() => setSelectedLeadId(null)}
+                >
+                  Закрыть
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="developer-dialog">
