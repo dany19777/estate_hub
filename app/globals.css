@@ -7282,7 +7282,7 @@ body:has(.site-header) .global-buyer-preferences {
   color: #607087;
   font-size: 9px;
 }
-.listing-purchase-card > div {
+.listing-purchase-card > .listing-registry-price {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -7292,19 +7292,19 @@ body:has(.site-header) .global-buyer-preferences {
   color: #245ecf;
   background: #edf3ff;
 }
-.listing-purchase-card > div > svg {
+.listing-registry-price > svg {
   width: 16px;
 }
-.listing-purchase-card > div p {
+.listing-registry-price p {
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin: 0;
 }
-.listing-purchase-card > div b {
+.listing-registry-price b {
   font-size: 8px;
 }
-.listing-purchase-card > div em {
+.listing-registry-price em {
   color: #6a7790;
   font-size: 7px;
   font-style: normal;
@@ -11005,20 +11005,38 @@ body:has(.site-header) .global-buyer-preferences {
 }
 .demo-reservation-action {
   display: grid;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 7px;
+  min-width: 0;
+  margin-top: 9px;
 }
 .demo-reservation-action > button,
 .demo-reservation-action > a {
   width: 100%;
+  min-width: 0;
+  min-height: 39px;
+  padding: 8px 10px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  font-size: 9px;
+  font-weight: 700;
+}
+.demo-reservation-action > button svg,
+.demo-reservation-action > a svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
 }
 .demo-reservation-action small {
   color: #66758d;
+  font-size: 7px;
+  line-height: 1.4;
 }
 .demo-reservation-action p {
   margin: 0;
   color: #285dc4;
-  font-size: 14px;
+  font-size: 8px;
+  line-height: 1.4;
 }
 .project-row-actions {
   display: flex;
