@@ -256,6 +256,7 @@ export default function DeveloperDashboard() {
     const id = target[label];
     if (!id) return;
     if (label === 'Сделки') setWorkspaceRevision((revision) => revision + 1);
+    if (label === 'Сообщения') void developerMessages.reload().catch(() => {});
     setActiveNav(label);
     setSidebarOpen(false);
     window.history.replaceState(null, '', `#${id}`);

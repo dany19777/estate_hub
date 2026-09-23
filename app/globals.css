@@ -7314,6 +7314,9 @@ body:has(.site-header) .global-buyer-preferences {
   height: 39px !important;
   font-size: 9px !important;
 }
+.listing-message-action {
+  margin-top: 8px;
+}
 .listing-call-action {
   display: flex;
   width: calc(100% - 24px);
