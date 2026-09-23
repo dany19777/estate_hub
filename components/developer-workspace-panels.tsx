@@ -548,7 +548,7 @@ export function DeveloperWorkspacePanels({
             </p>
           )}
           {data?.deals.map((deal) => (
-            <article key={deal.id}>
+            <article className="developer-deal-card" key={deal.id}>
               <div>
                 <strong>
                   {deal.complex_name}
@@ -564,8 +564,10 @@ export function DeveloperWorkspacePanels({
                   ? ` · ${formatPriceMillions(deal.price_uzs)} сум`
                   : ''}
               </p>
-              <small>Обновлено: {deal.updated_at}</small>
-              {data.canManageLeads && deal.status === 'deal_in_progress' && deal.reservation_id && <Button type="button" disabled={processing} onClick={() => void completeDeal(deal)}>{deal.payment_reference?.startsWith('LOCAL-DEMO-') ? 'Завершить тестовую сделку' : 'Завершить сделку'}</Button>}
+              <div className="developer-deal-footer">
+                <small>Обновлено: {deal.updated_at}</small>
+                {data.canManageLeads && deal.status === 'deal_in_progress' && deal.reservation_id && <Button type="button" disabled={processing} onClick={() => void completeDeal(deal)}>{deal.payment_reference?.startsWith('LOCAL-DEMO-') ? 'Завершить тестовую сделку' : 'Завершить сделку'}</Button>}
+              </div>
             </article>
           ))}
         </div>
