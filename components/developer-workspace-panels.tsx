@@ -63,6 +63,8 @@ type Viewing = {
 };
 type Deal = {
   id: string;
+  reservation_id: string | null;
+  payment_reference: string | null;
   customer_name: string;
   complex_name: string;
   unit_number: string | null;
@@ -186,15 +188,18 @@ export function DeveloperWorkspacePanels({
   revision,
   onAddUnit,
   onLeadUpdated,
+  onDealCompleted,
 }: {
   period: string;
   revision: number;
   onAddUnit: () => void;
   onLeadUpdated: () => Promise<void>;
+  onDealCompleted: () => Promise<void>;
 }) {
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [dealFeedback, setDealFeedback] = useState('');
   const [processing, setProcessing] = useState(false);
   const [unitSearch, setUnitSearch] = useState('');
   const [unitFilter, setUnitFilter] = useState('all');
@@ -230,6 +235,23 @@ export function DeveloperWorkspacePanels({
     const timer = window.setTimeout(() => void reload(), 0);
     return () => window.clearTimeout(timer);
   }, [reload, revision]);
+
+  async function completeDeal(deal: Deal) {
+    if (!deal.reservation_id || !window.confirm(`Отметить квартиру № ${deal.unit_number ?? '—'} как проданную и завершить ${deal.payment_reference?.startsWith('LOCAL-DEMO-') ? 'тестовую ' : ''}сделку?`)) return;
+    setProcessing(true);
+    setDealFeedback('');
+    try {
+      const response = await fetch('/api/developer/reservations', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reservationId: deal.reservation_id, action: 'sold' }) });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message ?? 'Не удалось завершить сделку.');
+      setDealFeedback(payload.message ?? 'Сделка завершена.');
+      await Promise.all([reload(), onDealCompleted()]);
+    } catch (caught) {
+      setDealFeedback(caught instanceof Error ? caught.message : 'Не удалось завершить сделку.');
+    } finally {
+      setProcessing(false);
+    }
+  }
 
   async function mutate(
     method: 'POST' | 'PATCH',
@@ -517,6 +539,7 @@ export function DeveloperWorkspacePanels({
         }
       >
         <div className="developer-workspace-list">
+          {dealFeedback && <output>{dealFeedback}</output>}
           {!data && <p>Загружаем сделки…</p>}
           {data && data.deals.length === 0 && (
             <p>
@@ -542,6 +565,7 @@ export function DeveloperWorkspacePanels({
                   : ''}
               </p>
               <small>Обновлено: {deal.updated_at}</small>
+              {data.canManageLeads && deal.status === 'deal_in_progress' && deal.reservation_id && <Button type="button" disabled={processing} onClick={() => void completeDeal(deal)}>{deal.payment_reference?.startsWith('LOCAL-DEMO-') ? 'Завершить тестовую сделку' : 'Завершить сделку'}</Button>}
             </article>
           ))}
         </div>

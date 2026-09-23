@@ -75,11 +75,13 @@ export async function GET(request: Request) {
         .all(),
       database
         .prepare(`SELECT lead.id, customer.full_name AS customer_name, complex.name AS complex_name,
-        unit.unit_number, listing.price_uzs, lead.status, lead.updated_at
+        unit.unit_number, listing.price_uzs, lead.status, lead.updated_at,
+        reservation.id AS reservation_id, reservation.payment_reference
         FROM leads lead JOIN crm_customers customer ON customer.id = lead.customer_id
         JOIN complexes complex ON complex.id = lead.complex_id
         LEFT JOIN listings listing ON listing.id = lead.listing_id
         LEFT JOIN units unit ON unit.id = listing.unit_id
+        LEFT JOIN reservation_transactions reservation ON reservation.lead_id = lead.id
         WHERE lead.organization_id = ? AND lead.status IN ('deal_in_progress', 'won')
         ORDER BY lead.updated_at DESC LIMIT 100`)
         .bind(organizationId)

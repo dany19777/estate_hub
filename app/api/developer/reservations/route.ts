@@ -1,6 +1,7 @@
 import { authorizationResponse, requirePermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { paymentProvider } from '@/lib/payment-provider';
+import { localSandboxEnabled } from '@/lib/local-sandbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ type ReservationRow = {
   payment_reference: string | null;
 };
 
-const allowedActions = new Set(['visit_completed', 'deal_in_progress', 'extend', 'buyer_refused', 'developer_refused']);
+const allowedActions = new Set(['visit_completed', 'deal_in_progress', 'sold', 'extend', 'buyer_refused', 'developer_refused']);
 
 async function releaseExpiredReservations(database: D1Database, organizationId: string) {
   await database.batch([
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
     return Response.json({
       reservations,
       stats: {
-        active: reservations.filter((item) => item.status === 'confirmed' && !['buyer_refused', 'developer_refused', 'sold'].includes(String(item.outcome_status))).length,
+        active: reservations.filter((item) => item.status === 'confirmed' && !['buyer_refused', 'developer_refused', 'sold', 'cancelled_admin'].includes(String(item.outcome_status))).length,
         holds: reservations.filter((item) => item.status === 'payment_hold').length,
         deals: reservations.filter((item) => item.outcome_status === 'deal_in_progress').length,
         total: reservations.length,
@@ -99,11 +100,14 @@ export async function PATCH(request: Request) {
     if (!reservation) return Response.json({ error: 'not_found', message: 'Бронирование не найдено.' }, { status: 404 });
     if (reservation.status !== 'confirmed') return Response.json({ error: 'invalid_state', message: 'Действие доступно только для активной брони.' }, { status: 409 });
     if (['buyer_refused', 'developer_refused', 'sold', 'cancelled_admin'].includes(reservation.outcome_status)) return Response.json({ error: 'closed_reservation', message: 'Бронирование уже закрыто.' }, { status: 409 });
+    const isDemo = reservation.payment_reference?.startsWith('LOCAL-DEMO-') ?? false;
+    if (action === 'sold' && reservation.outcome_status !== 'deal_in_progress') return Response.json({ error: 'invalid_state', message: 'Сначала переведите бронь в сделку.' }, { status: 409 });
+    if (action === 'sold' && isDemo && !localSandboxEnabled(request)) return Response.json({ error: 'unavailable', message: 'Завершить тестовую сделку можно только на localhost.' }, { status: 403 });
+    if (action === 'sold' && !isDemo && reservation.payment_status !== 'paid') return Response.json({ error: 'payment_required', message: 'Нельзя завершить сделку без подтверждённой оплаты брони.' }, { status: 409 });
 
     const activityMetadata = action === 'extend' ? { reason, newExpiry } : { previousOutcome: reservation.outcome_status };
     const statements: D1PreparedStatement[] = [];
     let refundMetadata: Record<string, unknown> = {};
-    const isDemo = reservation.payment_reference?.startsWith('LOCAL-DEMO-') ?? false;
     if (action === 'developer_refused' && !isDemo) {
       const refundKey = `developer-refund:${reservation.id}`;
       const refund = await paymentProvider().refundReservation({ reservationId: reservation.id, amountUzs: reservation.reservation_fee_uzs, idempotencyKey: refundKey });
@@ -126,6 +130,11 @@ export async function PATCH(request: Request) {
     }
     if (action === 'visit_completed') statements.push(database.prepare(`UPDATE leads SET status = 'viewing_completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(reservation.lead_id));
     if (action === 'deal_in_progress') statements.push(database.prepare(`UPDATE leads SET status = 'deal_in_progress', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(reservation.lead_id));
+    if (action === 'sold') {
+      statements.push(database.prepare(`UPDATE leads SET status = 'won', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(reservation.lead_id));
+      statements.push(database.prepare(`UPDATE units SET availability_status = 'sold', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND availability_status = 'reserved'`).bind(reservation.unit_id));
+      statements.push(database.prepare(`UPDATE listings SET status = 'sold', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'reserved'`).bind(reservation.listing_id));
+    }
     if (action === 'buyer_refused' || action === 'developer_refused') {
       statements.push(database.prepare(`UPDATE reservation_transactions SET status = ?, payment_status = ?, cancellation_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
         .bind(action === 'developer_refused' && !isDemo ? 'refunded' : 'cancelled', isDemo ? 'awaiting_payment' : action === 'developer_refused' ? 'refunded' : 'paid', action, reservation.id));
@@ -139,7 +148,7 @@ export async function PATCH(request: Request) {
     statements.push(database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, ?, 'reservation', ?, ?)`)
       .bind(crypto.randomUUID(), session.user.id, `reservation.${action}`, reservation.id, JSON.stringify(actionMetadata)));
     await database.batch(statements);
-    const messages: Record<string, string> = { visit_completed: 'Визит отмечен завершённым.', deal_in_progress: 'Бронь переведена в сделку.', extend: 'Срок брони продлён.', buyer_refused: 'Отказ покупателя зарегистрирован.', developer_refused: isDemo ? 'Тестовая бронь отменена без возврата: оплаты не было.' : 'Отмена застройщика зарегистрирована, возврат проведён через платёжный контур.' };
+    const messages: Record<string, string> = { visit_completed: 'Визит отмечен завершённым.', deal_in_progress: 'Бронь переведена в сделку.', sold: isDemo ? 'Тестовая сделка завершена. Квартира отмечена как проданная.' : 'Сделка завершена. Квартира отмечена как проданная.', extend: 'Срок брони продлён.', buyer_refused: 'Отказ покупателя зарегистрирован.', developer_refused: isDemo ? 'Тестовая бронь отменена без возврата: оплаты не было.' : 'Отмена застройщика зарегистрирована, возврат проведён через платёжный контур.' };
     return Response.json({ reservationId, action, message: messages[action] });
   } catch (error) {
     const response = authorizationResponse(error);

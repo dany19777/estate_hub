@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     // Release expired test reservations before checking availability.
     await database.batch([
-      database.prepare(`UPDATE reservation_transactions SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE status = 'confirmed' AND payment_reference LIKE 'LOCAL-DEMO-%' AND reservation_expires_at <= CURRENT_TIMESTAMP`),
+      database.prepare(`UPDATE reservation_transactions SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE status = 'confirmed' AND payment_reference LIKE 'LOCAL-DEMO-%' AND reservation_expires_at <= CURRENT_TIMESTAMP AND COALESCE((SELECT outcome_status FROM reservation_outcomes WHERE reservation_id = reservation_transactions.id), 'active') NOT IN ('sold', 'deal_in_progress')`),
       database.prepare(`UPDATE units SET availability_status = 'available', updated_at = CURRENT_TIMESTAMP WHERE availability_status = 'reserved' AND id IN (SELECT unit_id FROM reservation_transactions WHERE status = 'expired' AND payment_reference LIKE 'LOCAL-DEMO-%') AND NOT EXISTS (SELECT 1 FROM reservation_transactions active WHERE active.unit_id = units.id AND active.status IN ('payment_hold', 'confirmed'))`),
       database.prepare(`UPDATE listings SET status = 'published', updated_at = CURRENT_TIMESTAMP WHERE status = 'reserved' AND id IN (SELECT listing_id FROM reservation_transactions WHERE status = 'expired' AND payment_reference LIKE 'LOCAL-DEMO-%') AND NOT EXISTS (SELECT 1 FROM reservation_transactions active WHERE active.listing_id = listings.id AND active.status IN ('payment_hold', 'confirmed'))`),
     ]);
@@ -68,7 +68,7 @@ export async function PATCH(request: Request) {
     const body = await request.json() as { reservationId?: unknown };
     const id = typeof body.reservationId === 'string' ? body.reservationId : '';
     const database = await ensureMarketplaceDatabase();
-    const reservation = await database.prepare(`SELECT id, unit_id, listing_id, lead_id FROM reservation_transactions WHERE id = ? AND buyer_user_id = ? AND status = 'confirmed' AND payment_reference LIKE 'LOCAL-DEMO-%' LIMIT 1`).bind(id, session.user.id).first<{ id: string; unit_id: string; listing_id: string; lead_id: string }>();
+    const reservation = await database.prepare(`SELECT r.id, r.unit_id, r.listing_id, r.lead_id FROM reservation_transactions r LEFT JOIN reservation_outcomes outcome ON outcome.reservation_id = r.id WHERE r.id = ? AND r.buyer_user_id = ? AND r.status = 'confirmed' AND r.payment_reference LIKE 'LOCAL-DEMO-%' AND COALESCE(outcome.outcome_status, 'active') NOT IN ('sold', 'developer_refused', 'buyer_refused', 'cancelled_admin') LIMIT 1`).bind(id, session.user.id).first<{ id: string; unit_id: string; listing_id: string; lead_id: string }>();
     if (!reservation) return Response.json({ error: 'not_found', message: 'Активная тестовая бронь не найдена.' }, { status: 404 });
     await database.batch([
       database.prepare(`UPDATE reservation_transactions SET status = 'cancelled', cancellation_reason = 'buyer_demo_cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(id),

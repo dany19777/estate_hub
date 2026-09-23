@@ -19,13 +19,13 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(`${value.replace(' ', 'T')}Z`));
 }
 
-export function DeveloperReservationsPanel({ reservations, stats, loading, error, reload }: { reservations: DeveloperReservation[]; stats: { active: number; holds: number; deals: number; total: number }; loading: boolean; error: string | null; reload: () => Promise<void> }) {
+export function DeveloperReservationsPanel({ reservations, stats, loading, error, reload, onUpdated }: { reservations: DeveloperReservation[]; stats: { active: number; holds: number; deals: number; total: number }; loading: boolean; error: string | null; reload: () => Promise<void>; onUpdated: () => void }) {
   const [filter, setFilter] = useState<'active' | 'holds' | 'history'>('active');
   const [processing, setProcessing] = useState('');
   const [feedback, setFeedback] = useState('');
   const visible = useMemo(() => reservations.filter((reservation) => filter === 'active'
-    ? reservation.status === 'confirmed'
-    : filter === 'holds' ? reservation.status === 'payment_hold' : !['confirmed', 'payment_hold'].includes(reservation.status)), [filter, reservations]);
+    ? reservation.status === 'confirmed' && !['sold', 'buyer_refused', 'developer_refused', 'cancelled_admin'].includes(reservation.outcome_status)
+    : filter === 'holds' ? reservation.status === 'payment_hold' : reservation.status !== 'payment_hold' && (reservation.status !== 'confirmed' || ['sold', 'buyer_refused', 'developer_refused', 'cancelled_admin'].includes(reservation.outcome_status))), [filter, reservations]);
 
   async function updateReservation(reservation: DeveloperReservation, action: 'visit_completed' | 'deal_in_progress' | 'extend' | 'buyer_refused' | 'developer_refused') {
     let reason = '';
@@ -50,6 +50,7 @@ export function DeveloperReservationsPanel({ reservations, stats, loading, error
       if (!response.ok) throw new Error(payload.message ?? 'Не удалось обновить бронь.');
       setFeedback(payload.message ?? 'Бронирование обновлено.');
       await reload();
+      onUpdated();
     } catch (caught) {
       setFeedback(caught instanceof Error ? caught.message : 'Не удалось обновить бронь.');
     } finally {

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const session = await getAppSession(request);
     const database = await ensureMarketplaceDatabase();
     await database.batch([
-      database.prepare(`UPDATE reservation_transactions SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE buyer_user_id = ? AND status = 'confirmed' AND payment_reference LIKE 'LOCAL-DEMO-%' AND reservation_expires_at <= CURRENT_TIMESTAMP`).bind(session.user.id),
+      database.prepare(`UPDATE reservation_transactions SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE buyer_user_id = ? AND status = 'confirmed' AND payment_reference LIKE 'LOCAL-DEMO-%' AND reservation_expires_at <= CURRENT_TIMESTAMP AND COALESCE((SELECT outcome_status FROM reservation_outcomes WHERE reservation_id = reservation_transactions.id), 'active') NOT IN ('sold', 'deal_in_progress')`).bind(session.user.id),
       database.prepare(`UPDATE units SET availability_status = 'available', updated_at = CURRENT_TIMESTAMP WHERE availability_status = 'reserved' AND id IN (SELECT unit_id FROM reservation_transactions WHERE buyer_user_id = ? AND status = 'expired' AND payment_reference LIKE 'LOCAL-DEMO-%') AND NOT EXISTS (SELECT 1 FROM reservation_transactions active WHERE active.unit_id = units.id AND active.status IN ('payment_hold', 'confirmed'))`).bind(session.user.id),
       database.prepare(`UPDATE listings SET status = 'published', updated_at = CURRENT_TIMESTAMP WHERE status = 'reserved' AND id IN (SELECT listing_id FROM reservation_transactions WHERE buyer_user_id = ? AND status = 'expired' AND payment_reference LIKE 'LOCAL-DEMO-%') AND NOT EXISTS (SELECT 1 FROM reservation_transactions active WHERE active.listing_id = listings.id AND active.status IN ('payment_hold', 'confirmed'))`).bind(session.user.id),
     ]);
@@ -20,7 +20,8 @@ export async function GET(request: Request) {
       JOIN units u ON u.id = r.unit_id
       JOIN complexes c ON c.id = r.complex_id
       JOIN organizations o ON o.id = r.organization_id
-      WHERE r.buyer_user_id = ? AND r.status IN ('payment_hold', 'confirmed')
+      LEFT JOIN reservation_outcomes outcome ON outcome.reservation_id = r.id
+      WHERE r.buyer_user_id = ? AND r.status IN ('payment_hold', 'confirmed') AND COALESCE(outcome.outcome_status, 'active') <> 'sold'
       ORDER BY CASE r.status WHEN 'payment_hold' THEN 0 ELSE 1 END, r.created_at DESC`)
       .bind(session.user.id)
       .all();

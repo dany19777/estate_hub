@@ -255,6 +255,7 @@ export default function DeveloperDashboard() {
     };
     const id = target[label];
     if (!id) return;
+    if (label === 'Сделки') setWorkspaceRevision((revision) => revision + 1);
     setActiveNav(label);
     setSidebarOpen(false);
     window.history.replaceState(null, '', `#${id}`);
@@ -865,7 +866,7 @@ export default function DeveloperDashboard() {
                 </div>
               </section>
 
-              <DeveloperReservationsPanel {...developerReservations} />
+              <DeveloperReservationsPanel {...developerReservations} onUpdated={() => setWorkspaceRevision((revision) => revision + 1)} />
 
               <DeveloperMessagesPanel {...developerMessages} />
 
@@ -1102,6 +1103,10 @@ export default function DeveloperDashboard() {
                 onLeadUpdated={async () => {
                   await loadLeads();
                   setWorkspaceRevision((revision) => revision + 1);
+                }}
+                onDealCompleted={async () => {
+                  await developerReservations.reload();
+                  await loadLeads();
                 }}
               />
             </div>
