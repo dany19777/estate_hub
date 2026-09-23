@@ -122,7 +122,8 @@ export default function BuyerProfile() {
   const notifications = useNotifications();
   const watchlist = useWatchlist();
   const { session } = useSession();
-  const { reservations } = useReservations();
+  const { reservations, reload: reloadReservations } = useReservations();
+  const [demoReservationMessage, setDemoReservationMessage] = useState('');
   const {
     disputes,
     loading: disputesLoading,
@@ -157,6 +158,20 @@ export default function BuyerProfile() {
           ? 'На проверке'
           : 'Базовый аккаунт';
   const activeReservation = reservations[0];
+  const isDemoReservation = activeReservation?.payment_reference?.startsWith('LOCAL-DEMO-') ?? false;
+  async function cancelDemoReservation() {
+    if (!activeReservation || !window.confirm('Отменить тестовую бронь? Квартира снова станет доступной.')) return;
+    setDemoReservationMessage('');
+    try {
+      const response = await fetch('/api/reservations/demo', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reservationId: activeReservation.id }) });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message ?? 'Не удалось отменить бронь.');
+      await reloadReservations();
+      setDemoReservationMessage(payload.message ?? 'Тестовая бронь отменена.');
+    } catch (error) {
+      setDemoReservationMessage(error instanceof Error ? error.message : 'Не удалось отменить бронь.');
+    }
+  }
   const activeDispute = disputes.find(
     (item) =>
       item.reservation_id === activeReservation?.id &&
@@ -802,7 +817,7 @@ export default function BuyerProfile() {
                         <Badge>
                           <Clock3 />{' '}
                           {activeReservation.status === 'confirmed'
-                            ? 'Активная бронь'
+                            ? isDemoReservation ? 'Тестовая бронь' : 'Активная бронь'
                             : 'Ожидает оплаты'}
                         </Badge>
                         {activeDispute && (
@@ -864,7 +879,7 @@ export default function BuyerProfile() {
                         />
                         <p>
                           {activeReservation.status === 'confirmed'
-                            ? 'Оплата зарегистрирована. Посетите офис продаж до окончания срока брони.'
+                            ? isDemoReservation ? 'Тестовая бронь без оплаты. Квартира удерживается до указанного срока.' : 'Оплата зарегистрирована. Посетите офис продаж до окончания срока брони.'
                             : `Квартира удержана. Завершите оплату бронирования: ${formatPriceMillions(activeReservation.reservation_fee_uzs)} сум.`}
                         </p>
                         <div>
@@ -880,6 +895,7 @@ export default function BuyerProfile() {
                               </Button>
                             }
                           />
+                          {isDemoReservation && <Button variant="outline" onClick={() => void cancelDemoReservation()}>Отменить тестовую бронь</Button>}
                           {activeReservation.status === 'confirmed' &&
                           activeReservation.payment_status === 'paid' ? (
                             activeDispute ? (
@@ -919,12 +935,9 @@ export default function BuyerProfile() {
                           )}
                         </span>
                         <p>
-                          <strong>Оплата брони</strong>
+                          <strong>{isDemoReservation ? 'Тестовый режим' : 'Оплата брони'}</strong>
                           <small>
-                            {formatPriceMillions(
-                              activeReservation.reservation_fee_uzs,
-                            )}{' '}
-                            сум
+                            {isDemoReservation ? 'Без оплаты' : `${formatPriceMillions(activeReservation.reservation_fee_uzs)} сум`}
                           </small>
                         </p>
                       </div>
@@ -970,6 +983,7 @@ export default function BuyerProfile() {
                     </Button>
                   </div>
                 )}
+                {demoReservationMessage && <output>{demoReservationMessage}</output>}
               </section>
 
               <section className="profile-card-section" id="favorites">

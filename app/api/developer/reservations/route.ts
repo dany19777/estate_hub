@@ -13,6 +13,7 @@ type ReservationRow = {
   listing_id: string;
   lead_id: string;
   reservation_fee_uzs: number;
+  payment_reference: string | null;
 };
 
 const allowedActions = new Set(['visit_completed', 'deal_in_progress', 'extend', 'buyer_refused', 'developer_refused']);
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
     if (!session.organization) return Response.json({ reservations: [], stats: { active: 0, holds: 0, deals: 0, total: 0 } });
     const database = await ensureMarketplaceDatabase();
     await releaseExpiredReservations(database, session.organization.id);
-    const result = await database.prepare(`SELECT reservation.id, reservation.status, reservation.payment_status,
+    const result = await database.prepare(`SELECT reservation.id, reservation.status, reservation.payment_status, reservation.payment_reference,
       COALESCE(outcome.outcome_status, 'active') AS outcome_status, outcome.extension_reason, outcome.extended_at,
       reservation.price_uzs, reservation.reservation_fee_uzs, reservation.hold_expires_at, reservation.reservation_expires_at,
       reservation.created_at, customer.full_name AS buyer_name, customer.phone_e164 AS buyer_phone, customer.email AS buyer_email,
@@ -90,19 +91,20 @@ export async function PATCH(request: Request) {
     }
 
     const database = await ensureMarketplaceDatabase();
-    const reservation = await database.prepare(`SELECT reservation.id, reservation.status, reservation.payment_status,
+    const reservation = await database.prepare(`SELECT reservation.id, reservation.status, reservation.payment_status, reservation.payment_reference,
       COALESCE(outcome.outcome_status, 'active') AS outcome_status, reservation.unit_id, reservation.listing_id, reservation.lead_id, reservation.reservation_fee_uzs
       FROM reservation_transactions reservation
       LEFT JOIN reservation_outcomes outcome ON outcome.reservation_id = reservation.id
       WHERE reservation.id = ? AND reservation.organization_id = ? LIMIT 1`).bind(reservationId, session.organization.id).first<ReservationRow>();
     if (!reservation) return Response.json({ error: 'not_found', message: 'Бронирование не найдено.' }, { status: 404 });
-    if (reservation.status !== 'confirmed') return Response.json({ error: 'invalid_state', message: 'Действие доступно только для оплаченной активной брони.' }, { status: 409 });
+    if (reservation.status !== 'confirmed') return Response.json({ error: 'invalid_state', message: 'Действие доступно только для активной брони.' }, { status: 409 });
     if (['buyer_refused', 'developer_refused', 'sold', 'cancelled_admin'].includes(reservation.outcome_status)) return Response.json({ error: 'closed_reservation', message: 'Бронирование уже закрыто.' }, { status: 409 });
 
     const activityMetadata = action === 'extend' ? { reason, newExpiry } : { previousOutcome: reservation.outcome_status };
     const statements: D1PreparedStatement[] = [];
     let refundMetadata: Record<string, unknown> = {};
-    if (action === 'developer_refused') {
+    const isDemo = reservation.payment_reference?.startsWith('LOCAL-DEMO-') ?? false;
+    if (action === 'developer_refused' && !isDemo) {
       const refundKey = `developer-refund:${reservation.id}`;
       const refund = await paymentProvider().refundReservation({ reservationId: reservation.id, amountUzs: reservation.reservation_fee_uzs, idempotencyKey: refundKey });
       const refundOperationId = crypto.randomUUID();
@@ -126,7 +128,7 @@ export async function PATCH(request: Request) {
     if (action === 'deal_in_progress') statements.push(database.prepare(`UPDATE leads SET status = 'deal_in_progress', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(reservation.lead_id));
     if (action === 'buyer_refused' || action === 'developer_refused') {
       statements.push(database.prepare(`UPDATE reservation_transactions SET status = ?, payment_status = ?, cancellation_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
-        .bind(action === 'developer_refused' ? 'refunded' : 'cancelled', action === 'developer_refused' ? 'refunded' : 'paid', action, reservation.id));
+        .bind(action === 'developer_refused' && !isDemo ? 'refunded' : 'cancelled', isDemo ? 'awaiting_payment' : action === 'developer_refused' ? 'refunded' : 'paid', action, reservation.id));
       statements.push(database.prepare(`UPDATE units SET availability_status = 'available', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND availability_status = 'reserved'`).bind(reservation.unit_id));
       statements.push(database.prepare(`UPDATE listings SET status = 'published', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'reserved'`).bind(reservation.listing_id));
       statements.push(database.prepare(`UPDATE leads SET status = 'lost', lost_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(action, reservation.lead_id));
@@ -137,7 +139,7 @@ export async function PATCH(request: Request) {
     statements.push(database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, ?, 'reservation', ?, ?)`)
       .bind(crypto.randomUUID(), session.user.id, `reservation.${action}`, reservation.id, JSON.stringify(actionMetadata)));
     await database.batch(statements);
-    const messages: Record<string, string> = { visit_completed: 'Визит отмечен завершённым.', deal_in_progress: 'Бронь переведена в сделку.', extend: 'Срок брони продлён.', buyer_refused: 'Отказ покупателя зарегистрирован.', developer_refused: 'Отмена застройщика зарегистрирована, возврат проведён через платёжный контур.' };
+    const messages: Record<string, string> = { visit_completed: 'Визит отмечен завершённым.', deal_in_progress: 'Бронь переведена в сделку.', extend: 'Срок брони продлён.', buyer_refused: 'Отказ покупателя зарегистрирован.', developer_refused: isDemo ? 'Тестовая бронь отменена без возврата: оплаты не было.' : 'Отмена застройщика зарегистрирована, возврат проведён через платёжный контур.' };
     return Response.json({ reservationId, action, message: messages[action] });
   } catch (error) {
     const response = authorizationResponse(error);

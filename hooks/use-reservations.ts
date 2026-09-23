@@ -7,6 +7,7 @@ export type BuyerReservation = {
   listing_id: string;
   status: 'payment_hold' | 'confirmed';
   payment_status: string;
+  payment_reference: string | null;
   price_uzs: number;
   reservation_fee_uzs: number;
   hold_expires_at: string;

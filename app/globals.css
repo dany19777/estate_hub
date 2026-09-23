@@ -11003,6 +11003,23 @@ body:has(.site-header) .global-buyer-preferences {
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
 }
+.demo-reservation-action {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.demo-reservation-action > button,
+.demo-reservation-action > a {
+  width: 100%;
+}
+.demo-reservation-action small {
+  color: #66758d;
+}
+.demo-reservation-action p {
+  margin: 0;
+  color: #285dc4;
+  font-size: 14px;
+}
 .project-row-actions {
   display: flex;
   align-items: center;

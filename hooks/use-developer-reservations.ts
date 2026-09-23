@@ -6,6 +6,7 @@ export type DeveloperReservation = {
   id: string;
   status: 'payment_hold' | 'confirmed' | 'cancelled' | 'expired' | 'refunded';
   payment_status: 'awaiting_payment' | 'paid' | 'refunded' | 'failed';
+  payment_reference: string | null;
   outcome_status: 'active' | 'visit_completed' | 'deal_in_progress' | 'buyer_refused' | 'developer_refused' | 'sold' | 'cancelled_admin';
   extension_reason: string | null;
   extended_at: string | null;
