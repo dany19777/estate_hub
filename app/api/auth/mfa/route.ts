@@ -1,6 +1,6 @@
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { passwordSessionUser, sameOrigin, sessionCookie, sessionToken } from '@/lib/password-auth';
-import { decryptTotpSecret, encryptTotpSecret, matchingTotpStep, newTotpSecret } from '@/lib/platform-mfa';
+import { decryptTotpSecret, encryptTotpSecret, matchingTotpStep, newRecoveryCodes, newTotpSecret, normalizeRecoveryCode } from '@/lib/platform-mfa';
 import { tokenHash } from '@/lib/password';
 
 export const dynamic = 'force-dynamic';
@@ -52,7 +52,9 @@ export async function PATCH(request: Request) {
     if (!state || !token || state.user.mfa_verified_at) return Response.json({ error: 'unauthenticated' }, { status: 401, headers: noStore });
     const body = await request.json() as { code?: unknown };
     const code = typeof body.code === 'string' ? body.code.trim() : '';
-    if (!/^\d{6}$/.test(code)) return Response.json({ error: 'validation_failed', message: 'Введите шестизначный код.' }, { status: 400, headers: noStore });
+    const isTotp = /^\d{6}$/.test(code);
+    const recoveryCode = normalizeRecoveryCode(code);
+    if (!isTotp && !recoveryCode) return Response.json({ error: 'validation_failed', message: 'Введите шестизначный код или резервный код.' }, { status: 400, headers: noStore });
     const now = Math.floor(Date.now() / 1000);
     const bucket = `mfa:${state.user.id}`;
     const attempt = await state.database.prepare(`INSERT INTO auth_rate_limits (bucket, attempts, expires_at) VALUES (?, 1, ?)
@@ -61,18 +63,29 @@ export async function PATCH(request: Request) {
     if ((attempt?.attempts ?? 11) > 10) return Response.json({ error: 'rate_limited', message: 'Слишком много попыток. Повторите через 15 минут.' }, { status: 429, headers: { ...noStore, 'Retry-After': '900' } });
     const credential = await state.database.prepare('SELECT encrypted_secret, status, last_used_step FROM platform_mfa_credentials WHERE user_id = ?').bind(state.user.id).first<Credential>();
     if (!credential) return Response.json({ error: 'setup_required', message: 'Сначала настройте приложение-аутентификатор.' }, { status: 409, headers: noStore });
-    const secret = await decryptTotpSecret(credential.encrypted_secret, state.user.id);
-    const step = await matchingTotpStep(secret, code, credential.last_used_step);
-    if (step === null) return Response.json({ error: 'invalid_code', message: 'Неверный или уже использованный код.' }, { status: 400, headers: noStore });
-    const accepted = await state.database.prepare(`UPDATE platform_mfa_credentials SET status = 'active', last_used_step = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ? AND last_used_step < ?`).bind(step, state.user.id, step).run();
-    if ((accepted.meta.changes ?? 0) !== 1) return Response.json({ error: 'replayed_code', message: 'Код уже использован. Дождитесь следующего.' }, { status: 409, headers: noStore });
+    let recoveryCodes: string[] = [];
+    if (isTotp) {
+      const secret = await decryptTotpSecret(credential.encrypted_secret, state.user.id);
+      const step = await matchingTotpStep(secret, code, credential.last_used_step);
+      if (step === null) return Response.json({ error: 'invalid_code', message: 'Неверный или уже использованный код.' }, { status: 400, headers: noStore });
+      const accepted = await state.database.prepare(`UPDATE platform_mfa_credentials SET status = 'active', last_used_step = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ? AND last_used_step < ?`).bind(step, state.user.id, step).run();
+      if ((accepted.meta.changes ?? 0) !== 1) return Response.json({ error: 'replayed_code', message: 'Код уже использован. Дождитесь следующего.' }, { status: 409, headers: noStore });
+      if (credential.status === 'pending') recoveryCodes = newRecoveryCodes();
+    } else {
+      if (credential.status !== 'active' || !recoveryCode) return Response.json({ error: 'invalid_code', message: 'Резервный код недоступен.' }, { status: 400, headers: noStore });
+      const accepted = await state.database.prepare(`UPDATE platform_mfa_recovery_codes SET used_at = CURRENT_TIMESTAMP
+        WHERE user_id = ? AND code_hash = ? AND used_at IS NULL`).bind(state.user.id, await tokenHash(recoveryCode)).run();
+      if ((accepted.meta.changes ?? 0) !== 1) return Response.json({ error: 'invalid_code', message: 'Неверный или уже использованный резервный код.' }, { status: 400, headers: noStore });
+    }
+    const recoveryHashes = await Promise.all(recoveryCodes.map((item) => tokenHash(item.replaceAll('-', ''))));
     await state.database.batch([
+      ...recoveryHashes.map((hash) => state.database.prepare('INSERT INTO platform_mfa_recovery_codes (user_id, code_hash) VALUES (?, ?)').bind(state.user.id, hash)),
       state.database.prepare('UPDATE auth_sessions SET mfa_verified_at = ?, expires_at = ? WHERE token_hash = ? AND user_id = ?').bind(now, now + 12 * 3600, await tokenHash(token), state.user.id),
       state.database.prepare('DELETE FROM auth_rate_limits WHERE bucket = ?').bind(bucket),
-      state.database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'auth.mfa_verified', 'user', ?, '{}')`).bind(crypto.randomUUID(), state.user.id, state.user.id),
+      state.database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'auth.mfa_verified', 'user', ?, ?)`).bind(crypto.randomUUID(), state.user.id, state.user.id, JSON.stringify({ method: isTotp ? 'totp' : 'recovery' })),
     ]);
-    return Response.json({ status: 'verified', redirectTo: '/admin' }, { headers: { ...noStore, 'Set-Cookie': sessionCookie(request, token, 12 * 3600) } });
+    return Response.json({ status: 'verified', redirectTo: '/admin', recoveryCodes }, { headers: { ...noStore, 'Set-Cookie': sessionCookie(request, token, 12 * 3600) } });
   } catch (error) {
     console.error('MFA verification unavailable', error instanceof Error ? error.message : 'unknown');
     return Response.json({ error: 'mfa_unavailable', message: 'Не удалось проверить код. Повторите попытку.' }, { status: 503, headers: noStore });

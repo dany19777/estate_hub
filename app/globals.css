@@ -14038,6 +14038,21 @@ body:has(.site-header) .global-buyer-preferences {
   font-weight: 700;
   letter-spacing: 0.08em;
 }
+.mfa-recovery-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mfa-recovery-list code {
+  font-size: 13px;
+  letter-spacing: 0.03em;
+}
+@media (max-width: 480px) {
+  .mfa-recovery-list { grid-template-columns: 1fr; }
+}
 .auth-state {
   min-height: 70svh;
   display: flex;

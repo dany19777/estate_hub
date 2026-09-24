@@ -2,6 +2,18 @@ import { env } from 'cloudflare:workers';
 
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
+export function newRecoveryCodes(count = 10) {
+  return Array.from({ length: count }, () => {
+    const value = Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
+    return value.match(/.{4}/g)!.join('-');
+  });
+}
+
+export function normalizeRecoveryCode(value: string) {
+  const normalized = value.toUpperCase().replace(/[\s-]/g, '');
+  return /^[A-F0-9]{16}$/.test(normalized) ? normalized : null;
+}
+
 export function newTotpSecret() {
   const bytes = crypto.getRandomValues(new Uint8Array(20));
   let bits = 0;
