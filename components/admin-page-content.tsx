@@ -36,6 +36,7 @@ import { AdminReviewsPanel } from '@/components/admin-reviews-panel';
 import { AdminUsersPanel } from '@/components/admin-users-panel';
 import { AdminAuditPanel } from '@/components/admin-audit-panel';
 import { AdminDirectoryPanel } from '@/components/admin-directory-panel';
+import { LogoutButton } from '@/components/logout-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -200,11 +201,11 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    const requestedView = window.location.hash.slice(1);
-    if (adminHashLabels[requestedView]) {
-      setActiveNav(adminHashLabels[requestedView]);
-    }
     const task = window.setTimeout(() => {
+      const requestedView = window.location.hash.slice(1);
+      if (adminHashLabels[requestedView]) {
+        setActiveNav(adminHashLabels[requestedView]);
+      }
       void loadDashboard();
     }, 0);
     return () => window.clearTimeout(task);
@@ -469,6 +470,7 @@ export default function AdminDashboard() {
               )}
             </button>
             <span>{userInitials}</span>
+            <LogoutButton className="admin-logout-button" />
           </div>
         </header>
         <div

@@ -13953,6 +13953,511 @@ body:has(.site-header) .global-buyer-preferences {
   }
 }
 
+/* Readable, spacious platform administration without changing its visual language. */
+.platform-admin {
+  grid-template-columns: 272px minmax(0, 1fr);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.platform-admin :is(button, input, select, textarea, label, a, p, small, em, span, strong, b, time, code, td, th, h3) {
+  font-size: 14px !important;
+}
+.platform-admin .admin-heading h1 {
+  font-size: 30px;
+}
+.platform-admin .admin-panel-heading h2 {
+  font-size: 19px;
+  line-height: 1.3;
+}
+.platform-admin :is(.admin-billing-block-heading h3, .billing-event-strip h3, .admin-billing-plans h3, .promotion-admin-products h3) {
+  font-size: 17px !important;
+}
+.platform-admin :is(.admin-kpis strong, .billing-kpis strong, .promotion-admin-kpis strong) {
+  font-size: 27px !important;
+  line-height: 1.2;
+}
+.platform-admin :is(.admin-brand strong, .admin-brand strong em) {
+  font-size: 20px !important;
+}
+.platform-admin :is(.admin-brand small, .system-status small, .admin-kpis em, .admin-directory-identity small, .admin-directory-identity em, .admin-audit-list time) {
+  font-size: 12px !important;
+}
+.platform-admin :is(button, input, select, textarea) {
+  min-height: 40px;
+}
+.platform-admin button svg,
+.platform-admin a svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+.platform-admin .admin-sidebar {
+  min-width: 0;
+}
+.platform-admin .admin-brand,
+.platform-admin .admin-topbar {
+  height: 76px;
+}
+.platform-admin .admin-brand {
+  gap: 12px;
+  padding-inline: 20px;
+}
+.platform-admin .admin-brand > span {
+  width: 42px;
+  height: 42px;
+}
+.platform-admin .admin-brand > span svg {
+  width: 22px;
+  height: 22px;
+}
+.platform-admin .admin-user {
+  grid-template-columns: 44px minmax(0, 1fr) 18px;
+  gap: 11px;
+  margin: 16px 14px;
+  padding: 12px;
+}
+.platform-admin .admin-user > span {
+  width: 44px;
+  height: 44px;
+  font-weight: 700;
+}
+.platform-admin .admin-user > svg {
+  width: 18px;
+}
+.platform-admin .admin-sidebar > nav {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  gap: 4px;
+  padding-inline: 12px;
+}
+.platform-admin .admin-sidebar > nav button {
+  min-height: 43px;
+  height: auto;
+  gap: 12px;
+  padding: 9px 12px;
+}
+.platform-admin .admin-sidebar > nav button svg {
+  width: 18px;
+  height: 18px;
+}
+.platform-admin .admin-sidebar > nav button em {
+  min-width: 24px;
+  min-height: 24px;
+  height: 24px;
+  padding-inline: 5px;
+}
+.platform-admin .admin-back-to-site {
+  min-height: 44px;
+  height: auto;
+  margin: 12px 14px 0;
+  padding: 9px 12px;
+}
+.platform-admin .system-status {
+  margin: 12px 14px 16px;
+  padding: 12px;
+}
+.platform-admin .admin-topbar {
+  grid-template-columns: minmax(150px, 1fr) minmax(260px, 400px) minmax(80px, 1fr);
+  padding-inline: 32px;
+}
+.platform-admin .admin-topbar > div:first-child strong {
+  font-size: 16px !important;
+}
+.platform-admin .admin-global-search {
+  height: 42px;
+}
+.platform-admin .admin-global-search svg {
+  width: 18px;
+  margin-left: 12px;
+}
+.platform-admin .admin-global-search input {
+  height: 40px;
+}
+.platform-admin .admin-topbar > div:last-child button,
+.platform-admin .admin-topbar > div:last-child > span {
+  width: 40px;
+  height: 40px;
+}
+.platform-admin .admin-topbar > div:last-child button span {
+  top: 0;
+  right: -3px;
+  width: 21px;
+  height: 21px;
+  font-size: 11px !important;
+}
+.platform-admin .admin-topbar > div:last-child .admin-logout-button {
+  display: inline-flex;
+  width: auto;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid #2a3a51;
+  border-radius: 8px;
+  color: #a9b9cf;
+  background: #14243a;
+}
+.platform-admin .admin-content {
+  padding: 30px 32px 48px;
+}
+.platform-admin .admin-view-container {
+  height: calc(100dvh - 76px);
+}
+.platform-admin .admin-heading {
+  margin-bottom: 24px;
+}
+.platform-admin .admin-heading > div > span {
+  font-size: 12px !important;
+}
+.platform-admin .admin-heading p {
+  color: #a6b5c8;
+}
+.platform-admin .admin-kpis {
+  gap: 14px;
+}
+.platform-admin .admin-kpis article {
+  min-height: 118px;
+  height: auto;
+  gap: 14px;
+  padding: 17px;
+}
+.platform-admin .admin-kpis article > span {
+  width: 44px;
+  height: 44px;
+}
+.platform-admin .admin-kpis article > span svg {
+  width: 21px;
+  height: 21px;
+}
+.platform-admin .admin-kpis small {
+  color: #a1afc2;
+}
+.platform-admin :is(.admin-main-grid, .admin-lower-grid) {
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 18px;
+  margin-top: 18px;
+}
+.platform-admin .admin-side-stack {
+  gap: 18px;
+}
+.platform-admin .admin-panel {
+  border-radius: 14px;
+}
+.platform-admin .admin-panel-heading {
+  min-height: 78px;
+  gap: 20px;
+  padding: 18px 20px;
+}
+.platform-admin .admin-panel-heading p {
+  color: #9aaac0;
+  line-height: 1.4;
+}
+.platform-admin .admin-queue-toolbar,
+.platform-admin .finance-toolbar {
+  min-height: 62px;
+  height: auto;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+}
+.platform-admin .admin-queue-toolbar > div:first-child {
+  flex-wrap: wrap;
+}
+.platform-admin .admin-queue-toolbar > div:first-child button,
+.platform-admin .finance-toolbar button,
+.platform-admin .admin-directory-tabs button,
+.platform-admin .admin-directory-filters button {
+  min-height: 38px;
+  height: auto;
+  padding: 8px 12px;
+}
+.platform-admin .admin-queue-toolbar > div:last-child {
+  width: min(100%, 260px);
+  height: 40px;
+}
+.platform-admin .admin-queue-toolbar > div:last-child input {
+  height: 38px;
+}
+.platform-admin [data-slot='table-container'] {
+  max-width: 100%;
+}
+.platform-admin .admin-table {
+  min-width: 900px;
+  font-size: 14px !important;
+}
+.platform-admin .admin-table [data-slot='table-head'] {
+  height: 48px;
+  padding: 10px 12px;
+  color: #9aabc1;
+  font-size: 12px !important;
+}
+.platform-admin .admin-table [data-slot='table-cell'] {
+  height: 64px;
+  padding: 10px 12px;
+  color: #c1cede;
+  font-size: 14px !important;
+}
+.platform-admin .admin-table td > button {
+  width: 38px;
+  height: 38px;
+}
+.platform-admin .admin-table td > button svg {
+  width: 18px;
+  height: 18px;
+}
+.platform-admin :is(.risk-badge, .queue-status, .dispute-priority, .dispute-status, .finance-status, .billing-admin-status, .promotion-state, .admin-entity-status) {
+  min-height: 28px;
+  height: auto;
+  padding: 5px 9px;
+  line-height: 1.2;
+}
+.platform-admin :is(.dispute-status, .finance-status) svg {
+  width: 16px;
+  height: 16px;
+}
+.platform-admin .admin-applicant {
+  min-width: 190px;
+  gap: 10px;
+}
+.platform-admin :is(.admin-applicant > span, .finance-operation > span, .admin-directory-avatar, .admin-audit-list article > span) {
+  width: 42px;
+  height: 42px;
+}
+.platform-admin .attention-panel article {
+  grid-template-columns: 42px minmax(0, 1fr) 18px;
+  gap: 12px;
+  padding: 15px 18px;
+}
+.platform-admin .attention-panel article > span {
+  width: 42px;
+  height: 42px;
+}
+.platform-admin .attention-panel article > span svg {
+  width: 20px;
+  height: 20px;
+}
+.platform-admin .finance-summary > div:nth-child(2) {
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+.platform-admin .finance-summary > div:nth-child(2) span {
+  padding: 12px 6px;
+}
+.platform-admin .finance-summary > a,
+.platform-admin .finance-summary > button {
+  min-height: 44px;
+  height: auto;
+  padding: 9px;
+}
+.platform-admin .admin-activity article {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 16px;
+}
+.platform-admin .admin-activity article > span {
+  width: 40px;
+  height: 40px;
+}
+.platform-admin .admin-activity article > span svg {
+  width: 18px;
+  height: 18px;
+}
+.platform-admin .admin-entity-directory,
+.platform-admin .admin-review-list {
+  gap: 12px;
+  padding: 18px;
+}
+.platform-admin .admin-entity-directory > article,
+.platform-admin .admin-user-directory > article,
+.platform-admin .admin-review-list > article,
+.platform-admin .admin-audit-list article {
+  gap: 14px;
+  padding: 16px;
+}
+.platform-admin .admin-entity-directory > article {
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
+}
+.platform-admin .admin-user-directory > article {
+  grid-template-columns: 42px minmax(210px, 0.8fr) minmax(0, 1.5fr) auto;
+}
+.platform-admin .admin-entity-actions,
+.platform-admin .admin-directory-roles {
+  gap: 8px;
+}
+.platform-admin .admin-entity-actions :is(a, button),
+.platform-admin .admin-user-status,
+.platform-admin .admin-directory-roles button {
+  min-height: 38px;
+  height: auto;
+  padding: 8px 10px;
+}
+.platform-admin .admin-directory-tabs,
+.platform-admin .admin-directory-filters {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 18px;
+}
+.platform-admin .admin-directory-tabs button span {
+  min-width: 24px;
+  height: 24px;
+  padding-inline: 5px;
+}
+.platform-admin .admin-audit-list {
+  gap: 10px;
+  max-height: min(65vh, 800px);
+}
+.platform-admin .admin-audit-list article {
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+}
+.platform-admin .admin-audit-list code {
+  font-size: 12px !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.platform-admin :is(.billing-kpis, .promotion-admin-kpis) {
+  gap: 12px;
+  padding: 18px;
+}
+.platform-admin :is(.billing-kpis article, .promotion-admin-kpis article) {
+  min-height: 108px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px 12px;
+  padding: 16px;
+}
+.platform-admin :is(.billing-kpis article > span, .promotion-admin-kpis article > span) {
+  width: 44px;
+  height: 44px;
+}
+.platform-admin :is(.admin-billing-plans, .promotion-admin-products) {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  padding: 0 18px 18px;
+}
+.platform-admin :is(.admin-billing-plans article, .promotion-admin-products article) {
+  padding: 16px;
+}
+.platform-admin .promotion-admin-products article {
+  min-height: 200px;
+}
+.platform-admin .admin-billing-block-heading {
+  min-height: 70px;
+  padding: 16px 20px;
+}
+.platform-admin .admin-billing-block-heading > button,
+.platform-admin .admin-billing-actions button {
+  gap: 8px;
+  padding: 8px 12px;
+}
+@media (max-width: 1450px) {
+  .platform-admin .admin-kpis {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .platform-admin .admin-kpis article {
+    grid-column: span 2;
+  }
+  .platform-admin .admin-kpis article:nth-last-child(-n + 2) {
+    grid-column: span 3;
+  }
+  .platform-admin :is(.admin-main-grid, .admin-lower-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .platform-admin .admin-side-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .platform-admin .admin-activity > div:last-child {
+    grid-template-columns: 1fr;
+  }
+  .platform-admin .admin-activity article {
+    border-right: 0;
+  }
+}
+@media (max-width: 1150px) {
+  .platform-admin .admin-kpis {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .platform-admin .admin-user-directory > article {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+  }
+  .platform-admin .admin-directory-roles {
+    grid-column: 2 / -1;
+  }
+}
+@media (max-width: 900px) {
+  .platform-admin {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .platform-admin .admin-sidebar {
+    width: min(82vw, 300px);
+  }
+  .platform-admin .admin-entity-directory > article {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+  }
+  .platform-admin .admin-entity-actions {
+    grid-column: 2 / -1;
+  }
+  .platform-admin .admin-topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .platform-admin .admin-global-search {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .platform-admin .admin-content {
+    padding: 20px 16px 32px;
+  }
+  .platform-admin .admin-topbar {
+    height: 68px;
+    padding-inline: 16px;
+  }
+  .platform-admin .admin-view-container {
+    height: calc(100dvh - 68px);
+  }
+  .platform-admin .admin-kpis,
+  .platform-admin :is(.billing-kpis, .promotion-admin-kpis) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .platform-admin .admin-kpis article,
+  .platform-admin .admin-kpis article:nth-last-child(-n + 2) {
+    grid-column: auto;
+  }
+  .platform-admin .admin-kpis article:last-child {
+    grid-column: 1 / -1;
+  }
+  .platform-admin .admin-side-stack,
+  .platform-admin .admin-review-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .platform-admin .admin-panel-heading,
+  .platform-admin .admin-billing-block-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .platform-admin .admin-audit-list article {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+  .platform-admin .admin-audit-list time {
+    grid-column: 2;
+  }
+}
+@media (max-width: 480px) {
+  .platform-admin .admin-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .platform-admin .admin-kpis article:last-child {
+    grid-column: auto;
+  }
+  .platform-admin .admin-user-directory > article,
+  .platform-admin .admin-entity-directory > article {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+  .platform-admin .admin-user-status,
+  .platform-admin .admin-directory-roles,
+  .platform-admin .admin-entity-actions {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Account entry extends the existing light marketplace visual language. */
 .login-page {
   min-height: 100svh;
