@@ -1,6 +1,7 @@
+import { env } from 'cloudflare:workers';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { passwordSessionUser, sameOrigin, sessionCookie, sessionToken } from '@/lib/password-auth';
-import { decryptTotpSecret, encryptTotpSecret, matchingTotpStep, newRecoveryCodes, newTotpSecret, normalizeRecoveryCode } from '@/lib/platform-mfa';
+import { decryptTotpSecret, encryptTotpSecret, matchingTotpStep, newRecoveryCodes, newTotpSecret, normalizeRecoveryCode, totpCode } from '@/lib/platform-mfa';
 import { tokenHash } from '@/lib/password';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,15 @@ async function context(request: Request) {
 
 const noStore = { 'Cache-Control': 'private, no-store' };
 
+function localDemoMfa(request: Request, userId: string) {
+  const hostname = new URL(request.url).hostname;
+  const settings = env as Cloudflare.Env & { ESTATEHUB_TEST_ACCOUNTS?: string; ENABLE_LOCAL_DEMO_MFA?: string };
+  return (hostname === 'localhost' || hostname === '127.0.0.1')
+    && settings.ENABLE_LOCAL_DEMO_MFA === 'true'
+    && Boolean(settings.ESTATEHUB_TEST_ACCOUNTS)
+    && userId === 'test-auth-superadmin';
+}
+
 async function recordMfaEvent(database: D1Database, userId: string, action: string, method: string) {
   await database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json)
     VALUES (?, 'system', ?, ?, 'user', ?, ?)`).bind(crypto.randomUUID(), userId, action, userId, JSON.stringify({ method })).run().catch((error) => console.error('Failed to record MFA event', error));
@@ -26,6 +36,22 @@ async function recordMfaEvent(database: D1Database, userId: string, action: stri
 export async function GET(request: Request) {
   const state = await context(request);
   if (!state) return Response.json({ error: 'unauthenticated' }, { status: 401, headers: noStore });
+  if (localDemoMfa(request, state.user.id) && !state.user.mfa_verified_at) {
+    let credential = await state.database.prepare('SELECT encrypted_secret, status, last_used_step FROM platform_mfa_credentials WHERE user_id = ?').bind(state.user.id).first<Credential>();
+    if (!credential) {
+      const secret = newTotpSecret();
+      await state.database.prepare(`INSERT OR IGNORE INTO platform_mfa_credentials (user_id, encrypted_secret, status)
+        VALUES (?, ?, 'pending')`).bind(state.user.id, await encryptTotpSecret(secret, state.user.id)).run();
+      credential = await state.database.prepare('SELECT encrypted_secret, status, last_used_step FROM platform_mfa_credentials WHERE user_id = ?').bind(state.user.id).first<Credential>();
+    }
+    if (!credential) return Response.json({ error: 'mfa_unavailable' }, { status: 503, headers: noStore });
+    const currentStep = Math.floor(Date.now() / 30_000);
+    const nextStep = Math.max(currentStep, credential.last_used_step + 1);
+    const demoCode = nextStep <= currentStep + 1
+      ? await totpCode(await decryptTotpSecret(credential.encrypted_secret, state.user.id), nextStep)
+      : null;
+    return Response.json({ status: 'code_required', email: state.user.email, demoCode, demo: true }, { headers: noStore });
+  }
   const credential = await state.database.prepare('SELECT status FROM platform_mfa_credentials WHERE user_id = ?').bind(state.user.id).first<{ status: string }>();
   return Response.json({ status: state.user.mfa_verified_at ? 'verified' : credential?.status === 'active' ? 'code_required' : 'setup_required', email: state.user.email }, { headers: noStore });
 }
@@ -79,13 +105,14 @@ export async function PATCH(request: Request) {
         await recordMfaEvent(state.database, state.user.id, 'auth.mfa_failed', 'totp');
         return Response.json({ error: 'invalid_code', message: 'Неверный или уже использованный код.' }, { status: 400, headers: noStore });
       }
-      const accepted = await state.database.prepare(`UPDATE platform_mfa_credentials SET status = 'active', last_used_step = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = ? AND last_used_step < ?`).bind(step, state.user.id, step).run();
+      const demo = localDemoMfa(request, state.user.id);
+      const accepted = await state.database.prepare(`UPDATE platform_mfa_credentials SET status = ?, last_used_step = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ? AND last_used_step < ?`).bind(demo ? 'pending' : 'active', step, state.user.id, step).run();
       if ((accepted.meta.changes ?? 0) !== 1) {
         await recordMfaEvent(state.database, state.user.id, 'auth.mfa_failed', 'replayed_totp');
         return Response.json({ error: 'replayed_code', message: 'Код уже использован. Дождитесь следующего.' }, { status: 409, headers: noStore });
       }
-      if (credential.status === 'pending') recoveryCodes = newRecoveryCodes();
+      if (credential.status === 'pending' && !demo) recoveryCodes = newRecoveryCodes();
     } else {
       if (credential.status !== 'active' || !recoveryCode) return Response.json({ error: 'invalid_code', message: 'Резервный код недоступен.' }, { status: 400, headers: noStore });
       const accepted = await state.database.prepare(`UPDATE platform_mfa_recovery_codes SET used_at = CURRENT_TIMESTAMP
@@ -100,7 +127,7 @@ export async function PATCH(request: Request) {
       ...recoveryHashes.map((hash) => state.database.prepare('INSERT INTO platform_mfa_recovery_codes (user_id, code_hash) VALUES (?, ?)').bind(state.user.id, hash)),
       state.database.prepare('UPDATE auth_sessions SET mfa_verified_at = ?, expires_at = ? WHERE token_hash = ? AND user_id = ?').bind(now, now + 12 * 3600, await tokenHash(token), state.user.id),
       state.database.prepare('DELETE FROM auth_rate_limits WHERE bucket = ?').bind(bucket),
-      state.database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'auth.mfa_verified', 'user', ?, ?)`).bind(crypto.randomUUID(), state.user.id, state.user.id, JSON.stringify({ method: isTotp ? 'totp' : 'recovery' })),
+      state.database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'auth.mfa_verified', 'user', ?, ?)`).bind(crypto.randomUUID(), state.user.id, state.user.id, JSON.stringify({ method: localDemoMfa(request, state.user.id) ? 'local_demo' : isTotp ? 'totp' : 'recovery' })),
     ]);
     return Response.json({ status: 'verified', redirectTo: '/admin', recoveryCodes }, { headers: { ...noStore, 'Set-Cookie': sessionCookie(request, token, 12 * 3600) } });
   } catch (error) {

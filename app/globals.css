@@ -14048,6 +14048,12 @@ body:has(.site-header) .global-buyer-preferences {
   font-weight: 700;
   letter-spacing: 0.08em;
 }
+.mfa-demo-code {
+  color: #174ba8;
+  font-size: clamp(32px, 8vw, 48px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+}
 .mfa-recovery-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
