@@ -9,6 +9,7 @@ const checks = [
   { path: '/api/buyer/favorites', expected: { anonymous: 401, buyer: 200, developer: 200, superadmin: 403 } },
   { path: '/api/developer/workspace', expected: { anonymous: 401, buyer: 403, developer: 200, superadmin: 403 } },
   { path: '/api/admin/users', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
+  { path: '/api/admin/billing/export', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
 ];
 const mutationChecks = [
   { method: 'POST', path: '/api/developer/complexes', expected: { anonymous: 401, buyer: 403, developer: 400, superadmin: 403 } },

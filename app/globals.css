@@ -13269,12 +13269,22 @@ body:has(.site-header) .global-buyer-preferences {
 .admin-billing-panel > .admin-panel-heading {
   border-bottom: 1px solid #19283b;
 }
-.admin-billing-panel > .admin-panel-heading > button {
+.admin-billing-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.admin-billing-actions button {
   display: flex;
   align-items: center;
   gap: 4px;
+  border: 0;
+  color: #6f94ff;
+  background: transparent;
+  font-size: 10px;
+  cursor: pointer;
 }
-.admin-billing-panel > .admin-panel-heading > button svg {
+.admin-billing-actions button svg {
   width: 11px;
 }
 .admin-billing-panel > .admin-operation-state {

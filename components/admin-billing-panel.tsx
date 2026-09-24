@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CalendarClock, CheckCircle2, CircleDollarSign, Edit3, RefreshCw, WalletCards } from 'lucide-react';
+import { AlertTriangle, CalendarClock, CheckCircle2, CircleDollarSign, Download, Edit3, RefreshCw, WalletCards } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -78,7 +78,7 @@ export function AdminBillingPanel({ sandboxMode, plans, subscriptions, config, s
 
   return (
     <section className="admin-panel admin-billing-panel" id="billing">
-      <div className="admin-panel-heading"><div><h2>Тарифы и биллинг</h2><p>Подписки застройщиков и оплаченные периоды вторичного рынка</p></div><button type="button" onClick={onRetry}><RefreshCw /> Обновить</button></div>
+      <div className="admin-panel-heading"><div><h2>Тарифы и биллинг</h2><p>Подписки застройщиков и оплаченные периоды вторичного рынка</p></div><div className="admin-billing-actions"><button type="button" onClick={() => window.location.assign('/api/admin/billing/export')}><Download /> Выгрузить CSV</button><button type="button" onClick={onRetry}><RefreshCw /> Обновить</button></div></div>
       {error && <div className="admin-operation-state error"><AlertTriangle /><span>{error}</span><button type="button" onClick={onRetry}>Повторить</button></div>}
       <div className="billing-kpis">
         <article><span><CircleDollarSign /></span><small>Выручка</small><strong>{money(stats.revenue)}</strong></article>
