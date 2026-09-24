@@ -10,6 +10,7 @@
     "build": "vinext build",
     "check:locales": "node scripts/audit-buyer-locales.mjs",
     "check:roles": "node scripts/verify-role-access.mjs",
+    "check:migrations": "python3 scripts/check-migrations.py",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt"
