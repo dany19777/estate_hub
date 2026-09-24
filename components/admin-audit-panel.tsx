@@ -14,6 +14,9 @@ const actionLabels: Record<string, string> = {
   'complex.published': 'ЖК опубликован', 'complex.rejected': 'Публикация ЖК отклонена',
   'reservation.confirmed': 'Бронирование оплачено', 'reservation.extended': 'Бронирование продлено',
   'review.published': 'Отзыв опубликован', 'review.rejected': 'Отзыв отклонён',
+  'auth.login_failed': 'Неверный пароль', 'auth.rate_limited': 'Превышен лимит входов',
+  'auth.mfa_failed': 'Неверный MFA-код', 'auth.mfa_rate_limited': 'Превышен лимит MFA',
+  'auth.mfa_verified': 'MFA подтверждена', 'billing.exported': 'Выгружен журнал биллинга',
 };
 
 function date(value: string) { return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(`${value.replace(' ', 'T')}Z`)); }

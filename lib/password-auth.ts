@@ -159,7 +159,13 @@ export async function loginWithPassword(
       expires_at = CASE WHEN expires_at <= ? THEN excluded.expires_at ELSE expires_at END RETURNING attempts`)
       .bind(bucket, now + 900, now, now)
       .first<{ attempts: number }>();
-    if ((row?.attempts ?? limit + 1) > limit) return { status: 429 as const };
+    if ((row?.attempts ?? limit + 1) > limit) {
+      if (row?.attempts === limit + 1) {
+        await database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json)
+          VALUES (?, 'system', NULL, 'auth.rate_limited', 'auth_bucket', ?, ?)`).bind(crypto.randomUUID(), bucket, JSON.stringify({ limit })).run().catch((error) => console.error('Failed to record login rate limit', error));
+      }
+      return { status: 429 as const };
+    }
   }
   const credentials = await database
     .prepare(`SELECT credentials.user_id, credentials.password_hash, users.status
@@ -170,8 +176,13 @@ export async function loginWithPassword(
     password,
     credentials?.password_hash ?? DUMMY_HASH,
   );
-  if (!valid || !credentials || credentials.status !== 'active')
+  if (!valid || !credentials || credentials.status !== 'active') {
+    if (credentials) {
+      await database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json)
+        VALUES (?, 'system', ?, 'auth.login_failed', 'user', ?, '{}')`).bind(crypto.randomUUID(), credentials.user_id, credentials.user_id).run().catch((error) => console.error('Failed to record login failure', error));
+    }
     return { status: 401 as const };
+  }
   const [platformRole, membership] = await Promise.all([
     database
       .prepare(`SELECT 1 AS allowed FROM platform_role_assignments WHERE user_id = ? LIMIT 1`)

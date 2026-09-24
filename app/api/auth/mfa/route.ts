@@ -18,6 +18,11 @@ async function context(request: Request) {
 
 const noStore = { 'Cache-Control': 'private, no-store' };
 
+async function recordMfaEvent(database: D1Database, userId: string, action: string, method: string) {
+  await database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json)
+    VALUES (?, 'system', ?, ?, 'user', ?, ?)`).bind(crypto.randomUUID(), userId, action, userId, JSON.stringify({ method })).run().catch((error) => console.error('Failed to record MFA event', error));
+}
+
 export async function GET(request: Request) {
   const state = await context(request);
   if (!state) return Response.json({ error: 'unauthenticated' }, { status: 401, headers: noStore });
@@ -60,23 +65,35 @@ export async function PATCH(request: Request) {
     const attempt = await state.database.prepare(`INSERT INTO auth_rate_limits (bucket, attempts, expires_at) VALUES (?, 1, ?)
       ON CONFLICT(bucket) DO UPDATE SET attempts = CASE WHEN expires_at <= ? THEN 1 ELSE attempts + 1 END,
       expires_at = CASE WHEN expires_at <= ? THEN excluded.expires_at ELSE expires_at END RETURNING attempts`).bind(bucket, now + 900, now, now).first<{ attempts: number }>();
-    if ((attempt?.attempts ?? 11) > 10) return Response.json({ error: 'rate_limited', message: 'Слишком много попыток. Повторите через 15 минут.' }, { status: 429, headers: { ...noStore, 'Retry-After': '900' } });
+    if ((attempt?.attempts ?? 11) > 10) {
+      if (attempt?.attempts === 11) await recordMfaEvent(state.database, state.user.id, 'auth.mfa_rate_limited', 'unknown');
+      return Response.json({ error: 'rate_limited', message: 'Слишком много попыток. Повторите через 15 минут.' }, { status: 429, headers: { ...noStore, 'Retry-After': '900' } });
+    }
     const credential = await state.database.prepare('SELECT encrypted_secret, status, last_used_step FROM platform_mfa_credentials WHERE user_id = ?').bind(state.user.id).first<Credential>();
     if (!credential) return Response.json({ error: 'setup_required', message: 'Сначала настройте приложение-аутентификатор.' }, { status: 409, headers: noStore });
     let recoveryCodes: string[] = [];
     if (isTotp) {
       const secret = await decryptTotpSecret(credential.encrypted_secret, state.user.id);
       const step = await matchingTotpStep(secret, code, credential.last_used_step);
-      if (step === null) return Response.json({ error: 'invalid_code', message: 'Неверный или уже использованный код.' }, { status: 400, headers: noStore });
+      if (step === null) {
+        await recordMfaEvent(state.database, state.user.id, 'auth.mfa_failed', 'totp');
+        return Response.json({ error: 'invalid_code', message: 'Неверный или уже использованный код.' }, { status: 400, headers: noStore });
+      }
       const accepted = await state.database.prepare(`UPDATE platform_mfa_credentials SET status = 'active', last_used_step = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ? AND last_used_step < ?`).bind(step, state.user.id, step).run();
-      if ((accepted.meta.changes ?? 0) !== 1) return Response.json({ error: 'replayed_code', message: 'Код уже использован. Дождитесь следующего.' }, { status: 409, headers: noStore });
+      if ((accepted.meta.changes ?? 0) !== 1) {
+        await recordMfaEvent(state.database, state.user.id, 'auth.mfa_failed', 'replayed_totp');
+        return Response.json({ error: 'replayed_code', message: 'Код уже использован. Дождитесь следующего.' }, { status: 409, headers: noStore });
+      }
       if (credential.status === 'pending') recoveryCodes = newRecoveryCodes();
     } else {
       if (credential.status !== 'active' || !recoveryCode) return Response.json({ error: 'invalid_code', message: 'Резервный код недоступен.' }, { status: 400, headers: noStore });
       const accepted = await state.database.prepare(`UPDATE platform_mfa_recovery_codes SET used_at = CURRENT_TIMESTAMP
         WHERE user_id = ? AND code_hash = ? AND used_at IS NULL`).bind(state.user.id, await tokenHash(recoveryCode)).run();
-      if ((accepted.meta.changes ?? 0) !== 1) return Response.json({ error: 'invalid_code', message: 'Неверный или уже использованный резервный код.' }, { status: 400, headers: noStore });
+      if ((accepted.meta.changes ?? 0) !== 1) {
+        await recordMfaEvent(state.database, state.user.id, 'auth.mfa_failed', 'recovery');
+        return Response.json({ error: 'invalid_code', message: 'Неверный или уже использованный резервный код.' }, { status: 400, headers: noStore });
+      }
     }
     const recoveryHashes = await Promise.all(recoveryCodes.map((item) => tokenHash(item.replaceAll('-', ''))));
     await state.database.batch([
