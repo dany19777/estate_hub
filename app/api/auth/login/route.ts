@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       { redirectTo: result.redirectTo },
       {
         headers: {
-          'Set-Cookie': sessionCookie(request, result.token),
+          'Set-Cookie': sessionCookie(request, result.token, result.redirectTo === '/mfa' ? 600 : undefined),
           'Cache-Control': 'no-store',
         },
       },

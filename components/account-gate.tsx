@@ -14,7 +14,7 @@ export function AccountGate({
   showSessionBar?: boolean;
   children: React.ReactNode;
 }) {
-  const { session, loading, error, unauthenticated } = useSession();
+  const { session, loading, error, unauthenticated, mfaRequired } = useSession();
   useEffect(() => {
     if (!loading && unauthenticated) {
       const returnTo = `${window.location.pathname}${window.location.search}`;
@@ -22,7 +22,8 @@ export function AccountGate({
         `/login?returnTo=${encodeURIComponent(returnTo)}`,
       );
     }
-  }, [loading, unauthenticated]);
+    if (!loading && mfaRequired) window.location.replace('/mfa');
+  }, [loading, unauthenticated, mfaRequired]);
   if (loading) return <output className="auth-state">Проверяем доступ…</output>;
   if (!session)
     return (

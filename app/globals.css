@@ -14016,6 +14016,28 @@ body:has(.site-header) .global-buyer-preferences {
   color: #b42318;
   font-size: 14px;
 }
+.mfa-setup-key {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 24px;
+  padding: 16px;
+  border: 1px solid #cbdaf8;
+  border-radius: 12px;
+  background: #f2f6ff;
+}
+.mfa-setup-key p {
+  margin: 0;
+  color: #42536f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mfa-setup-key code {
+  overflow-wrap: anywhere;
+  color: #174ba8;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
 .auth-state {
   min-height: 70svh;
   display: flex;

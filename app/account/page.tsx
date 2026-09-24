@@ -1,11 +1,13 @@
 'use client';
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useSession } from '@/hooks/use-session';
 export default function AccountPage() {
-  const { session, loading, error, unauthenticated } = useSession();
+  const { session, loading, error, unauthenticated, mfaRequired } = useSession();
   useEffect(() => {
     if (loading) return;
     if (unauthenticated) window.location.replace('/login');
+    else if (mfaRequired) window.location.replace('/mfa');
     else if (session)
       window.location.replace(
         session.permissions.includes('VIEW_ADMIN')
@@ -14,13 +16,13 @@ export default function AccountPage() {
             ? '/developer'
             : '/profile',
       );
-  }, [session, loading, unauthenticated]);
+  }, [session, loading, unauthenticated, mfaRequired]);
   return (
     <main className="auth-state">
       {error && !unauthenticated ? (
         <>
           <p role="alert">{error}</p>
-          <a href="/login">Войти</a>
+          <Link href="/login">Войти</Link>
         </>
       ) : (
         'Открываем кабинет…'

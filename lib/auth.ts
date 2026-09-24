@@ -161,6 +161,8 @@ export async function getAppSession(request: Request): Promise<AppSession> {
       .first<PhoneVerificationRow>(),
   ]);
   const platformRoles = (roleResult.results ?? []).map((item) => item.role);
+  if (platformRoles.length > 0 && !user.mfa_verified_at)
+    throw new AuthorizationError(403, 'Подтвердите вход кодом из приложения-аутентификатора.', 'mfa_required');
   const permissionSet = new Set<Permission>();
   platformRoles.forEach((role) =>
     platformPermissionMatrix[role].forEach((permission) =>

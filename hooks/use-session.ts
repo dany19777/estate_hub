@@ -19,6 +19,7 @@ export function useSession() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [unauthenticated, setUnauthenticated] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -26,8 +27,10 @@ export function useSession() {
       .then(async (response) => {
         const payload = (await response.json()) as MarketplaceSession & {
           message?: string;
+          error?: string;
         };
         if (response.status === 401) setUnauthenticated(true);
+        if (payload.error === 'mfa_required') setMfaRequired(true);
         if (!response.ok)
           throw new Error(
             payload.message ?? 'Не удалось определить права доступа.',
@@ -47,5 +50,5 @@ export function useSession() {
     return () => controller.abort();
   }, []);
 
-  return { session, loading, error, unauthenticated };
+  return { session, loading, error, unauthenticated, mfaRequired };
 }

@@ -4,6 +4,7 @@ import { randomToken, tokenHash, verifyPassword } from '@/lib/password';
 
 const COOKIE = 'estatehub_session';
 const LIFETIME = 30 * 24 * 60 * 60;
+const MFA_PENDING_LIFETIME = 10 * 60;
 const DUMMY_HASH =
   'pbkdf2-sha256$100000$00000000000000000000000000000000$0000000000000000000000000000000000000000000000000000000000000000';
 export function sessionToken(request: Request) {
@@ -131,11 +132,11 @@ export async function passwordSessionUser(request: Request) {
   if (!token) return null;
   const database = await ensureMarketplaceDatabase();
   return database
-    .prepare(`SELECT users.id, users.email, users.full_name FROM auth_sessions
+    .prepare(`SELECT users.id, users.email, users.full_name, auth_sessions.mfa_verified_at FROM auth_sessions
     JOIN users ON users.id = auth_sessions.user_id
     WHERE token_hash = ? AND expires_at > ? AND users.status = 'active'`)
     .bind(await tokenHash(token), Math.floor(Date.now() / 1000))
-    .first<{ id: string; email: string; full_name: string }>();
+    .first<{ id: string; email: string; full_name: string; mfa_verified_at: number | null }>();
 }
 export async function loginWithPassword(
   request: Request,
@@ -171,6 +172,16 @@ export async function loginWithPassword(
   );
   if (!valid || !credentials || credentials.status !== 'active')
     return { status: 401 as const };
+  const [platformRole, membership] = await Promise.all([
+    database
+      .prepare(`SELECT 1 AS allowed FROM platform_role_assignments WHERE user_id = ? LIMIT 1`)
+      .bind(credentials.user_id)
+      .first<{ allowed: number }>(),
+    database
+      .prepare(`SELECT 1 AS allowed FROM organization_memberships WHERE user_id = ? AND status = 'active' LIMIT 1`)
+      .bind(credentials.user_id)
+      .first<{ allowed: number }>(),
+  ]);
   const token = randomToken();
   const oldToken = sessionToken(request);
   await database.batch([
@@ -188,27 +199,15 @@ export async function loginWithPassword(
       .prepare(
         'INSERT INTO auth_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
       )
-      .bind(await tokenHash(token), credentials.user_id, now + LIFETIME),
+      .bind(await tokenHash(token), credentials.user_id, now + (platformRole ? MFA_PENDING_LIFETIME : LIFETIME)),
     database
       .prepare(
         "INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'auth.login', 'user', ?, '{}')",
       )
       .bind(crypto.randomUUID(), credentials.user_id, credentials.user_id),
   ]);
-  const [platformRole, membership] = await Promise.all([
-    database
-      .prepare(`SELECT 1 AS allowed FROM platform_role_assignments
-        WHERE user_id = ? AND role IN ('SUPERADMIN', 'PLATFORM_ADMIN', 'MODERATOR', 'VERIFICATION_SPECIALIST', 'FINANCE_OPERATOR', 'SUPPORT', 'CONTENT_MANAGER') LIMIT 1`)
-      .bind(credentials.user_id)
-      .first<{ allowed: number }>(),
-    database
-      .prepare(`SELECT 1 AS allowed FROM organization_memberships
-        WHERE user_id = ? AND status = 'active' LIMIT 1`)
-      .bind(credentials.user_id)
-      .first<{ allowed: number }>(),
-  ]);
   const redirectTo = platformRole
-    ? '/admin'
+    ? '/mfa'
     : membership
       ? '/developer'
       : '/profile';
