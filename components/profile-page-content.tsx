@@ -1,6 +1,7 @@
 'use client';
 
 import { LogoutButton } from '@/components/logout-button';
+import { useBuyerPreferences } from '@/components/buyer-preferences';
 
 import NextImage from 'next/image';
 import { useEffect, useState } from 'react';
@@ -112,6 +113,7 @@ function profileDate(value: string) {
 }
 
 export default function BuyerProfile() {
+  const { t } = useBuyerPreferences();
   const [active, setActive] = useState('Обзор');
   const { favorites } = useFavorites();
   const { items: comparisons } = useComparisons();
@@ -160,7 +162,7 @@ export default function BuyerProfile() {
   const activeReservation = reservations[0];
   const isDemoReservation = activeReservation?.payment_reference?.startsWith('LOCAL-DEMO-') ?? false;
   async function cancelDemoReservation() {
-    if (!activeReservation || !window.confirm('Отменить тестовую бронь? Квартира снова станет доступной.')) return;
+    if (!activeReservation || !window.confirm(t('Отменить тестовую бронь? Квартира снова станет доступной.'))) return;
     setDemoReservationMessage('');
     try {
       const response = await fetch('/api/reservations/demo', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reservationId: activeReservation.id }) });

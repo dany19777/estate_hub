@@ -5,6 +5,7 @@ import { CalendarClock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { InternalLink as Link } from '@/components/internal-link';
+import { useBuyerPreferences } from '@/components/buyer-preferences';
 
 export function DemoReservationButton({ listingId }: { listingId: string }) {
   const [enabled, setEnabled] = useState(false);
@@ -12,6 +13,7 @@ export function DemoReservationButton({ listingId }: { listingId: string }) {
   const [message, setMessage] = useState('');
   const [reserved, setReserved] = useState(false);
   const key = useRef('');
+  const { t } = useBuyerPreferences();
 
   useEffect(() => {
     let active = true;
@@ -23,7 +25,7 @@ export function DemoReservationButton({ listingId }: { listingId: string }) {
 
   if (!enabled) return null;
   async function reserve() {
-    if (!window.confirm('Создать тестовую бронь на 72 часа без оплаты? Квартира станет недоступной для других покупателей.')) return;
+    if (!window.confirm(t('Создать тестовую бронь на 72 часа без оплаты? Квартира станет недоступной для других покупателей.'))) return;
     setBusy(true);
     setMessage('');
     if (!key.current) key.current = crypto.randomUUID();
