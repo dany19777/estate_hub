@@ -613,6 +613,13 @@ export const schemaStatements = [
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     sent_at TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS support_request_handling (
+    request_id TEXT PRIMARY KEY REFERENCES support_requests(id),
+    status TEXT NOT NULL CHECK (status IN ('in_progress', 'answered', 'closed')),
+    handled_by TEXT NOT NULL REFERENCES users(id),
+    internal_note TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
 ] as const;
 
 export const indexStatements = [
@@ -677,5 +684,6 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_promotions_complex_status_end ON promotions(complex_id, status, ends_at)`,
   `CREATE INDEX IF NOT EXISTS idx_promotions_listing_status_end ON promotions(listing_id, status, ends_at)`,
   `CREATE INDEX IF NOT EXISTS idx_support_requests_status_created ON support_requests(delivery_status, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_support_handling_status_updated ON support_request_handling(status, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_support_requests_source_created ON support_requests(source_hash, created_at)`,
 ] as const;

@@ -15,7 +15,7 @@ const checks = [
     path: `/api/developer/${section}`,
     expected: { anonymous: 401, buyer: 403, developer: 200, superadmin: 403 },
   })),
-  ...['audit', 'billing', 'directory', 'disputes', 'finance', 'moderation', 'promotions', 'reviews', 'verifications'].map((section) => ({
+  ...['audit', 'billing', 'directory', 'disputes', 'finance', 'moderation', 'promotions', 'reviews', 'support', 'verifications'].map((section) => ({
     path: `/api/admin/${section}`,
     expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 },
   })),
@@ -24,7 +24,7 @@ const mutationChecks = [
   { method: 'POST', path: '/api/developer/complexes', expected: { anonymous: 401, buyer: 403, developer: 400, superadmin: 403 } },
   { method: 'PATCH', path: '/api/admin/moderation', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
   { method: 'PATCH', path: '/api/admin/users', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
-  ...['billing', 'directory', 'disputes', 'finance', 'promotions', 'reviews', 'verifications'].map((section) => ({
+  ...['billing', 'directory', 'disputes', 'finance', 'promotions', 'reviews', 'support', 'verifications'].map((section) => ({
     method: 'PATCH', path: `/api/admin/${section}`,
     expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 },
   })),

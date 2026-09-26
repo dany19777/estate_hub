@@ -15,6 +15,7 @@ import {
   Gauge,
   Landmark,
   ListChecks,
+  Mail,
   Menu,
   MessageSquareText,
   Search,
@@ -35,6 +36,7 @@ import { AdminPromotionsPanel } from '@/components/admin-promotions-panel';
 import { AdminReviewsPanel } from '@/components/admin-reviews-panel';
 import { AdminUsersPanel } from '@/components/admin-users-panel';
 import { AdminAuditPanel } from '@/components/admin-audit-panel';
+import { AdminSupportPanel } from '@/components/admin-support-panel';
 import { AdminDirectoryPanel } from '@/components/admin-directory-panel';
 import { LogoutButton } from '@/components/logout-button';
 import { Button } from '@/components/ui/button';
@@ -64,6 +66,7 @@ const adminNav = [
   { label: 'Верификация', icon: FileCheck2, count: 17 },
   { label: 'Модерация', icon: ListChecks, count: 9 },
   { label: 'Отзывы', icon: MessageSquareText },
+  { label: 'Поддержка', icon: Mail },
   { label: 'Брони и платежи', icon: WalletCards },
   { label: 'Споры и возвраты', icon: AlertTriangle, count: 3 },
   { label: 'Тарифы и биллинг', icon: CircleDollarSign },
@@ -125,6 +128,7 @@ const adminViews: Record<string, string> = {
   Верификация: 'verification',
   Модерация: 'moderation',
   Отзывы: 'reviews',
+  Поддержка: 'support',
   'Брони и платежи': 'finance',
   'Споры и возвраты': 'disputes',
   'Тарифы и биллинг': 'billing',
@@ -140,6 +144,7 @@ const adminHashLabels: Record<string, string> = {
   verification: 'Верификация',
   moderation: 'Модерация',
   reviews: 'Отзывы',
+  support: 'Поддержка',
   finance: 'Брони и платежи',
   disputes: 'Споры и возвраты',
   billing: 'Тарифы и биллинг',
@@ -335,6 +340,7 @@ export default function AdminDashboard() {
   const highRiskCount =
     dashboard?.queue.filter((item) => item.risk_level === 'high').length ?? 0;
   const activeView = adminViews[activeNav] ?? 'overview';
+  const canManageSupport = dashboard?.session.platformRoles.some((role) => ['SUPERADMIN', 'PLATFORM_ADMIN', 'SUPPORT'].includes(role)) ?? false;
 
   function navigateAdmin(label: string) {
     const target = adminViews[label] ?? 'overview';
@@ -382,7 +388,7 @@ export default function AdminDashboard() {
           <ChevronDown />
         </div>
         <nav>
-          {adminNav.map((item) => {
+          {adminNav.filter((item) => item.label !== 'Поддержка' || canManageSupport).map((item) => {
             const count =
               item.label === 'Верификация'
                 ? dashboard?.stats.pendingVerifications
@@ -996,6 +1002,8 @@ export default function AdminDashboard() {
               setFeedback(message);
             }}
           />
+
+          {canManageSupport && <AdminSupportPanel />}
 
           <div className="admin-lower-grid">
             <AdminAuditPanel query={query} />

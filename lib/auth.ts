@@ -27,7 +27,8 @@ export type Permission =
   | 'MODERATE_LISTINGS'
   | 'MANAGE_FINANCE'
   | 'MANAGE_BILLING'
-  | 'MANAGE_PROMOTIONS';
+  | 'MANAGE_PROMOTIONS'
+  | 'MANAGE_SUPPORT';
 
 export type AppSession = {
   user: { id: string; email: string; fullName: string };
@@ -70,6 +71,7 @@ const platformPermissionMatrix: Record<PlatformRole, Permission[]> = {
     'MANAGE_FINANCE',
     'MANAGE_BILLING',
     'MANAGE_PROMOTIONS',
+    'MANAGE_SUPPORT',
   ],
   PLATFORM_ADMIN: [
     'VIEW_ADMIN',
@@ -78,6 +80,7 @@ const platformPermissionMatrix: Record<PlatformRole, Permission[]> = {
     'MANAGE_FINANCE',
     'MANAGE_BILLING',
     'MANAGE_PROMOTIONS',
+    'MANAGE_SUPPORT',
   ],
   MODERATOR: ['VIEW_ADMIN', 'MODERATE_LISTINGS'],
   VERIFICATION_SPECIALIST: ['VIEW_ADMIN', 'REVIEW_VERIFICATION'],
@@ -87,7 +90,7 @@ const platformPermissionMatrix: Record<PlatformRole, Permission[]> = {
     'MANAGE_BILLING',
     'MANAGE_PROMOTIONS',
   ],
-  SUPPORT: ['VIEW_ADMIN'],
+  SUPPORT: ['VIEW_ADMIN', 'MANAGE_SUPPORT'],
   CONTENT_MANAGER: ['VIEW_ADMIN'],
 };
 
