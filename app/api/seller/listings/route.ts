@@ -151,7 +151,7 @@ export async function PATCH(request: Request) {
     const method = body.method === 'bank' ? 'offline_bank_transfer' : body.method === 'card' ? 'offline_card_transfer' : '';
     const reference = typeof body.reference === 'string' ? body.reference.trim() : '';
     const configured = method === 'offline_bank_transfer' ? paymentEnv.PLATFORM_PAYMENT_BANK_ACCOUNT ?? paymentEnv.SECONDARY_PAYMENT_BANK_ACCOUNT : paymentEnv.SECONDARY_PAYMENT_CARD_NUMBER;
-    if (!method || !configured || reference.length < 6 || reference.length > 100 || !/^[\p{L}\p{N} ._\/-]+$/u.test(reference)) return Response.json({ error: 'validation_failed', message: 'Выберите доступный способ оплаты и укажите номер банковской операции.' }, { status: 400 });
+    if (!method || !configured || reference.length < 6 || reference.length > 100 || !/^[\p{L}\p{N} ._/-]+$/u.test(reference)) return Response.json({ error: 'validation_failed', message: 'Выберите доступный способ оплаты и укажите номер банковской операции.' }, { status: 400 });
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
     if (!validKey(idempotencyKey)) return Response.json({ error: 'idempotency_required', message: 'Повторите отправку.' }, { status: 400 });
     const existing = await database.prepare(`SELECT id FROM billing_events WHERE idempotency_key = ? LIMIT 1`).bind(idempotencyKey).first();

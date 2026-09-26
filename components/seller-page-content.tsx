@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, type ReactElement, useEffect, useMemo, useState } from 'react';
+import { type ReactElement, type SyntheticEvent, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   BadgeCheck,
@@ -88,7 +88,7 @@ function SecondaryPaymentDialog({ billing, trigger, onSubmit }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  async function submitPayment(event: FormEvent<HTMLFormElement>) {
+  async function submitPayment(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
@@ -112,8 +112,8 @@ function SecondaryPaymentDialog({ billing, trigger, onSubmit }: {
       <div className="seller-payment-summary"><span>Сумма за {billing.periodDays} дней</span><strong>{billing.feeUzs.toLocaleString('ru-RU')} сум</strong></div>
       <form id="seller-payment-form" onSubmit={submitPayment} className="seller-payment-form">
         <fieldset><legend>Способ перевода</legend>
-          {billing.bankAccount && <label className={method === 'bank' ? 'selected' : ''}><input type="radio" name="payment-method" checked={method === 'bank'} onChange={() => setMethod('bank')} /><span><strong>Банковский перевод</strong><small>{billing.bankName} · счёт {billing.bankAccount}</small></span></label>}
-          {billing.cardNumber && <label className={method === 'card' ? 'selected' : ''}><input type="radio" name="payment-method" checked={method === 'card'} onChange={() => setMethod('card')} /><span><strong>Перевод на карту</strong><small>{billing.cardNumber} · {billing.cardHolder}</small></span></label>}
+          {billing.bankAccount && <label aria-label="Банковский перевод" className={method === 'bank' ? 'selected' : ''}><input type="radio" name="payment-method" checked={method === 'bank'} onChange={() => setMethod('bank')} /><span><strong>Банковский перевод</strong><small>{billing.bankName} · счёт {billing.bankAccount}</small></span></label>}
+          {billing.cardNumber && <label aria-label="Перевод на карту" className={method === 'card' ? 'selected' : ''}><input type="radio" name="payment-method" checked={method === 'card'} onChange={() => setMethod('card')} /><span><strong>Перевод на карту</strong><small>{billing.cardNumber} · {billing.cardHolder}</small></span></label>}
         </fieldset>
         <label className="seller-payment-reference" htmlFor="seller-payment-reference">Номер банковской операции<Input id="seller-payment-reference" value={reference} onChange={(event) => setReference(event.target.value)} minLength={6} maxLength={100} placeholder="Из чека или выписки" required /></label>
         <p className="seller-payment-hint">Наличные не принимаются. Отправка номера операции сама по себе не публикует объявление.</p>
@@ -259,7 +259,7 @@ export default function SellerPage() {
       }));
   }, [seller.complexes, form.complexId]);
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: SyntheticEvent) => {
     event.preventDefault();
     if (!selectedBuilding) return;
     try {

@@ -12,7 +12,7 @@ const surfaceNames: Record<string, string> = { search: 'Поиск', homepage: '
 function money(value: number) { return formatUzsAmount(value); }
 function date(value: string) { return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value.replace(' ', 'T')}Z`)); }
 
-export function DeveloperPromotionsPanel({ products, complexes, listings, promotions, loading, error, feedback, processing, onRetry, onPurchase }: Props) {
+export function DeveloperPromotionsPanel({ products, complexes, listings, promotions, loading, error, feedback, onRetry }: Props) {
   const defaults = useMemo(() => Object.fromEntries(products.map((product) => [product.id, product.target_type === 'complex' ? complexes[0]?.id ?? '' : listings[0]?.id ?? ''])), [complexes, listings, products]);
   const [targets, setTargets] = useState<Record<string, string>>({});
   const activeCount = promotions.filter((item) => item.status === 'active' || item.status === 'scheduled').length;
