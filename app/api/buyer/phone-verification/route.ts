@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 
 import { authorizationResponse, getAppSession } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { localSandboxEnabled } from '@/lib/local-sandbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await getAppSession(request);
-    if ((env as Cloudflare.Env & { ENABLE_SANDBOX_SMS?: string }).ENABLE_SANDBOX_SMS !== 'true') {
+    if (!localSandboxEnabled(request) || (env as Cloudflare.Env & { ENABLE_SANDBOX_SMS?: string }).ENABLE_SANDBOX_SMS !== 'true') {
       return Response.json({ error: 'sms_unavailable', message: 'Подтверждение телефона временно недоступно. Настраивается SMS-провайдер.' }, { status: 503 });
     }
     const body = await request.json() as { phone?: unknown };
