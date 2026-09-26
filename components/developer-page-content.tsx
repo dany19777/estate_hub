@@ -150,10 +150,14 @@ type DeveloperLead = {
   time_slot: string | null;
   viewing_status: string | null;
   sla_breached: boolean;
+  assigned_to: string | null;
+  assignee_name: string | null;
 };
 
 type DeveloperLeadData = {
   leads: DeveloperLead[];
+  team: Array<{ user_id: string; full_name: string; role: string }>;
+  canAssign: boolean;
   slaMinutes: number;
   stats: { total: number; new: number; viewings: number; slaBreaches: number };
 };
@@ -503,6 +507,26 @@ export default function DeveloperDashboard() {
       setLeadFeedback(
         error instanceof Error ? error.message : 'Не удалось обновить заявку.',
       );
+    } finally {
+      setLeadProcessing('');
+    }
+  }
+
+  async function assignLead(leadId: string, userId: string) {
+    setLeadProcessing(leadId);
+    setLeadFeedback('');
+    try {
+      const response = await fetch('/api/developer/leads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, action: 'assign', userId }),
+      });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message || 'Не удалось назначить ответственного.');
+      setLeadFeedback(payload.message || 'Ответственный назначен.');
+      await loadLeads();
+    } catch (error) {
+      setLeadFeedback(error instanceof Error ? error.message : 'Не удалось назначить ответственного.');
     } finally {
       setLeadProcessing('');
     }
@@ -1293,6 +1317,20 @@ export default function DeveloperDashboard() {
                       {selectedLead.email}
                     </a>
                   )}
+                </section>
+                <section className="developer-lead-assignment">
+                  <h3>Ответственный за заявку</h3>
+                  {leadData?.canAssign && !['won', 'lost'].includes(selectedLead.status) ? (
+                    <select
+                      aria-label="Ответственный за заявку"
+                      value={selectedLead.assigned_to ?? ''}
+                      disabled={leadProcessing === selectedLead.id}
+                      onChange={(event) => void assignLead(selectedLead.id, event.target.value)}
+                    >
+                      <option value="">Не назначен</option>
+                      {leadData.team.map((member) => <option key={member.user_id} value={member.user_id}>{member.full_name}</option>)}
+                    </select>
+                  ) : <p>{selectedLead.assignee_name ?? 'Не назначен'}</p>}
                 </section>
                 {selectedLead.requested_date && (
                   <section>

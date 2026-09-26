@@ -113,7 +113,14 @@ def main() -> None:
         after = database.execute("SELECT COUNT(*) FROM units").fetchone()[0]
         if status != 404 or payload.get("error") != "not_found" or before != after:
             raise RuntimeError("Cross-organization unit creation was not blocked")
-        print("Organization isolation: project lists, workspace and cross-company mutation passed")
+        primary_lead = database.execute("SELECT id FROM leads WHERE organization_id = ? LIMIT 1", primary).fetchone()
+        if primary_lead:
+            status, payload = call(secondary_session, "PATCH", "/api/developer/leads", {
+                "leadId": primary_lead[0], "action": "assign", "userId": user_id,
+            })
+            if status != 404 or payload.get("error") != "not_found":
+                raise RuntimeError("Cross-organization lead assignment was not blocked")
+        print("Organization isolation: project lists, workspace, units and lead assignment passed")
     finally:
         for table in ["auth_sessions", "organization_memberships", "auth_credentials"]:
             database.execute(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))

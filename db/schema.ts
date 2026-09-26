@@ -242,6 +242,13 @@ export const schemaStatements = [
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS lead_assignments (
+    lead_id TEXT PRIMARY KEY REFERENCES leads(id),
+    organization_id TEXT NOT NULL REFERENCES organizations(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    assigned_by TEXT NOT NULL REFERENCES users(id),
+    assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE TABLE IF NOT EXISTS viewings (
     id TEXT PRIMARY KEY,
     lead_id TEXT NOT NULL UNIQUE REFERENCES leads(id),
@@ -628,6 +635,7 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_crm_customers_org_updated ON crm_customers(organization_id, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_org_status_created ON leads(organization_id, status, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_customer_created ON leads(customer_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_lead_assignments_organization_user ON lead_assignments(organization_id, user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_viewings_date_status ON viewings(requested_date, status)`,
   `CREATE INDEX IF NOT EXISTS idx_lead_activities_lead_created ON lead_activities(lead_id, created_at)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_one_active_listing ON reservation_transactions(listing_id) WHERE status IN ('payment_hold', 'confirmed')`,
