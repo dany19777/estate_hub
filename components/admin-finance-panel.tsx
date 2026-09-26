@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CheckCircle2, RefreshCw, WalletCards } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, RefreshCw, WalletCards } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import type { AdminFinanceOperation } from '@/hooks/use-admin-finance';
@@ -33,7 +33,7 @@ export function AdminFinancePanel({ operations, loading, error, processing, onRe
 
   return (
     <section className="admin-panel finance-operations-panel" id="finance">
-      <div className="admin-panel-heading"><div><h2>Брони и платёжные операции</h2><p>Платежи, возвраты и сверка с провайдером</p></div><span className="queue-total">{operations.length} операций</span></div>
+      <div className="admin-panel-heading"><div><h2>Брони и платёжные операции</h2><p>Платежи, возвраты и сверка с провайдером</p></div><div className="admin-billing-actions"><button type="button" onClick={() => window.location.assign('/api/admin/finance/export')}><Download /> Отмены и возвраты CSV</button><span className="queue-total">{operations.length} операций</span></div></div>
       <div className="finance-toolbar">
         <div>{[
           ['all', 'Все'], ['reservation_payment', 'Оплаты'], ['refund', 'Возвраты'], ['review', 'На сверке'],
