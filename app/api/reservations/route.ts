@@ -30,9 +30,9 @@ function responseForReservation(reservation: ReservationRow, duplicate = false) 
 }
 
 export async function POST(request: Request) {
-  if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
   try {
     const session = await getAppSession(request);
+    if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
     if (!validIdempotencyKey(idempotencyKey)) return Response.json({ error: 'idempotency_required', message: 'Обновите страницу и повторите бронирование.' }, { status: 400 });
     const database = await ensureMarketplaceDatabase();

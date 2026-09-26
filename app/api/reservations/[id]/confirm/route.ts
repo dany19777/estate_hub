@@ -17,9 +17,9 @@ type ReservationPaymentRow = {
 type ExistingOperation = { reservation_id: string; status: string };
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
   try {
     const session = await getAppSession(request);
+    if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
     const { id } = await params;
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
     if (!/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {

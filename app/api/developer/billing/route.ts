@@ -115,9 +115,9 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
   try {
     const session = await requirePermission(request, 'MANAGE_BILLING');
+    if (!onlinePaymentsEnabled()) return onlinePaymentsDisabledResponse();
     if (!session.organization) return Response.json({ error: 'organization_required', message: 'Кабинет не связан с организацией.' }, { status: 403 });
     const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
     if (!idempotencyKey) return Response.json({ error: 'idempotency_required', message: 'Повторите действие: отсутствует ключ операции.' }, { status: 400 });

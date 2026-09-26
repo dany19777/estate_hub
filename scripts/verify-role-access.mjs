@@ -10,11 +10,32 @@ const checks = [
   { path: '/api/developer/workspace', expected: { anonymous: 401, buyer: 403, developer: 200, superadmin: 403 } },
   { path: '/api/admin/users', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
   { path: '/api/admin/billing/export', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
+  { path: '/api/admin/finance/export', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
+  ...['complexes', 'billing', 'leads', 'messages', 'promotions', 'reservations', 'reviews', 'workspace'].map((section) => ({
+    path: `/api/developer/${section}`,
+    expected: { anonymous: 401, buyer: 403, developer: 200, superadmin: 403 },
+  })),
+  ...['audit', 'billing', 'directory', 'disputes', 'finance', 'moderation', 'promotions', 'reviews', 'verifications'].map((section) => ({
+    path: `/api/admin/${section}`,
+    expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 },
+  })),
 ];
 const mutationChecks = [
   { method: 'POST', path: '/api/developer/complexes', expected: { anonymous: 401, buyer: 403, developer: 400, superadmin: 403 } },
   { method: 'PATCH', path: '/api/admin/moderation', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
   { method: 'PATCH', path: '/api/admin/users', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
+  ...['billing', 'directory', 'disputes', 'finance', 'promotions', 'reviews', 'verifications'].map((section) => ({
+    method: 'PATCH', path: `/api/admin/${section}`,
+    expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 },
+  })),
+  ...['complexes', 'units', 'workspace', 'messages', 'promotions', 'billing'].map((section) => ({
+    method: 'POST', path: `/api/developer/${section}`,
+    expected: { anonymous: 401, buyer: 403, superadmin: 403 },
+  })),
+  ...['workspace', 'reservations', 'reviews', 'billing', 'leads'].map((section) => ({
+    method: 'PATCH', path: `/api/developer/${section}`,
+    expected: { anonymous: 401, buyer: 403, superadmin: 403 },
+  })),
 ];
 
 if (!['buyer', 'developer', 'superadmin'].every((role) => byRole[role]?.login && byRole[role]?.password)) {
