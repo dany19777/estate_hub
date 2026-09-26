@@ -65,6 +65,24 @@ export function AdminSupportPanel() {
     }
   }
 
+  async function retryDelivery(item: SupportRequest) {
+    setProcessing(item.id);
+    setError('');
+    try {
+      const response = await fetch('/api/admin/support/retry', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: item.id }),
+      });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message ?? 'Не удалось повторить отправку.');
+      await load();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Не удалось повторить отправку.');
+    } finally {
+      setProcessing('');
+    }
+  }
+
   return <section className="admin-panel admin-support-panel" id="support">
     <div className="admin-panel-heading"><div><h2>Вопросы в поддержку</h2><p>Обращения с сайта и состояние доставки письма</p></div><button type="button" onClick={() => void load()} disabled={loading}><RefreshCw /> Обновить</button></div>
     {error && <p className="admin-support-error">{error}</p>}
@@ -77,6 +95,7 @@ export function AdminSupportPanel() {
       {item.delivery_error && <small className="admin-support-error">Ошибка почты: {item.delivery_error}</small>}
       {item.internal_note && <small>Внутренняя заметка: {item.internal_note}</small>}
       <footer>
+        {item.delivery_status !== 'sent' && <button type="button" disabled={processing === item.id} onClick={() => void retryDelivery(item)}>Повторить отправку письма</button>}
         {item.handling_status === 'new' && <button type="button" disabled={processing === item.id} onClick={() => void changeStatus(item, 'in_progress')}>Взять в работу</button>}
         {item.handling_status === 'in_progress' && <button type="button" disabled={processing === item.id} onClick={() => void changeStatus(item, 'answered')}>Отметить ответ</button>}
         {item.handling_status !== 'closed' && <button type="button" disabled={processing === item.id} onClick={() => void changeStatus(item, 'closed')}>Закрыть</button>}

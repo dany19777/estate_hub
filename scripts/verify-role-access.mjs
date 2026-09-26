@@ -24,6 +24,7 @@ const mutationChecks = [
   { method: 'POST', path: '/api/developer/complexes', expected: { anonymous: 401, buyer: 403, developer: 400, superadmin: 403 } },
   { method: 'PATCH', path: '/api/admin/moderation', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
   { method: 'PATCH', path: '/api/admin/users', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
+  { method: 'POST', path: '/api/admin/support/retry', expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 } },
   ...['billing', 'directory', 'disputes', 'finance', 'promotions', 'reviews', 'support', 'verifications'].map((section) => ({
     method: 'PATCH', path: `/api/admin/${section}`,
     expected: { anonymous: 401, buyer: 403, developer: 403, superadmin: 403 },

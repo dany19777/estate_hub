@@ -1,15 +1,8 @@
-import { env } from 'cloudflare:workers';
-
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { sameOrigin } from '@/lib/password-auth';
+import { deliverSupportMail, supportMailConfigured } from '@/lib/support-mail';
 
 export const dynamic = 'force-dynamic';
-
-type SupportEnv = Cloudflare.Env & {
-  RESEND_API_KEY?: string;
-  SUPPORT_EMAIL?: string;
-  SUPPORT_FROM_EMAIL?: string;
-};
 
 function clean(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -17,20 +10,6 @@ function clean(value: unknown, max: number) {
 
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function escapeHtml(value: string) {
-  return value.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;',
-      })[character]!,
-  );
 }
 
 async function sourceHash(request: Request) {
@@ -104,8 +83,7 @@ export async function POST(request: Request) {
       .bind(id, fullName, email, subject, message, locale, hash)
       .run();
 
-    const runtime = env as SupportEnv;
-    if (!runtime.RESEND_API_KEY || !runtime.SUPPORT_EMAIL) {
+    if (!supportMailConfigured()) {
       return Response.json(
         {
           requestId: id,
@@ -116,26 +94,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const delivery = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${runtime.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from:
-          runtime.SUPPORT_FROM_EMAIL ||
-          'EstateHub Support <support@estatehub.uz>',
-        to: [runtime.SUPPORT_EMAIL],
-        reply_to: email,
-        subject: `[EstateHub] ${subject}`,
-        html: `<h2>Новый вопрос с EstateHub</h2><p><strong>Имя:</strong> ${escapeHtml(fullName)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Язык:</strong> ${escapeHtml(locale)}</p><p><strong>Тема:</strong> ${escapeHtml(subject)}</p><hr><p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>`,
-      }),
-    });
-    const deliveryPayload = (await delivery.json().catch(() => ({}))) as {
-      id?: string;
-      message?: string;
-    };
+    const delivery = await deliverSupportMail({ id, full_name: fullName, email, subject, message, locale });
 
     if (!delivery.ok) {
       await database
@@ -143,7 +102,7 @@ export async function POST(request: Request) {
           `UPDATE support_requests SET delivery_status = 'failed', delivery_provider = 'resend', delivery_error = ? WHERE id = ?`,
         )
         .bind(
-          clean(deliveryPayload.message, 500) || 'Email delivery failed',
+          delivery.error ?? 'Email delivery failed',
           id,
         )
         .run();
@@ -161,7 +120,7 @@ export async function POST(request: Request) {
       .prepare(
         `UPDATE support_requests SET delivery_status = 'sent', delivery_provider = 'resend', delivery_reference = ?, sent_at = CURRENT_TIMESTAMP WHERE id = ?`,
       )
-      .bind(deliveryPayload.id ?? null, id)
+      .bind(delivery.reference, id)
       .run();
     return Response.json(
       {
