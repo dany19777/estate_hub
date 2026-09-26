@@ -1009,21 +1009,21 @@ export default function AdminDashboard() {
               <div>
                 <p>
                   <span>
-                    <i /> API
+                    <i /> Очереди кабинета
                   </span>
-                  <strong>99,99%</strong>
+                  <strong>{loadError ? 'Ошибка загрузки' : dashboard ? 'Загружены' : 'Загрузка'}</strong>
                 </p>
                 <p>
                   <span>
-                    <i /> Поиск
+                    <i /> Опубликованные объявления
                   </span>
-                  <strong>182 ms</strong>
+                  <strong>{dashboard?.stats.publishedListings ?? '—'}</strong>
                 </p>
                 <p>
                   <span>
-                    <i /> Платежи
+                    <i /> Оплата брони
                   </span>
-                  <strong>{finance.error ? 'Проверить' : 'Работает'}</strong>
+                  <strong>Отключена</strong>
                 </p>
                 <p>
                   <span>
