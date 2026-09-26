@@ -1,5 +1,6 @@
 import { authorizationResponse, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { supportMailConfigured } from '@/lib/support-mail';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
         SUM(CASE WHEN request.delivery_status <> 'sent' THEN 1 ELSE 0 END) AS undelivered_count
         FROM support_requests request LEFT JOIN support_request_handling handling ON handling.request_id = request.id`).first(),
     ]);
-    return Response.json({ requests: result.results ?? [], stats: counts ?? { total: 0, new_count: 0, undelivered_count: 0 } }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return Response.json({ requests: result.results ?? [], mailConfigured: supportMailConfigured(), stats: counts ?? { total: 0, new_count: 0, undelivered_count: 0 } }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return authorizationResponse(error) ?? Response.json({ error: 'support_queue_failed', message: 'Не удалось загрузить обращения.' }, { status: 500 });
   }

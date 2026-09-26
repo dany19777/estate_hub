@@ -26,13 +26,15 @@ export function AdminSupportPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [processing, setProcessing] = useState('');
+  const [mailConfigured, setMailConfigured] = useState(false);
   const load = useCallback(async () => {
     setError('');
     try {
       const response = await fetch('/api/admin/support', { cache: 'no-store' });
-      const payload = await response.json() as { requests?: SupportRequest[]; message?: string };
+      const payload = await response.json() as { requests?: SupportRequest[]; mailConfigured?: boolean; message?: string };
       if (!response.ok) throw new Error(payload.message ?? 'Не удалось загрузить обращения.');
       setRequests(payload.requests ?? []);
+      setMailConfigured(Boolean(payload.mailConfigured));
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Не удалось загрузить обращения.');
     } finally {
@@ -95,7 +97,7 @@ export function AdminSupportPanel() {
       {item.delivery_error && <small className="admin-support-error">Ошибка почты: {item.delivery_error}</small>}
       {item.internal_note && <small>Внутренняя заметка: {item.internal_note}</small>}
       <footer>
-        {item.delivery_status !== 'sent' && <button type="button" disabled={processing === item.id} onClick={() => void retryDelivery(item)}>Повторить отправку письма</button>}
+        {item.delivery_status !== 'sent' && <button type="button" disabled={!mailConfigured || processing === item.id} title={!mailConfigured ? 'Сначала настройте почтовый сервис' : undefined} onClick={() => void retryDelivery(item)}>Повторить отправку письма</button>}
         {item.handling_status === 'new' && <button type="button" disabled={processing === item.id} onClick={() => void changeStatus(item, 'in_progress')}>Взять в работу</button>}
         {item.handling_status === 'in_progress' && <button type="button" disabled={processing === item.id} onClick={() => void changeStatus(item, 'answered')}>Отметить ответ</button>}
         {item.handling_status !== 'closed' && <button type="button" disabled={processing === item.id} onClick={() => void changeStatus(item, 'closed')}>Закрыть</button>}
