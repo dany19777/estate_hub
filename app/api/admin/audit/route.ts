@@ -14,7 +14,13 @@ export async function GET(request: Request) {
       FROM audit_events event LEFT JOIN users user ON user.id = event.actor_id
       WHERE ? = '' OR LOWER(event.action || ' ' || event.entity_type || ' ' || event.entity_id || ' ' || COALESCE(user.full_name, '') || ' ' || COALESCE(user.email, '')) LIKE '%' || ? || '%'
       ORDER BY event.created_at DESC LIMIT 200`).bind(query, query).all();
-    return Response.json({ events: (result.results ?? []).map((event) => ({ ...event, metadata: JSON.parse(String(event.metadata_json || '{}')) })) }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return Response.json({ events: (result.results ?? []).map((event) => {
+      let metadata: unknown = {};
+      if (typeof event.metadata_json === 'string') {
+        try { metadata = JSON.parse(event.metadata_json); } catch { metadata = {}; }
+      }
+      return { ...event, metadata };
+    }) }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return authorizationResponse(error) ?? Response.json({ error: 'audit_unavailable', message: 'Не удалось загрузить журнал аудита.' }, { status: 500 });
   }

@@ -23,7 +23,7 @@ export function SupportSection() {
   >('idle');
   const [feedback, setFeedback] = useState('');
 
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus('sending');
     setFeedback('');

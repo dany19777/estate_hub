@@ -3,12 +3,13 @@ import { useState } from 'react';
 import { Building2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { InternalLink as Link } from '@/components/internal-link';
 export default function LoginPage() {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError('');
@@ -43,13 +44,13 @@ export default function LoginPage() {
   }
   return (
     <main className="login-page">
-      <a className="login-back" href="/">
+      <Link className="login-back" href="/">
         <ArrowLeft size={18} /> На главную
-      </a>
+      </Link>
       <section className="login-card">
-        <a href="/" className="login-brand">
+        <Link href="/" className="login-brand">
           <Building2 /> Estate<span>Hub</span>
-        </a>
+        </Link>
         <h1>Вход в аккаунт</h1>
         <p>Войдите, чтобы продолжить работу в своём кабинете.</p>
         <form onSubmit={submit}>

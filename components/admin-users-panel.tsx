@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ban, Check, RefreshCw, ShieldCheck, UserRound } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 type User = { id: string; email: string; full_name: string; status: string; created_at: string; roles: string[]; organization_role: string | null; organization_name: string | null; phone_status: string | null };
@@ -27,7 +26,10 @@ export function AdminUsersPanel({ query = '' }: { query?: string }) {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [load]);
   const visible = useMemo(() => { const value = query.trim().toLowerCase(); return users.filter((user) => !value || `${user.full_name} ${user.email} ${user.organization_name ?? ''}`.toLowerCase().includes(value)); }, [query, users]);
 
   async function update(userId: string, action: string, role?: string) {

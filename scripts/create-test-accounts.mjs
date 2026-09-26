@@ -24,7 +24,7 @@ mkdirSync('work', { recursive: true });
 writeFileSync('work/test-accounts.json', JSON.stringify(entries, null, 2), {
   mode: 0o600,
 });
-const config = JSON.stringify(entries.map(({ password, ...entry }) => entry));
+const config = JSON.stringify(entries.map(({ password: _password, ...entry }) => entry));
 writeFileSync(
   '.dev.vars',
   `ESTATEHUB_TEST_ACCOUNTS=${Buffer.from(config).toString('base64')}\n`,

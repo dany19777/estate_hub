@@ -23,7 +23,7 @@ async function payload() {
     LEFT JOIN buyer_phone_verifications phone ON phone.user_id = user.id
     GROUP BY user.id, membership.role, organization.name, phone.status
     ORDER BY user.created_at DESC`).all();
-  return { users: (users.results ?? []).map((user) => ({ ...user, roles: String(user.roles ?? '').split(',').filter(Boolean) })) };
+  return { users: (users.results ?? []).map((user) => ({ ...user, roles: (typeof user.roles === 'string' ? user.roles : '').split(',').filter(Boolean) })) };
 }
 
 export async function GET(request: Request) {
