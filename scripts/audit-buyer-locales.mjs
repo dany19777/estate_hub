@@ -66,6 +66,7 @@ function collect(folder) {
       if (!['ui', 'api'].includes(entry.name)) collect(path);
     } else if (
       path.endsWith('.tsx') &&
+      !path.endsWith('/layout.tsx') && // Server SEO metadata does not use the client locale context.
       !/(?:^|\/)(?:admin|developer)-/.test(path) &&
       path !== 'components/buyer-preferences.tsx'
     )

@@ -40,7 +40,10 @@ export function AdminSupportPanel() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   async function changeStatus(item: SupportRequest, status: 'in_progress' | 'answered' | 'closed') {
     const note = status === 'in_progress' ? '' : window.prompt('Кратко укажите итог обработки. Это внутренняя заметка, клиенту она не отправляется.', item.internal_note ?? '')?.trim();
