@@ -1,5 +1,6 @@
 import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { assessVerificationRisk } from '@/lib/verification-risk';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,8 @@ type VerificationRow = {
   document_type: string | null;
   status: string;
   risk_level: string;
+  organization_status: string | null;
+  previous_rejections: number;
   created_at: string;
 };
 
@@ -32,20 +35,30 @@ async function queuePayload(request: Request) {
       verification.id, verification.subject_type, verification.subject_id,
       COALESCE(organization.name, complex.name, seller.full_name, verification.subject_id) AS applicant,
       organization.organization_type, owner.document_type,
-      verification.status, verification.risk_level, verification.created_at
+      verification.status, verification.risk_level, verification.created_at,
+      linked_organization.verification_status AS organization_status,
+      (SELECT COUNT(*) FROM verification_cases previous
+        WHERE previous.subject_type = verification.subject_type AND previous.subject_id = verification.subject_id
+          AND previous.status = 'rejected') AS previous_rejections
       FROM verification_cases verification
       LEFT JOIN organizations organization ON verification.subject_type = 'organization' AND organization.id = verification.subject_id
       LEFT JOIN complexes complex ON verification.subject_type = 'complex' AND complex.id = verification.subject_id
       LEFT JOIN secondary_listing_owners owner ON verification.subject_type = 'listing' AND owner.listing_id = verification.subject_id
       LEFT JOIN users seller ON seller.id = owner.seller_user_id
+      LEFT JOIN organizations linked_organization ON linked_organization.id =
+        CASE WHEN verification.subject_type = 'complex' THEN complex.developer_org_id
+          WHEN verification.subject_type = 'organization' THEN organization.id ELSE NULL END
       WHERE verification.status IN ('submitted', 'in_review')
       UNION ALL
       SELECT identity.id, 'buyer' AS subject_type, identity.user_id AS subject_id, user.full_name AS applicant,
-        NULL AS organization_type, identity.document_type, identity.status, identity.risk_level, identity.submitted_at AS created_at
+        NULL AS organization_type, identity.document_type, identity.status, identity.risk_level, identity.submitted_at AS created_at,
+        NULL AS organization_status,
+        (SELECT COUNT(*) FROM audit_events prior WHERE prior.action = 'verification.rejected'
+          AND prior.entity_type = 'user' AND prior.entity_id = identity.user_id) AS previous_rejections
       FROM buyer_identity_verifications identity
       JOIN users user ON user.id = identity.user_id
       WHERE identity.status IN ('submitted', 'in_review')) queue
-      ORDER BY CASE queue.risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, queue.created_at ASC`).all<VerificationRow>(),
+      ORDER BY queue.created_at ASC`).all<VerificationRow>(),
     database.prepare(`SELECT COUNT(*) AS count FROM users WHERE status = 'active'`).first<CountRow>(),
     database.prepare(`SELECT COUNT(*) AS count FROM complex_publication_workflows WHERE status = 'published'`).first<CountRow>(),
     database.prepare(`SELECT (SELECT COUNT(*) FROM verification_cases WHERE status IN ('submitted', 'in_review')) +
@@ -54,7 +67,10 @@ async function queuePayload(request: Request) {
   ]);
   return {
     session,
-    queue: queueResult.results ?? [],
+    queue: (queueResult.results ?? []).map((item) => {
+      const risk = assessVerificationRisk(item);
+      return { ...item, risk_level: risk.level, risk_reasons: risk.reasons };
+    }).sort((left, right) => ({ high: 0, medium: 1, low: 2 })[left.risk_level] - ({ high: 0, medium: 1, low: 2 })[right.risk_level]),
     stats: {
       users: users?.count ?? 0,
       activeComplexes: activeComplexes?.count ?? 0,

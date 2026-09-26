@@ -82,6 +82,7 @@ type VerificationCase = {
   document_type: string | null;
   status: string;
   risk_level: string;
+  risk_reasons: string[];
   created_at: string;
 };
 
@@ -676,9 +677,10 @@ export default function AdminDashboard() {
                         <TableCell>{subject}</TableCell>
                         <TableCell>{date}</TableCell>
                         <TableCell>
-                          <Badge className={`risk-badge ${risk.toLowerCase()}`}>
+                          <Badge className={`risk-badge ${risk.toLowerCase()}`} title={item.risk_reasons.length ? item.risk_reasons.join('; ') : 'Дополнительных признаков риска нет'}>
                             {risk}
                           </Badge>
+                          {item.risk_reasons.length > 0 && <small className="risk-reasons">{item.risk_reasons.join('; ')}</small>}
                         </TableCell>
                         <TableCell>
                           <Badge
