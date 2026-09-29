@@ -89,8 +89,8 @@ export async function PATCH(request: Request) {
     const now = Math.floor(Date.now() / 1000);
     const bucket = `mfa:${state.user.id}`;
     const attempt = await state.database.prepare(`INSERT INTO auth_rate_limits (bucket, attempts, expires_at) VALUES (?, 1, ?)
-      ON CONFLICT(bucket) DO UPDATE SET attempts = CASE WHEN expires_at <= ? THEN 1 ELSE attempts + 1 END,
-      expires_at = CASE WHEN expires_at <= ? THEN excluded.expires_at ELSE expires_at END RETURNING attempts`).bind(bucket, now + 900, now, now).first<{ attempts: number }>();
+      ON CONFLICT(bucket) DO UPDATE SET attempts = CASE WHEN auth_rate_limits.expires_at <= ? THEN 1 ELSE auth_rate_limits.attempts + 1 END,
+      expires_at = CASE WHEN auth_rate_limits.expires_at <= ? THEN excluded.expires_at ELSE auth_rate_limits.expires_at END RETURNING attempts`).bind(bucket, now + 900, now, now).first<{ attempts: number }>();
     if ((attempt?.attempts ?? 11) > 10) {
       if (attempt?.attempts === 11) await recordMfaEvent(state.database, state.user.id, 'auth.mfa_rate_limited', 'unknown');
       return Response.json({ error: 'rate_limited', message: 'Слишком много попыток. Повторите через 15 минут.' }, { status: 429, headers: { ...noStore, 'Retry-After': '900' } });

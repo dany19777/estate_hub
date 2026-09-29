@@ -8,8 +8,8 @@ const conversationSelect = `SELECT conversation.id, conversation.listing_id, con
   complex.name AS complex_name, complex.slug, complex.hero_image_url AS image,
   unit.unit_number, unit.rooms, unit.area_sqm,
   COALESCE(organization.name, CASE listing.seller_type WHEN 'owner' THEN 'Собственник' ELSE 'Агентство недвижимости' END) AS seller,
-  (SELECT message.body FROM conversation_messages message WHERE message.conversation_id = conversation.id ORDER BY message.created_at DESC, message.rowid DESC LIMIT 1) AS last_message,
-  (SELECT message.created_at FROM conversation_messages message WHERE message.conversation_id = conversation.id ORDER BY message.created_at DESC, message.rowid DESC LIMIT 1) AS last_message_at,
+  (SELECT message.body FROM conversation_messages message WHERE message.conversation_id = conversation.id ORDER BY message.created_at DESC, message.id DESC LIMIT 1) AS last_message,
+  (SELECT message.created_at FROM conversation_messages message WHERE message.conversation_id = conversation.id ORDER BY message.created_at DESC, message.id DESC LIMIT 1) AS last_message_at,
   (SELECT COUNT(*) FROM conversation_messages message WHERE message.conversation_id = conversation.id) AS message_count,
   (SELECT COUNT(*) FROM conversation_messages message WHERE message.conversation_id = conversation.id AND message.author_type = 'seller' AND message.read_by_buyer_at IS NULL) AS unread_count
   FROM conversations conversation
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
     const messages = await database
       .prepare(`SELECT id, author_type, body, created_at
-      FROM conversation_messages WHERE conversation_id = ? ORDER BY created_at ASC, rowid ASC`)
+      FROM conversation_messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`)
       .bind(conversation.id)
       .all();
     await database

@@ -1,0 +1,90 @@
+name: estatehub
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: estatehub
+      POSTGRES_USER: estatehub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U estatehub -d estatehub"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [internal]
+
+  objectstore:
+    image: chrislusf/seaweedfs:4.47
+    restart: unless-stopped
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+      S3_BUCKET: estatehub-media
+    volumes:
+      - object_data:/data
+    networks: [internal]
+
+  migrate:
+    build: .
+    image: estatehub/app:local
+    command: ["sh", "-c", "node scripts/migrate-postgres.mjs && node scripts/seed-reference-postgres.mjs"]
+    environment:
+      DATABASE_URL: postgres://estatehub:${POSTGRES_PASSWORD}@postgres:5432/estatehub
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+    networks: [internal]
+
+  app:
+    image: estatehub/app:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3008:3000"
+    environment:
+      DATABASE_URL: postgres://estatehub:${POSTGRES_PASSWORD}@postgres:5432/estatehub
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://objectstore:8333
+      S3_REGION: us-east-1
+      S3_BUCKET: estatehub-media
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      ESTATEHUB_MFA_ENCRYPTION_KEY: ${ESTATEHUB_MFA_ENCRYPTION_KEY:?set ESTATEHUB_MFA_ENCRYPTION_KEY}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:?set PUBLIC_SITE_URL}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      SUPPORT_FROM_EMAIL: ${SUPPORT_FROM_EMAIL:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      objectstore: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/complexes').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+      start_period: 30s
+    networks: [internal, ingress]
+
+networks:
+  internal:
+    internal: true
+  ingress: {}
+
+volumes:
+  postgres_data:
+  object_data:

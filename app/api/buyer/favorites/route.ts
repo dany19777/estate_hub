@@ -21,7 +21,7 @@ export async function GET(request: Request) {
           AND EXISTS (SELECT 1 FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id
             WHERE purchase.listing_id = l.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP
               AND payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer'))))
-      WHERE favorite.user_id = ? GROUP BY c.id ORDER BY favorite.created_at DESC`).bind(session.user.id).all<FavoriteRow>();
+      WHERE favorite.user_id = ? GROUP BY c.id ORDER BY MAX(favorite.created_at) DESC`).bind(session.user.id).all<FavoriteRow>();
     return Response.json({ favorites: result.results ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return authorizationResponse(error) ?? Response.json({ error: 'favorites_unavailable', message: 'Не удалось загрузить избранное.' }, { status: 500 });

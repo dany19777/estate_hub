@@ -448,6 +448,21 @@ export default function DeveloperDashboard() {
     }
   }
 
+  async function uploadComplexImage(complexId: string, file: File) {
+    const body = new FormData();
+    body.set('complexId', complexId);
+    body.set('image', file);
+    try {
+      const response = await fetch('/api/developer/media', { method: 'POST', body });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message || 'Не удалось загрузить фото.');
+      await loadDashboard();
+      setWorkspaceRevision((revision) => revision + 1);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Не удалось загрузить фото.');
+    }
+  }
+
   async function createUnit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setAddingUnit(true);
@@ -861,6 +876,14 @@ export default function DeveloperDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="project-row-actions">
+                              <label className="project-image-upload" title={`Загрузить фото ${project.name}`}>
+                                <ImageIcon /> Фото
+                                <input type="file" accept="image/jpeg,image/png,image/webp" aria-label={`Загрузить фото ${project.name}`} onChange={(event) => {
+                                  const file = event.currentTarget.files?.[0];
+                                  if (file) void uploadComplexImage(project.id, file);
+                                  event.currentTarget.value = '';
+                                }} />
+                              </label>
                               {!['rejected', 'archived'].includes(project.workflow_status) && (
                                 <button type="button" onClick={() => openUnitDialog(project.id)} aria-label={`Добавить квартиру в ${project.name}`}>
                                   <Plus /> Квартира

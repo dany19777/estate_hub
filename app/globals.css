@@ -11048,6 +11048,22 @@ body:has(.site-header) .global-buyer-preferences {
   gap: 9px;
   white-space: nowrap;
 }
+.project-image-upload {
+  display: inline-flex;
+  min-height: 39px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #334c74;
+  border-radius: 10px;
+  color: #dce8ff;
+  background: #173668;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.project-image-upload input { display: none; }
 .developer-table td .project-row-actions > button,
 .developer-table td .project-row-actions > a {
   display: inline-flex;

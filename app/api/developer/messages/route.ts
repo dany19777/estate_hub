@@ -8,8 +8,8 @@ const conversationSelect = `SELECT conversation.id, conversation.listing_id, con
   buyer.full_name AS buyer_name, buyer.email AS buyer_email,
   complex.name AS complex_name, complex.slug, complex.hero_image_url AS image,
   unit.unit_number, unit.rooms, unit.area_sqm,
-  (SELECT message.body FROM conversation_messages message WHERE message.conversation_id = conversation.id ORDER BY message.created_at DESC, message.rowid DESC LIMIT 1) AS last_message,
-  (SELECT message.created_at FROM conversation_messages message WHERE message.conversation_id = conversation.id ORDER BY message.created_at DESC, message.rowid DESC LIMIT 1) AS last_message_at,
+  (SELECT message.body FROM conversation_messages message WHERE message.conversation_id = conversation.id ORDER BY message.created_at DESC, message.id DESC LIMIT 1) AS last_message,
+  (SELECT message.created_at FROM conversation_messages message WHERE message.conversation_id = conversation.id ORDER BY message.created_at DESC, message.id DESC LIMIT 1) AS last_message_at,
   (SELECT COUNT(*) FROM conversation_messages message WHERE message.conversation_id = conversation.id AND message.author_type = 'buyer' AND message.read_by_seller_at IS NULL) AS unread_count
   FROM conversations conversation
   JOIN users buyer ON buyer.id = conversation.buyer_user_id
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       WHERE conversation.organization_id = ? AND conversation.id = ? LIMIT 1`).bind(session.organization.id, conversationId).first();
     if (!conversation) return Response.json({ error: 'not_found', message: 'Диалог не найден.' }, { status: 404 });
     const messages = await database.prepare(`SELECT id, author_type, body, created_at
-      FROM conversation_messages WHERE conversation_id = ? ORDER BY created_at ASC, rowid ASC`).bind(conversationId).all();
+      FROM conversation_messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`).bind(conversationId).all();
     await database.prepare(`UPDATE conversation_messages SET read_by_seller_at = CURRENT_TIMESTAMP
       WHERE conversation_id = ? AND author_type = 'buyer' AND read_by_seller_at IS NULL`).bind(conversationId).run();
     return Response.json({ conversation, messages: messages.results ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });

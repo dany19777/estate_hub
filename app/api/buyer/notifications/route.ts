@@ -11,7 +11,7 @@ async function payload(database: D1Database, userId: string, phoneStatus: string
       notification.priority, notification.read_at, notification.created_at,
       GROUP_CONCAT(delivery.channel || ':' || delivery.status) AS delivery_summary
       FROM notifications notification LEFT JOIN notification_deliveries delivery ON delivery.notification_id = notification.id
-      WHERE notification.user_id = ? GROUP BY notification.id ORDER BY notification.created_at DESC, notification.rowid DESC LIMIT 100`).bind(userId).all(),
+      WHERE notification.user_id = ? GROUP BY notification.id ORDER BY notification.created_at DESC, notification.id DESC LIMIT 100`).bind(userId).all(),
     database.prepare(`SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND read_at IS NULL`).bind(userId).first<{ count: number }>(),
   ]);
   return { notifications: notificationResult.results ?? [], unreadCount: Number(unread?.count ?? 0), preferences, channelStatus: { inApp: 'active', email: 'sandbox_queue', sms: 'sandbox_queue', push: 'not_connected' } };

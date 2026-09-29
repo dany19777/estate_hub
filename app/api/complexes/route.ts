@@ -1,5 +1,6 @@
 import { buildCatalog } from '@/lib/catalog-service';
 import { readMarketplaceData } from '@/lib/database';
+import { cacheJson } from '@/lib/redis-cache';
 import type { CatalogQuery, SellerType } from '@/lib/marketplace';
 
 export const dynamic = 'force-dynamic';
@@ -46,8 +47,11 @@ export async function GET(request: Request) {
       excludeParsed: (searchParams.get('excludeParsed') ?? '').split(',').filter((key) => excludedFilters.has(key)),
       limit: positiveNumber(searchParams.get('limit')),
     };
-    const { complexes, listings } = await readMarketplaceData();
-    return Response.json(buildCatalog(complexes, listings, query), {
+    const catalog = await cacheJson(`catalog:v1:${searchParams.toString()}`, 15, async () => {
+      const { complexes, listings } = await readMarketplaceData();
+      return buildCatalog(complexes, listings, query);
+    });
+    return Response.json(catalog, {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {

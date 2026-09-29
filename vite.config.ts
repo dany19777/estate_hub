@@ -2,7 +2,10 @@ import { sites } from '@openai/sites-vite-plugin';
 import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
 import hostingConfig from './.openai/hosting.json';
+
+const nodeTarget = process.env.ESTATEHUB_TARGET === 'node';
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   '00000000-0000-4000-8000-000000000000';
@@ -46,10 +49,15 @@ export default defineConfig(async () => {
 
   return {
     css: { postcss: { plugins: [tailwindcss()] } },
+    resolve: nodeTarget ? {
+      alias: {
+        'cloudflare:workers': fileURLToPath(new URL('./lib/node-env.ts', import.meta.url)),
+      },
+    } : undefined,
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
-    plugins: [
+    plugins: nodeTarget ? [vinext()] : [
       vinext(),
       sites(),
       cloudflare({

@@ -22,11 +22,13 @@ export function sessionCookie(
   token: string,
   maxAge = LIFETIME,
 ) {
-  const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : '';
+  const publicOrigin = (env as Cloudflare.Env & { PUBLIC_SITE_URL?: string }).PUBLIC_SITE_URL;
+  const secure = new URL(publicOrigin || request.url).protocol === 'https:' ? '; Secure' : '';
   return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 export function sameOrigin(request: Request) {
-  return request.headers.get('origin') === new URL(request.url).origin;
+  const publicOrigin = (env as Cloudflare.Env & { PUBLIC_SITE_URL?: string }).PUBLIC_SITE_URL;
+  return request.headers.get('origin') === new URL(publicOrigin || request.url).origin;
 }
 
 // Only an explicitly configured secret may provision the three test accounts.
@@ -156,8 +158,8 @@ export async function loginWithPassword(
   for (const [bucket, limit] of buckets) {
     const row = await database
       .prepare(`INSERT INTO auth_rate_limits (bucket, attempts, expires_at) VALUES (?, 1, ?)
-      ON CONFLICT(bucket) DO UPDATE SET attempts = CASE WHEN expires_at <= ? THEN 1 ELSE attempts + 1 END,
-      expires_at = CASE WHEN expires_at <= ? THEN excluded.expires_at ELSE expires_at END RETURNING attempts`)
+      ON CONFLICT(bucket) DO UPDATE SET attempts = CASE WHEN auth_rate_limits.expires_at <= ? THEN 1 ELSE auth_rate_limits.attempts + 1 END,
+      expires_at = CASE WHEN auth_rate_limits.expires_at <= ? THEN excluded.expires_at ELSE auth_rate_limits.expires_at END RETURNING attempts`)
       .bind(bucket, now + 900, now, now)
       .first<{ attempts: number }>();
     if ((row?.attempts ?? limit + 1) > limit) {
