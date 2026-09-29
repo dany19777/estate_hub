@@ -34,6 +34,18 @@ export function LeadRequestDialog({ type, complexId, complexName, listingId, uni
 
   function changeOpen(nextOpen: boolean) {
     setOpen(nextOpen);
+    if (nextOpen) {
+      void fetch('/api/session', { cache: 'no-store' }).then(async (response) => {
+        if (!response.ok) return;
+        const session = await response.json() as { user?: { fullName?: string; email?: string }; phoneVerification?: { phone?: string | null } };
+        setForm((current) => ({
+          ...current,
+          fullName: current.fullName || session.user?.fullName || '',
+          phone: current.phone || session.phoneVerification?.phone || '',
+          email: current.email || session.user?.email || '',
+        }));
+      }).catch(() => {});
+    }
     if (!nextOpen) {
       setError('');
       setResult(null);
@@ -75,7 +87,7 @@ export function LeadRequestDialog({ type, complexId, complexName, listingId, uni
           <form id={`lead-request-${type}-${listingId ?? complexId}`} className="lead-request-form" onSubmit={submit}>
             {isViewing && <div className="lead-schedule-fields"><label htmlFor={`lead-date-${listingId}`}>Дата<Input id={`lead-date-${listingId}`} type="date" min={dateOffset(0)} max={dateOffset(30)} value={form.requestedDate} onChange={(event) => setForm({ ...form, requestedDate: event.target.value })} required /></label><label htmlFor={`lead-time-${listingId}`}>Время<select id={`lead-time-${listingId}`} value={form.timeSlot} onChange={(event) => setForm({ ...form, timeSlot: event.target.value })}>{['10:00', '12:00', '14:00', '16:00', '18:00'].map((time) => <option key={time}>{time}</option>)}</select></label></div>}
             <label htmlFor={`lead-name-${type}-${listingId ?? complexId}`}>Имя и фамилия<Input id={`lead-name-${type}-${listingId ?? complexId}`} value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} placeholder="Иван Иванов" required minLength={2} maxLength={100} /></label>
-            <div className="lead-contact-fields"><label htmlFor={`lead-phone-${type}-${listingId ?? complexId}`}>Телефон<Input id={`lead-phone-${type}-${listingId ?? complexId}`} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="+998 90 123 45 67" inputMode="tel" required /></label><label htmlFor={`lead-email-${type}-${listingId ?? complexId}`}>Email, необязательно<Input id={`lead-email-${type}-${listingId ?? complexId}`} type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="name@example.com" /></label></div>
+            <div className="lead-contact-fields"><label htmlFor={`lead-phone-${type}-${listingId ?? complexId}`}>Подтверждённый телефон<Input id={`lead-phone-${type}-${listingId ?? complexId}`} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="+998 90 123 45 67" inputMode="tel" required /></label><label htmlFor={`lead-email-${type}-${listingId ?? complexId}`}>Email, необязательно<Input id={`lead-email-${type}-${listingId ?? complexId}`} type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="name@example.com" /></label></div>
             <label htmlFor={`lead-message-${type}-${listingId ?? complexId}`}>{isViewing ? 'Комментарий менеджеру' : 'Что вас интересует?'}<textarea id={`lead-message-${type}-${listingId ?? complexId}`} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} placeholder={isViewing ? 'Например, хочу посмотреть отделку и планировку' : 'Например, расскажите об условиях рассрочки'} maxLength={500} /></label>
             <label className="lead-consent"><input type="checkbox" checked={form.consent} onChange={(event) => setForm({ ...form, consent: event.target.checked })} required /> Я согласен на обработку данных для ответа на заявку</label>
             {error && <p className="lead-request-error">{error}</p>}

@@ -14,7 +14,13 @@ export async function GET(request: Request) {
       JOIN complexes c ON c.id = favorite.complex_id
       JOIN complex_publication_workflows workflow ON workflow.complex_id = c.id AND workflow.status = 'published'
       LEFT JOIN listings l ON l.complex_id = c.id AND l.status = 'published'
-      LEFT JOIN units u ON u.id = l.unit_id AND u.availability_status = 'available'
+        AND EXISTS (SELECT 1 FROM units u WHERE u.id = l.unit_id AND u.availability_status = 'available')
+        AND (l.seller_org_id IS NULL OR EXISTS (SELECT 1 FROM organizations seller WHERE seller.id = l.seller_org_id AND seller.verification_status = 'verified'))
+        AND (l.market_type = 'PRIMARY_DEVELOPER' OR (
+          EXISTS (SELECT 1 FROM secondary_listing_owners owner WHERE owner.listing_id = l.id AND owner.verification_status = 'approved')
+          AND EXISTS (SELECT 1 FROM secondary_listing_purchases purchase JOIN billing_events payment ON payment.id = purchase.billing_event_id
+            WHERE purchase.listing_id = l.id AND purchase.status = 'active' AND purchase.period_end > CURRENT_TIMESTAMP
+              AND payment.status = 'paid' AND payment.provider IN ('offline_bank_transfer', 'offline_card_transfer'))))
       WHERE favorite.user_id = ? GROUP BY c.id ORDER BY favorite.created_at DESC`).bind(session.user.id).all<FavoriteRow>();
     return Response.json({ favorites: result.results ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {

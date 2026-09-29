@@ -21,6 +21,7 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level moderate
       - run: pnpm check:migrations
       - run: pnpm check:locales
       - run: pnpm check:risk

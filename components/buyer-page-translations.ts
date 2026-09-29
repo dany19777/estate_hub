@@ -121,6 +121,7 @@ const phrases: Record<string, { uz: string; en: string }> = {
     en: 'Verification failed',
   },
   Телефон: { uz: 'Telefon', en: 'Phone' },
+  'Подтверждённый телефон': { uz: 'Tasdiqlangan telefon raqami', en: 'Verified phone number' },
   'Подтвердите телефон': {
     uz: 'Telefonni tasdiqlang',
     en: 'Verify your phone',

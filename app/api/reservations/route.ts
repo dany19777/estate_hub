@@ -45,6 +45,9 @@ export async function POST(request: Request) {
     if (!listingId || fullName.length < 2 || fullName.length > 100 || !phone) {
       return Response.json({ error: 'validation_failed', message: 'Укажите имя и номер телефона в формате +998.' }, { status: 400 });
     }
+    if (phone !== session.phoneVerification.phone) {
+      return Response.json({ error: 'phone_mismatch', message: 'Укажите номер телефона, подтверждённый в вашем профиле.' }, { status: 409 });
+    }
 
     const existing = await database.prepare(`SELECT id, status, payment_status, hold_expires_at, reservation_expires_at
       FROM reservation_transactions WHERE idempotency_key = ? AND buyer_user_id = ? LIMIT 1`).bind(idempotencyKey, session.user.id).first<ReservationRow>();
@@ -70,13 +73,19 @@ export async function POST(request: Request) {
       .bind(listingId).first<{ id: string; unit_id: string; complex_id: string; seller_org_id: string; price_uzs: number }>();
     if (!listing?.seller_org_id) return Response.json({ error: 'listing_unavailable', message: 'Квартира недоступна для онлайн-бронирования. Обновите страницу.' }, { status: 409 });
 
-    let customer = await database.prepare(`SELECT id FROM crm_customers WHERE organization_id = ? AND phone_e164 = ? LIMIT 1`)
-      .bind(listing.seller_org_id, phone).first<{ id: string }>();
+    let customer = await database.prepare(`SELECT id, buyer_user_id FROM crm_customers WHERE organization_id = ? AND phone_e164 = ? LIMIT 1`)
+      .bind(listing.seller_org_id, phone).first<{ id: string; buyer_user_id: string | null }>();
+    if (customer?.buyer_user_id && customer.buyer_user_id !== session.user.id) {
+      return Response.json({ error: 'customer_conflict', message: 'Контакт уже связан с другим аккаунтом. Обратитесь в поддержку.' }, { status: 409 });
+    }
     if (!customer) {
       const id = crypto.randomUUID();
       await database.prepare(`INSERT OR IGNORE INTO crm_customers (id, organization_id, buyer_user_id, full_name, phone_e164, email, first_source)
         VALUES (?, ?, ?, ?, ?, ?, 'estatehub_reservation')`).bind(id, listing.seller_org_id, session.user.id, fullName, phone, session.user.email).run();
-      customer = await database.prepare(`SELECT id FROM crm_customers WHERE organization_id = ? AND phone_e164 = ? LIMIT 1`).bind(listing.seller_org_id, phone).first<{ id: string }>();
+      customer = await database.prepare(`SELECT id, buyer_user_id FROM crm_customers WHERE organization_id = ? AND phone_e164 = ? LIMIT 1`).bind(listing.seller_org_id, phone).first<{ id: string; buyer_user_id: string | null }>();
+      if (customer?.buyer_user_id && customer.buyer_user_id !== session.user.id) {
+        return Response.json({ error: 'customer_conflict', message: 'Контакт уже связан с другим аккаунтом. Обратитесь в поддержку.' }, { status: 409 });
+      }
     } else {
       await database.prepare(`UPDATE crm_customers SET buyer_user_id = COALESCE(buyer_user_id, ?), full_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
         .bind(session.user.id, fullName, session.user.email, customer.id).run();
