@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { randomToken, tokenHash, verifyPassword } from '@/lib/password';
+import { localSandboxEnabled } from '@/lib/local-sandbox';
 
 const COOKIE = 'estatehub_session';
 const LIFETIME = 30 * 24 * 60 * 60;
@@ -144,7 +145,7 @@ export async function loginWithPassword(
   password: string,
 ) {
   const database = await ensureMarketplaceDatabase();
-  await provisionTestAccounts();
+  if (localSandboxEnabled(request)) await provisionTestAccounts();
   const now = Math.floor(Date.now() / 1000);
   // Account and trusted network buckets are incremented atomically before KDF work.
   const ip = request.headers.get('cf-connecting-ip') ?? 'local';
@@ -176,7 +177,8 @@ export async function loginWithPassword(
     password,
     credentials?.password_hash ?? DUMMY_HASH,
   );
-  if (!valid || !credentials || credentials.status !== 'active') {
+  if (!valid || !credentials || credentials.status !== 'active' ||
+      (credentials.user_id.startsWith('test-auth-') && !localSandboxEnabled(request))) {
     if (credentials) {
       await database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json)
         VALUES (?, 'system', ?, 'auth.login_failed', 'user', ?, '{}')`).bind(crypto.randomUUID(), credentials.user_id, credentials.user_id).run().catch((error) => console.error('Failed to record login failure', error));

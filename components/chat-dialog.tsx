@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactElement, type SyntheticEvent, useCallback, useEffect, useState } from 'react';
+import { type ReactElement, type SyntheticEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, MessageCircle, Send, ShieldCheck } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ export function ChatDialog({ listingId, complexName, unitNumber, seller, trigger
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const requestKey = useRef<{ content: string; key: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,7 +41,11 @@ export function ChatDialog({ listingId, complexName, unitNumber, seller, trigger
     }
   }, [listingId]);
 
-  useEffect(() => { if (open) void load(); }, [load, open]);
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load, open]);
 
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,10 +54,13 @@ export function ChatDialog({ listingId, complexName, unitNumber, seller, trigger
     setSubmitting(true);
     setError('');
     try {
-      const response = await fetch('/api/buyer/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ listingId, body: message }) });
+      const content = JSON.stringify({ listingId, body: message });
+      if (requestKey.current?.content !== content) requestKey.current = { content, key: crypto.randomUUID() };
+      const response = await fetch('/api/buyer/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': requestKey.current.key }, body: content });
       const payload = await response.json() as { message?: string };
       if (!response.ok) throw new Error(payload.message ?? 'Не удалось отправить сообщение.');
       setBody('');
+      requestKey.current = null;
       await load();
       onMessageSent?.();
     } catch (caught) {

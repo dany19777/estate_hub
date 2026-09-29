@@ -1,5 +1,6 @@
 import { authorizationResponse, requirePermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { consumeRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,21 +54,38 @@ export async function POST(request: Request) {
     const payload = await request.json() as Record<string, unknown>;
     const conversationId = typeof payload.conversationId === 'string' ? payload.conversationId : '';
     const body = typeof payload.body === 'string' ? payload.body.trim() : '';
+    const idempotencyKey = request.headers.get('Idempotency-Key')?.trim() ?? '';
+    if (!/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) return Response.json({ error: 'idempotency_required', message: 'Обновите страницу и повторите отправку.' }, { status: 400 });
     if (!conversationId || !body || body.length > 1000) return Response.json({ error: 'validation_failed', message: 'Введите сообщение длиной до 1000 символов.' }, { status: 400 });
 
     const database = await ensureMarketplaceDatabase();
+    const existing = await database.prepare(`SELECT message.id, message.body, message.author_type, message.author_user_id, conversation.id AS conversation_id, conversation.organization_id
+      FROM conversation_messages message JOIN conversations conversation ON conversation.id = message.conversation_id
+      WHERE message.idempotency_key = ? LIMIT 1`).bind(idempotencyKey).first<{ id: string; body: string; author_type: string; author_user_id: string; conversation_id: string; organization_id: string }>();
+    if (existing) {
+      if (existing.author_type !== 'seller' || existing.organization_id !== session.organization.id || existing.author_user_id !== session.user.id || existing.conversation_id !== conversationId || existing.body !== body) return Response.json({ error: 'idempotency_conflict', message: 'Ключ сообщения уже использован.' }, { status: 409 });
+      return Response.json({ conversationId, message: { id: existing.id, author_type: 'seller', body }, duplicate: true });
+    }
+    const limit = await consumeRateLimit(database, `chat-developer:${session.user.id}`, 120, 3600);
+    if (!limit.allowed) return Response.json({ error: 'rate_limited', message: 'Слишком много сообщений. Попробуйте позже.' }, { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } });
     const conversation = await database.prepare(`SELECT id FROM conversations WHERE id = ? AND organization_id = ? LIMIT 1`)
       .bind(conversationId, session.organization.id).first<{ id: string }>();
     if (!conversation) return Response.json({ error: 'not_found', message: 'Диалог не найден.' }, { status: 404 });
 
     const messageId = crypto.randomUUID();
-    await database.batch([
-      database.prepare(`INSERT INTO conversation_messages (id, conversation_id, author_type, author_user_id, body, read_by_seller_at)
-        VALUES (?, ?, 'seller', ?, ?, CURRENT_TIMESTAMP)`).bind(messageId, conversation.id, session.user.id, body),
+    try { await database.batch([
+      database.prepare(`INSERT INTO conversation_messages (id, conversation_id, author_type, author_user_id, body, idempotency_key, read_by_seller_at)
+        VALUES (?, ?, 'seller', ?, ?, ?, CURRENT_TIMESTAMP)`).bind(messageId, conversation.id, session.user.id, body, idempotencyKey),
       database.prepare(`UPDATE conversations SET status = 'open', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(conversation.id),
       database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json)
         VALUES (?, 'user', ?, 'chat.seller_reply_sent', 'conversation', ?, ?)`).bind(crypto.randomUUID(), session.user.id, conversation.id, JSON.stringify({ messageId })),
-    ]);
+    ]); } catch (error) {
+      const concurrent = await database.prepare(`SELECT message.id, message.body, message.author_type, message.author_user_id, conversation.id AS conversation_id, conversation.organization_id
+        FROM conversation_messages message JOIN conversations conversation ON conversation.id = message.conversation_id
+        WHERE message.idempotency_key = ? LIMIT 1`).bind(idempotencyKey).first<{ id: string; body: string; author_type: string; author_user_id: string; conversation_id: string; organization_id: string }>();
+      if (concurrent && concurrent.author_type === 'seller' && concurrent.organization_id === session.organization.id && concurrent.author_user_id === session.user.id && concurrent.conversation_id === conversationId && concurrent.body === body) return Response.json({ conversationId, message: { id: concurrent.id, author_type: 'seller', body }, duplicate: true });
+      throw error;
+    }
     return Response.json({ conversationId: conversation.id, message: { id: messageId, author_type: 'seller', body } }, { status: 201 });
   } catch (error) {
     const response = authorizationResponse(error);

@@ -1,11 +1,11 @@
-import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
+import { authorizationResponse, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    await requirePermission(request, 'VIEW_ADMIN');
+    await requirePlatformPermission(request, 'MODERATE_LISTINGS');
     const database = await ensureMarketplaceDatabase();
     const result = await database.prepare(`SELECT review.id, review.complex_id, complex.name AS complex_name, user.full_name AS author, review.body, review.status, review.trust_level,
       review.moderation_reason, review.created_at, review.updated_at, ROUND(AVG(rating.rating), 1) AS overall,

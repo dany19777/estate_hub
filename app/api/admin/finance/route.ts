@@ -1,4 +1,4 @@
-import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
+import { authorizationResponse, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { paymentProvider } from '@/lib/payment-provider';
 
@@ -45,7 +45,7 @@ async function loadFinance(database: D1Database) {
 
 export async function GET(request: Request) {
   try {
-    await requirePermission(request, 'VIEW_ADMIN');
+    await requirePlatformPermission(request, 'MANAGE_FINANCE');
     const database = await ensureMarketplaceDatabase();
     return Response.json(await loadFinance(database), { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {

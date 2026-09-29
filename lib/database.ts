@@ -710,14 +710,16 @@ export async function ensureMarketplaceDatabase() {
   if (!initialization) {
     const database = marketplaceDatabase();
     initialization = (async () => {
-      await database.batch(
-        schemaStatements.map((statement) => database.prepare(statement)),
-      );
-      await database.batch(
-        indexStatements.map((statement) => database.prepare(statement)),
-      );
-      await ensureCatalogGeography(database);
-      await seedMarketplace(database);
+      const demoSeed = (env as Cloudflare.Env & { ESTATEHUB_SEED_DEMO?: string }).ESTATEHUB_SEED_DEMO === 'true';
+      if (demoSeed) {
+        await database.batch(schemaStatements.map((statement) => database.prepare(statement)));
+        await database.batch(indexStatements.map((statement) => database.prepare(statement)));
+        await ensureCatalogGeography(database);
+        await seedMarketplace(database);
+      } else {
+        // Production schema is installed by versioned D1 migrations, never by a live request.
+        await database.prepare('SELECT 1 FROM users LIMIT 1').first();
+      }
       // Approval is separate from paid publication. Reconcile listings made
       // public by older builds without a valid paid period.
       await database

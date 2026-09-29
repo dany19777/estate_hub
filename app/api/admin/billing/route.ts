@@ -1,4 +1,4 @@
-import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
+import { authorizationResponse, requirePlatformPermission } from '@/lib/auth';
 import { addDays, databaseNow, expireBillingPeriods } from '@/lib/billing';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { localSandboxEnabled } from '@/lib/local-sandbox';
@@ -69,7 +69,7 @@ async function adminBillingData(database: D1Database, sandboxEnabled = false) {
 
 export async function GET(request: Request) {
   try {
-    const session = await requirePermission(request, 'VIEW_ADMIN');
+    const session = await requirePlatformPermission(request, 'MANAGE_BILLING');
     const database = await ensureMarketplaceDatabase();
     return Response.json(await adminBillingData(database, localSandboxEnabled(request) && session.platformRoles.includes('SUPERADMIN')), { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {

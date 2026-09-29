@@ -15,7 +15,8 @@ type ModerationRow = {
 
 export async function GET(request: Request) {
   try {
-    await requirePermission(request, 'VIEW_ADMIN');
+    const session = await requirePermission(request, 'VIEW_ADMIN');
+    if (!session.permissions.includes('MODERATE_LISTINGS')) return Response.json({ queue: [] }, { headers: { 'Cache-Control': 'private, no-store' } });
     const database = await ensureMarketplaceDatabase();
     const result = await database.prepare(`SELECT
       complex.id AS complex_id, complex.name, organization.name AS developer,

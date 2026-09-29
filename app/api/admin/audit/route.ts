@@ -1,11 +1,11 @@
-import { authorizationResponse, requirePermission } from '@/lib/auth';
+import { authorizationResponse, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    await requirePermission(request, 'VIEW_ADMIN');
+    await requirePlatformPermission(request, 'VIEW_AUDIT');
     const url = new URL(request.url);
     const query = url.searchParams.get('q')?.trim().toLowerCase() ?? '';
     const database = await ensureMarketplaceDatabase();

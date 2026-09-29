@@ -1,7 +1,7 @@
 import {
   AuthorizationError,
   authorizationResponse,
-  requirePermission,
+  requirePlatformPermission,
 } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 
@@ -365,7 +365,7 @@ async function directoryPayload(database: D1Database) {
 
 export async function GET(request: Request) {
   try {
-    await requirePermission(request, 'VIEW_ADMIN');
+    await requirePlatformPermission(request, 'VIEW_DIRECTORY');
     const database = await ensureMarketplaceDatabase();
     return Response.json(await directoryPayload(database), {
       headers: { 'Cache-Control': 'private, no-store' },
@@ -386,7 +386,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await requirePermission(request, 'VIEW_ADMIN');
+    const session = await requirePlatformPermission(request, 'VIEW_DIRECTORY');
     const parsed = await readMutation(request);
     if (parsed.error) return parsed.error;
     const { entityType, entityId, action, reason } = parsed.mutation;

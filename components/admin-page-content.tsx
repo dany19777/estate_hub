@@ -90,7 +90,7 @@ type VerificationCase = {
 };
 
 type AdminDashboardData = {
-  session: { user: { fullName: string }; platformRoles: string[] };
+  session: { user: { fullName: string }; platformRoles: string[]; permissions: string[] };
   queue: VerificationCase[];
   moderation: Array<{
     complex_id: string;
@@ -153,6 +153,13 @@ const adminHashLabels: Record<string, string> = {
   'system-health': 'Настройки системы',
 };
 
+const sectionPermission: Record<string, string> = {
+  Застройщики: 'VIEW_DIRECTORY', 'Агентства и владельцы': 'VIEW_DIRECTORY', 'Жилые комплексы': 'VIEW_DIRECTORY',
+  Верификация: 'REVIEW_VERIFICATION', Модерация: 'MODERATE_LISTINGS', Отзывы: 'MODERATE_LISTINGS',
+  Поддержка: 'MANAGE_SUPPORT', 'Брони и платежи': 'MANAGE_FINANCE', 'Споры и возвраты': 'MANAGE_FINANCE',
+  'Тарифы и биллинг': 'MANAGE_BILLING', Продвижение: 'MANAGE_PROMOTIONS', Аудит: 'VIEW_AUDIT',
+};
+
 function formatAdminMoney(value: number) {
   return formatUzsAmount(value);
 }
@@ -197,6 +204,11 @@ export default function AdminDashboard() {
             'Не удалось загрузить очередь модерации.',
         );
       setDashboard({ ...payload, moderation: moderationPayload.queue ?? [] });
+      setActiveNav((current) => {
+        if ((current === 'Пользователи' || current === 'Роли и доступ') && !payload.session.platformRoles.includes('SUPERADMIN')) return 'Обзор';
+        const required = sectionPermission[current];
+        return required && !payload.session.permissions.includes(required) ? 'Обзор' : current;
+      });
     } catch (error) {
       setLoadError(
         error instanceof Error
@@ -340,7 +352,9 @@ export default function AdminDashboard() {
   const highRiskCount =
     dashboard?.queue.filter((item) => item.risk_level === 'high').length ?? 0;
   const activeView = adminViews[activeNav] ?? 'overview';
-  const canManageSupport = dashboard?.session.platformRoles.some((role) => ['SUPERADMIN', 'PLATFORM_ADMIN', 'SUPPORT'].includes(role)) ?? false;
+  const can = (permission: string) => dashboard?.session.permissions.includes(permission) ?? false;
+  const isSuperadmin = dashboard?.session.platformRoles.includes('SUPERADMIN') ?? false;
+  const canManageSupport = can('MANAGE_SUPPORT');
 
   function navigateAdmin(label: string) {
     const target = adminViews[label] ?? 'overview';
@@ -388,7 +402,10 @@ export default function AdminDashboard() {
           <ChevronDown />
         </div>
         <nav>
-          {adminNav.filter((item) => item.label !== 'Поддержка' || canManageSupport).map((item) => {
+          {adminNav.filter((item) => {
+            if (item.label === 'Пользователи' || item.label === 'Роли и доступ') return isSuperadmin;
+            return !sectionPermission[item.label] || can(sectionPermission[item.label]);
+          }).map((item) => {
             const count =
               item.label === 'Верификация'
                 ? dashboard?.stats.pendingVerifications
@@ -895,7 +912,7 @@ export default function AdminDashboard() {
             </Table>
           </section>
 
-          <AdminDirectoryPanel
+          {can('VIEW_DIRECTORY') && <AdminDirectoryPanel
             query={query}
             focus={
               activeNav === 'Застройщики'
@@ -906,11 +923,11 @@ export default function AdminDashboard() {
                     ? 'complexes'
                     : undefined
             }
-          />
+          />}
 
-          <AdminUsersPanel query={query} />
+          {isSuperadmin && <AdminUsersPanel query={query} />}
 
-          <AdminReviewsPanel
+          {can('MODERATE_LISTINGS') && <AdminReviewsPanel
             reviews={reviews.queue}
             stats={reviews.stats}
             loading={reviews.loading}
@@ -920,9 +937,9 @@ export default function AdminDashboard() {
               const message = await reviews.decide(reviewId, decision, reason);
               setFeedback(message);
             }}
-          />
+          />}
 
-          <AdminDisputesPanel
+          {can('MANAGE_FINANCE') && <AdminDisputesPanel
             disputes={disputes.disputes}
             loading={disputes.loading}
             error={disputes.error}
@@ -933,9 +950,9 @@ export default function AdminDashboard() {
               setFeedback(message);
               if (action === 'approve_refund') await finance.refresh();
             }}
-          />
+          />}
 
-          <AdminBillingPanel
+          {can('MANAGE_BILLING') && <AdminBillingPanel
             sandboxMode={billing.sandboxMode}
             plans={billing.plans}
             subscriptions={billing.subscriptions}
@@ -971,9 +988,9 @@ export default function AdminDashboard() {
               const message = await billing.activateSecondary(listingId, claimId);
               setFeedback(message);
             }}
-          />
+          />}
 
-          <AdminPromotionsPanel
+          {can('MANAGE_PROMOTIONS') && <AdminPromotionsPanel
             products={promotions.products}
             placements={promotions.placements}
             stats={promotions.stats}
@@ -989,9 +1006,9 @@ export default function AdminDashboard() {
               const message = await promotions.cancel(promotionId);
               setFeedback(message);
             }}
-          />
+          />}
 
-          <AdminFinancePanel
+          {can('MANAGE_FINANCE') && <AdminFinancePanel
             operations={finance.operations}
             loading={finance.loading}
             error={finance.error}
@@ -1001,12 +1018,12 @@ export default function AdminDashboard() {
               const message = await finance.reconcile(operationId);
               setFeedback(message);
             }}
-          />
+          />}
 
           {canManageSupport && <AdminSupportPanel />}
 
           <div className="admin-lower-grid">
-            <AdminAuditPanel query={query} />
+            {can('VIEW_AUDIT') && <AdminAuditPanel query={query} />}
             <section className="admin-panel system-health" id="system-health">
               <div className="admin-panel-heading">
                 <div>

@@ -9,7 +9,7 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useBuyerPreferences } from '@/components/buyer-preferences';
 
@@ -22,22 +22,26 @@ export function SupportSection() {
     'idle' | 'sending' | 'success' | 'error'
   >('idle');
   const [feedback, setFeedback] = useState('');
+  const requestKey = useRef<{ body: string; key: string } | null>(null);
 
   const submit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus('sending');
     setFeedback('');
     try {
+      const body = JSON.stringify({ ...form, locale });
+      if (requestKey.current?.body !== body) requestKey.current = { body, key: crypto.randomUUID() };
       const response = await fetch('/api/support', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, locale }),
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': requestKey.current.key },
+        body,
       });
       const payload = (await response.json()) as { message?: string };
       if (!response.ok) throw new Error(payload.message || 'Ошибка отправки');
       setStatus('success');
       setFeedback(payload.message || 'Вопрос отправлен в службу поддержки.');
       setForm(initialForm);
+      requestKey.current = null;
     } catch (error) {
       setStatus('error');
       setFeedback(

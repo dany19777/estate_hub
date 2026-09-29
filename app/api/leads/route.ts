@@ -1,5 +1,6 @@
 import { authorizationResponse, requireVerifiedPhone } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
+import { consumeRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,8 @@ export async function POST(request: Request) {
       FROM leads lead JOIN crm_customers customer ON customer.id = lead.customer_id
       WHERE lead.idempotency_key = ? AND customer.buyer_user_id = ? LIMIT 1`).bind(idempotencyKey, session.user.id).first<{ id: string; lead_type: string; status: string; repeated_interaction: number }>();
     if (existing) return Response.json({ leadId: existing.id, type: existing.lead_type, status: existing.status, repeated: Boolean(existing.repeated_interaction), duplicate: true, message: 'Заявка уже была принята.' });
+    const limit = await consumeRateLimit(database, `lead:${session.user.id}`, 20, 3600);
+    if (!limit.allowed) return Response.json({ error: 'rate_limited', message: 'Слишком много заявок. Попробуйте позже.' }, { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } });
 
     const body = await request.json() as Record<string, unknown>;
     const type = body.type === 'consultation' || body.type === 'viewing' ? body.type : null;

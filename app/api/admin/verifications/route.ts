@@ -31,7 +31,7 @@ async function queuePayload(request: Request) {
   const session = await requirePermission(request, 'VIEW_ADMIN');
   const database = await ensureMarketplaceDatabase();
   const [queueResult, users, activeComplexes, pendingVerifications, publishedListings] = await Promise.all([
-    database.prepare(`SELECT * FROM (SELECT
+    session.permissions.includes('REVIEW_VERIFICATION') ? database.prepare(`SELECT * FROM (SELECT
       verification.id, verification.subject_type, verification.subject_id,
       COALESCE(organization.name, complex.name, seller.full_name, verification.subject_id) AS applicant,
       organization.organization_type, owner.document_type,
@@ -58,7 +58,7 @@ async function queuePayload(request: Request) {
       FROM buyer_identity_verifications identity
       JOIN users user ON user.id = identity.user_id
       WHERE identity.status IN ('submitted', 'in_review')) queue
-      ORDER BY queue.created_at ASC`).all<VerificationRow>(),
+      ORDER BY queue.created_at ASC`).all<VerificationRow>() : Promise.resolve({ results: [] as VerificationRow[] }),
     database.prepare(`SELECT COUNT(*) AS count FROM users WHERE status = 'active'`).first<CountRow>(),
     database.prepare(`SELECT COUNT(*) AS count FROM complex_publication_workflows WHERE status = 'published'`).first<CountRow>(),
     database.prepare(`SELECT (SELECT COUNT(*) FROM verification_cases WHERE status IN ('submitted', 'in_review')) +

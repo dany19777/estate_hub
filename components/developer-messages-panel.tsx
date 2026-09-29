@@ -1,6 +1,6 @@
 'use client';
 
-import { type SyntheticEvent, useCallback, useEffect, useState } from 'react';
+import { type SyntheticEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, MessageCircle, Send, UserRound } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -16,9 +16,8 @@ export function DeveloperMessagesPanel({ conversations, loading, error, reload }
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [threadError, setThreadError] = useState('');
+  const requestKey = useRef<{ content: string; key: string } | null>(null);
   const selected = conversations.find((conversation) => conversation.id === selectedId) ?? conversations[0];
-
-  useEffect(() => { if (!selectedId && conversations[0]) setSelectedId(conversations[0].id); }, [conversations, selectedId]);
 
   const loadThread = useCallback(async (conversationId: string) => {
     setThreadLoading(true);
@@ -36,7 +35,13 @@ export function DeveloperMessagesPanel({ conversations, loading, error, reload }
     }
   }, [reload]);
 
-  useEffect(() => { if (selected?.id) void loadThread(selected.id); else setMessages([]); }, [loadThread, selected?.id]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (selected?.id) void loadThread(selected.id);
+      else setMessages([]);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadThread, selected?.id]);
 
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,10 +50,13 @@ export function DeveloperMessagesPanel({ conversations, loading, error, reload }
     setSubmitting(true);
     setThreadError('');
     try {
-      const response = await fetch('/api/developer/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: selected.id, body: message }) });
+      const content = JSON.stringify({ conversationId: selected.id, body: message });
+      if (requestKey.current?.content !== content) requestKey.current = { content, key: crypto.randomUUID() };
+      const response = await fetch('/api/developer/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': requestKey.current.key }, body: content });
       const payload = await response.json() as { message?: string };
       if (!response.ok) throw new Error(payload.message ?? 'Не удалось отправить ответ.');
       setBody('');
+      requestKey.current = null;
       await loadThread(selected.id);
     } catch (caught) {
       setThreadError(caught instanceof Error ? caught.message : 'Не удалось отправить ответ.');

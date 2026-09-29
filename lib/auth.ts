@@ -23,6 +23,8 @@ export type Permission =
   | 'MANAGE_UNITS'
   | 'MANAGE_LEADS'
   | 'VIEW_ADMIN'
+  | 'VIEW_AUDIT'
+  | 'VIEW_DIRECTORY'
   | 'REVIEW_VERIFICATION'
   | 'MODERATE_LISTINGS'
   | 'MANAGE_FINANCE'
@@ -66,6 +68,8 @@ const platformPermissionMatrix: Record<PlatformRole, Permission[]> = {
     'MANAGE_UNITS',
     'MANAGE_LEADS',
     'VIEW_ADMIN',
+    'VIEW_AUDIT',
+    'VIEW_DIRECTORY',
     'REVIEW_VERIFICATION',
     'MODERATE_LISTINGS',
     'MANAGE_FINANCE',
@@ -75,6 +79,8 @@ const platformPermissionMatrix: Record<PlatformRole, Permission[]> = {
   ],
   PLATFORM_ADMIN: [
     'VIEW_ADMIN',
+    'VIEW_AUDIT',
+    'VIEW_DIRECTORY',
     'REVIEW_VERIFICATION',
     'MODERATE_LISTINGS',
     'MANAGE_FINANCE',
@@ -82,8 +88,8 @@ const platformPermissionMatrix: Record<PlatformRole, Permission[]> = {
     'MANAGE_PROMOTIONS',
     'MANAGE_SUPPORT',
   ],
-  MODERATOR: ['VIEW_ADMIN', 'MODERATE_LISTINGS'],
-  VERIFICATION_SPECIALIST: ['VIEW_ADMIN', 'REVIEW_VERIFICATION'],
+  MODERATOR: ['VIEW_ADMIN', 'VIEW_DIRECTORY', 'MODERATE_LISTINGS'],
+  VERIFICATION_SPECIALIST: ['VIEW_ADMIN', 'VIEW_DIRECTORY', 'REVIEW_VERIFICATION'],
   FINANCE_OPERATOR: [
     'VIEW_ADMIN',
     'MANAGE_FINANCE',
@@ -91,7 +97,7 @@ const platformPermissionMatrix: Record<PlatformRole, Permission[]> = {
     'MANAGE_PROMOTIONS',
   ],
   SUPPORT: ['VIEW_ADMIN', 'MANAGE_SUPPORT'],
-  CONTENT_MANAGER: ['VIEW_ADMIN'],
+  CONTENT_MANAGER: ['VIEW_ADMIN', 'VIEW_DIRECTORY'],
 };
 
 const organizationPermissionMatrix: Record<OrganizationRole, Permission[]> = {

@@ -34,6 +34,7 @@ export async function deliverSupportMail(item: SupportMailRequest) {
   try {
     const delivery = await fetch('https://api.resend.com/emails', {
       method: 'POST',
+      signal: AbortSignal.timeout(8000),
       headers: {
         Authorization: `Bearer ${runtime.RESEND_API_KEY}`,
         'Content-Type': 'application/json',

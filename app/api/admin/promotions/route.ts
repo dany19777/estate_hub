@@ -1,4 +1,4 @@
-import { authorizationResponse, requirePermission, requirePlatformPermission } from '@/lib/auth';
+import { authorizationResponse, requirePlatformPermission } from '@/lib/auth';
 import { ensureMarketplaceDatabase } from '@/lib/database';
 import { expirePromotions } from '@/lib/promotions';
 
@@ -31,7 +31,7 @@ async function adminPromotionData(database: D1Database) {
 
 export async function GET(request: Request) {
   try {
-    await requirePermission(request, 'VIEW_ADMIN');
+    await requirePlatformPermission(request, 'MANAGE_PROMOTIONS');
     const database = await ensureMarketplaceDatabase();
     return Response.json(await adminPromotionData(database), { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {

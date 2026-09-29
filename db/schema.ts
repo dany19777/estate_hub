@@ -383,6 +383,7 @@ export const schemaStatements = [
     author_type TEXT NOT NULL CHECK (author_type IN ('buyer', 'seller', 'system')),
     author_user_id TEXT REFERENCES users(id),
     body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 1000),
+    idempotency_key TEXT,
     read_by_buyer_at TEXT,
     read_by_seller_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -610,6 +611,8 @@ export const schemaStatements = [
     delivery_reference TEXT,
     delivery_error TEXT,
     source_hash TEXT NOT NULL,
+    idempotency_key TEXT,
+    request_hash TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     sent_at TEXT
   )`,
@@ -660,6 +663,7 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_conversations_buyer_updated ON conversations(buyer_user_id, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_conversations_organization_updated ON conversations(organization_id, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_conversation_messages_created ON conversation_messages(conversation_id, created_at)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_conversation_messages_idempotency ON conversation_messages(idempotency_key) WHERE idempotency_key IS NOT NULL`,
   `CREATE INDEX IF NOT EXISTS idx_reservation_outcomes_status_updated ON reservation_outcomes(outcome_status, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_buyer_identity_status_submitted ON buyer_identity_verifications(status, submitted_at)`,
   `CREATE INDEX IF NOT EXISTS idx_payment_operations_reservation_created ON payment_operations(reservation_id, created_at)`,
@@ -686,4 +690,5 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_support_requests_status_created ON support_requests(delivery_status, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_support_handling_status_updated ON support_request_handling(status, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_support_requests_source_created ON support_requests(source_hash, created_at)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_support_requests_idempotency ON support_requests(idempotency_key) WHERE idempotency_key IS NOT NULL`,
 ] as const;
