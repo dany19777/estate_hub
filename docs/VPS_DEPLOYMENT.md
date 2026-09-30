@@ -4,7 +4,7 @@ The production stack uses Docker Compose on the project VPS. PostgreSQL 16 is th
 
 The temporary address `https://estatehub.161.97.107.6.sslip.io` is live behind HTTP Basic authentication while production accounts and catalog content are being decided. The access credentials are stored only in `/opt/estatehub/staging-access.txt` (root-only). Do not remove this gate until the release prerequisites below are complete. Search indexing remains disabled.
 
-`/opt/estatehub/.env` is root-readable (0600) and is never committed. It holds database, S3, and MFA secrets plus optional email settings. `ESTATEHUB_SEED_DEMO` and `ESTATEHUB_TEST_ACCOUNTS` must **never** be configured on this deployment. The migration job applies versioned schema changes and seeds only geography, tariff reference data, and platform billing defaults. It creates no users, listings, or demo data.
+`/opt/estatehub/.env` is root-readable (0600) and is never committed. It holds database, S3, and MFA secrets plus optional email settings. `ESTATEHUB_SEED_DEMO` and `ESTATEHUB_TEST_ACCOUNTS` must **never** be configured on this deployment. Keep `LEGAL_DOCUMENTS_PUBLISHED=no` and `ESTATEHUB_SELF_REGISTRATION=disabled` until approved legal texts replace the current placeholders and the registration/payment flows are reviewed. The migration job applies versioned schema changes and seeds only geography, tariff reference data, and platform billing defaults. It creates no users, listings, or demo data.
 
 Deploy from a reviewed revision, preserving `/opt/estatehub/.env` and named Docker volumes:
 

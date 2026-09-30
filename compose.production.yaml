@@ -68,6 +68,8 @@ services:
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
       SUPPORT_FROM_EMAIL: ${SUPPORT_FROM_EMAIL:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      LEGAL_DOCUMENTS_PUBLISHED: ${LEGAL_DOCUMENTS_PUBLISHED:-no}
+      ESTATEHUB_SELF_REGISTRATION: ${ESTATEHUB_SELF_REGISTRATION:-disabled}
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
