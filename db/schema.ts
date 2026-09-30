@@ -623,6 +623,21 @@ export const schemaStatements = [
     internal_note TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS account_consents (
+    user_id TEXT PRIMARY KEY REFERENCES users(id),
+    terms_accepted_at TEXT NOT NULL,
+    privacy_accepted_at TEXT NOT NULL,
+    marketing_opt_in INTEGER NOT NULL DEFAULT 0 CHECK (marketing_opt_in IN (0, 1)),
+    document_version TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS account_deletion_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    status TEXT NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'in_review', 'completed', 'rejected')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TEXT,
+    UNIQUE(user_id, status)
+  )`,
 ] as const;
 
 export const indexStatements = [
@@ -691,4 +706,5 @@ export const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_support_handling_status_updated ON support_request_handling(status, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_support_requests_source_created ON support_requests(source_hash, created_at)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_support_requests_idempotency ON support_requests(idempotency_key) WHERE idempotency_key IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_account_deletion_status_created ON account_deletion_requests(status, created_at)`,
 ] as const;

@@ -15,7 +15,8 @@ async function payload() {
   const database = await ensureMarketplaceDatabase();
   const users = await database.prepare(`SELECT user.id, user.email, user.full_name, user.status, user.created_at,
     GROUP_CONCAT(DISTINCT role.role) AS roles, membership.role AS organization_role, organization.name AS organization_name,
-    phone.status AS phone_status
+    phone.status AS phone_status,
+    (SELECT deletion.status FROM account_deletion_requests deletion WHERE deletion.user_id = user.id ORDER BY deletion.created_at DESC LIMIT 1) AS deletion_status
     FROM users user
     LEFT JOIN platform_role_assignments role ON role.user_id = user.id
     LEFT JOIN organization_memberships membership ON membership.user_id = user.id AND membership.status = 'active'

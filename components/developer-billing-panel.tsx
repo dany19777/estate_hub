@@ -9,6 +9,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Input } from '@/components/ui/input';
 import type { DeveloperBillingEvent, DeveloperPlan, DeveloperSubscription } from '@/hooks/use-developer-billing';
 import { formatUzsAmount } from '@/lib/marketplace';
+import { useLegalDocumentsPublished } from '@/hooks/use-legal-documents';
+import { InternalLink as Link } from '@/components/internal-link';
 
 type Props = {
   plans: DeveloperPlan[];
@@ -21,7 +23,7 @@ type Props = {
   feedback: string;
   processing: string;
   onRetry: () => void;
-  onSubmitContract: (planId: string, contractReference: string, transferReference: string) => Promise<string>;
+  onSubmitContract: (planId: string, contractReference: string, transferReference: string, acceptedOfferAndRefunds: boolean) => Promise<string>;
 };
 
 function money(value: number) {
@@ -50,6 +52,8 @@ export function DeveloperBillingPanel({ plans, subscription, usage, events, paym
   const [transferReference, setTransferReference] = useState('');
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [acceptedOfferAndRefunds, setAcceptedOfferAndRefunds] = useState(false);
+  const legalPublished = useLegalDocumentsPublished();
   const percent = usage.limit ? Math.min(100, Math.round(usage.activeInventory / usage.limit * 100)) : 0;
   const pending = events.some((event) => event.status === 'pending' && ['subscription_charge', 'plan_change'].includes(event.event_type));
   const selectedPlan = plans.find((item) => item.id === selectedPlanId);
@@ -61,13 +65,13 @@ export function DeveloperBillingPanel({ plans, subscription, usage, events, paym
     if (!selectedPlan) return;
     setSubmitting(true); setFormError('');
     try {
-      await onSubmitContract(selectedPlan.id, contractReference.trim(), transferReference.trim());
+      await onSubmitContract(selectedPlan.id, contractReference.trim(), transferReference.trim(), acceptedOfferAndRefunds);
       setSelectedPlanId(''); setContractReference(''); setTransferReference('');
     } catch (reason) { setFormError(reason instanceof Error ? reason.message : 'Не удалось отправить заявку.'); }
     finally { setSubmitting(false); }
   }
   return (
-    <section className="dashboard-panel developer-billing-panel" id="developer-billing">
+    <section className="dashboard-panel developer-billing-panel" id="developer-billing" data-price-currency-fixed>
       <div className="panel-heading"><div><h2>Тариф и договор</h2><p>{isDemo ? 'Тестовый доступ включён суперадмином на localhost. Реальной оплаты не было.' : pending ? 'Договор и перевод ожидают проверки суперадмина.' : hasPaymentDetails ? `Оплата банковским переводом: ${paymentDetails.bankName}, счёт ${paymentDetails.bankAccount}. После подписания договора укажите номер операции.` : 'Реквизиты компании не настроены. Для тестирования суперадмин может включить тестовый доступ в разделе «Тарифы и биллинг».'}</p></div><Badge className={`billing-subscription-state ${subscription?.status ?? 'past_due'}`}>{isDemo ? 'Тестовый доступ' : isPaid ? 'Активен' : pending ? 'Перевод проверяется' : subscription?.status === 'trialing' || subscription?.status === 'active' ? 'Ожидает договора и оплаты' : 'Требует решения администратора'}</Badge></div>
       {error && <div className="dashboard-operation-state error"><AlertCircle /><span>{error}</span><button type="button" onClick={onRetry}>Повторить</button></div>}
       {feedback && <div className="dashboard-operation-state success"><Check /><span>{feedback}</span></div>}
@@ -86,14 +90,16 @@ export function DeveloperBillingPanel({ plans, subscription, usage, events, paym
         <DialogContent className="seller-payment-dialog developer-contract-dialog">
           <DialogHeader><span className="seller-payment-eyebrow"><ShieldCheck /> Договор с EstateHub</span><DialogTitle>Подтвердить тариф</DialogTitle><DialogDescription>Сначала подпишите договор и переведите указанную сумму. Подписка активируется только после проверки суперадмином.</DialogDescription></DialogHeader>
           <div className="seller-payment-summary"><span>{selectedPlan?.name} · 30 дней</span><strong>{selectedPlan ? money(selectedPlan.monthly_price_uzs) : '—'}</strong></div>
+          {!legalPublished && <p className="seller-payment-hint">Приём переводов откроется после публикации юридических документов. Сейчас деньги переводить не нужно.</p>}
           {hasPaymentDetails ? <div className="developer-contract-account"><small>Получатель: {paymentDetails.bankName}</small><strong>Счёт {paymentDetails.bankAccount}</strong></div> : <output className="seller-payment-hint">Оформление пока недоступно: администратор EstateHub должен добавить банковские реквизиты компании. Без них не переводите деньги и не указывайте номер операции.</output>}
           <form id="developer-contract-form" className="seller-payment-form" onSubmit={submitContract}>
             <label className="seller-payment-reference" htmlFor="developer-contract-reference">Номер подписанного договора<Input id="developer-contract-reference" value={contractReference} onChange={(event) => setContractReference(event.target.value)} minLength={6} maxLength={100} required /></label>
             <label className="seller-payment-reference" htmlFor="developer-transfer-reference">Номер банковской операции<Input id="developer-transfer-reference" value={transferReference} onChange={(event) => setTransferReference(event.target.value)} minLength={6} maxLength={100} required /></label>
             <p className="seller-payment-hint">Суперадмин сверит подписанный договор, сумму и поступление денег по выписке. Заявка сама по себе не меняет тариф.</p>
+            <label className="payment-legal-check"><input type="checkbox" checked={acceptedOfferAndRefunds} onChange={event => setAcceptedOfferAndRefunds(event.target.checked)} disabled={!legalPublished} /><span>Перед отправкой перевода я ознакомился с <Link href="/legal/offer">Публичной офертой</Link> и <Link href="/legal/refunds">Правилами возврата</Link>.</span></label>
             {formError && <p className="lead-request-error">{formError}</p>}
           </form>
-          <DialogFooter><DialogClose render={<Button variant="outline" disabled={submitting} />}>Закрыть</DialogClose><Button type="submit" form="developer-contract-form" disabled={!hasPaymentDetails || submitting || contractReference.trim().length < 6 || transferReference.trim().length < 6}>{submitting ? 'Отправляем…' : 'Отправить на проверку'}</Button></DialogFooter>
+          <DialogFooter><DialogClose render={<Button variant="outline" disabled={submitting} />}>Закрыть</DialogClose><Button type="submit" form="developer-contract-form" disabled={!hasPaymentDetails || !legalPublished || !acceptedOfferAndRefunds || submitting || contractReference.trim().length < 6 || transferReference.trim().length < 6}>{submitting ? 'Отправляем…' : 'Отправить на проверку'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </section>

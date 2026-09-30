@@ -657,13 +657,14 @@ export function BuyerPreferencesProvider({
       )
         originalText.set(node, node.data);
       const base = originalText.get(node) ?? node.data;
+      const fixedUzs = Boolean(node.parentElement?.closest('[data-price-currency-fixed]'));
       const next =
         currency === 'USD' &&
         base.trim().toLowerCase() === 'сум' &&
         node.parentElement?.textContent?.includes('$')
           ? base.replace(/сум/i, '')
           : translateText(
-              convertPrices(base, currency, usdUzs, locale),
+              fixedUzs ? base : convertPrices(base, currency, usdUzs, locale),
               locale,
             );
       renderedText.set(node, next);
@@ -690,8 +691,9 @@ export function BuyerPreferencesProvider({
         )
           saved.set(attribute, current);
         const base = saved.get(attribute)!;
+        const fixedUzs = Boolean(element.closest('[data-price-currency-fixed]'));
         const next = translateText(
-          convertPrices(base, currency, usdUzs, locale),
+          fixedUzs ? base : convertPrices(base, currency, usdUzs, locale),
           locale,
         );
         rendered.set(attribute, next);

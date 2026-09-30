@@ -14793,3 +14793,33 @@ body:has(.site-header) .global-buyer-preferences {
 .admin-support-meta svg { width: 1rem; height: 1rem; }
 .admin-support-list footer { justify-content: flex-start; margin-top: 1rem; }
 .admin-support-error { margin: 1rem; color: #fca5a5 !important; }
+.site-footer { background: #0e1b2f; color: #d7e2f4; padding: 42px max(24px, calc((100vw - 1680px)/2)); }
+.site-footer-inner { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 32px; }
+.site-footer-inner > div, .site-footer-inner nav { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.site-footer strong { color: #fff; font-size: 17px; }
+.site-footer p, .site-footer small { margin: 0; color: #aebdd2; line-height: 1.55; }
+.site-footer a { color: #d7e2f4; text-decoration: none; }
+.site-footer a:hover { color: #85b0ff; text-decoration: underline; }
+.cookie-consent { position: fixed; z-index: 1100; bottom: 22px; left: 50%; transform: translateX(-50%); width: min(920px, calc(100vw - 32px)); display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 24px; background: #fff; border: 1px solid #c9d8ee; border-radius: 18px; box-shadow: 0 16px 50px #0d214934; color: #1c2b46; }
+.cookie-consent strong { font-size: 16px; }
+.cookie-consent p { margin: 5px 0 0; font-size: 14px; line-height: 1.5; }
+.cookie-consent a { color: #2162e6; }
+.cookie-consent-actions { display: flex; gap: 9px; flex-shrink: 0; }
+.cookie-consent button { border: 1px solid #b6c9e5; border-radius: 10px; padding: 11px 14px; background: #f4f7fd; color: #184caa; font-weight: 650; cursor: pointer; }
+.cookie-consent button:last-child { background: #2463eb; border-color: #2463eb; color: #fff; }
+.legal-page { max-width: 820px; margin: 0 auto; padding: 90px 24px 140px; min-height: 55vh; color: #17263d; }
+.legal-page h1 { font-size: clamp(32px, 4vw, 52px); margin: 22px 0; }
+.legal-page p { font-size: 18px; line-height: 1.65; color: #52647f; }
+.legal-page a { color: #2463eb; }
+@media (max-width: 900px) { .site-footer-inner { grid-template-columns: repeat(2, 1fr); } .cookie-consent { align-items: stretch; flex-direction: column; } }
+@media (max-width: 580px) { .site-footer-inner { grid-template-columns: 1fr; } .cookie-consent-actions { flex-direction: column; } }
+.register-check { display: flex !important; align-items: flex-start; gap: 10px; line-height: 1.45; font-weight: 400 !important; }
+.register-check input { flex: 0 0 auto; margin-top: 4px; accent-color: #2463eb; }
+.register-check a, .profile-delete-link { color: #2463eb; }
+.profile-delete-link { display: inline-block; margin-top: 16px; font-size: 13px; }
+.account-delete-form { display: grid; gap: 12px; max-width: 430px; margin-top: 25px; }
+.account-delete-form button { justify-self: start; }
+.admin-deletion-status { color: #fbbf6b !important; font-weight: 700; }
+.payment-legal-check { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.5; }
+.payment-legal-check input { flex: 0 0 auto; margin-top: 3px; accent-color: #2463eb; }
+.payment-legal-check a { color: #2463eb; }

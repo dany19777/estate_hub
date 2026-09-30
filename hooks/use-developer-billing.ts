@@ -42,7 +42,7 @@ export function useDeveloperBilling() {
     return () => window.clearTimeout(task);
   }, [refresh]);
 
-  const update = useCallback(async (planId: string, contractReference: string, transferReference: string) => {
+  const update = useCallback(async (planId: string, contractReference: string, transferReference: string, acceptedOfferAndRefunds: boolean) => {
     setProcessing(planId);
     setError('');
     setFeedback('');
@@ -50,7 +50,7 @@ export function useDeveloperBilling() {
       const response = await fetch('/api/developer/billing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({ planId, contractReference, transferReference }),
+        body: JSON.stringify({ planId, contractReference, transferReference, acceptedOfferAndRefunds }),
       });
       const payload = await response.json() as BillingData & { message?: string };
       if (!response.ok) throw new Error(payload.message || 'Не удалось обновить подписку.');

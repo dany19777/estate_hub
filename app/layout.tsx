@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { BuyerPreferencesProvider } from '@/components/buyer-preferences';
+import { CookieConsent } from '@/components/cookie-consent';
+import { SiteFooter } from '@/components/site-footer';
 import 'leaflet/dist/leaflet.css';
 import './globals.css';
 
@@ -41,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body>
-        <BuyerPreferencesProvider>{children}</BuyerPreferencesProvider>
+        <BuyerPreferencesProvider>{children}<SiteFooter /><CookieConsent /></BuyerPreferencesProvider>
       </body>
     </html>
   );

@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { usePhoneVerification } from '@/hooks/use-phone-verification';
 import { SellerListing, useSellerListings } from '@/hooks/use-seller-listings';
 import { formatPriceMillions } from '@/lib/marketplace';
+import { useLegalDocumentsPublished } from '@/hooks/use-legal-documents';
 
 const statusMeta: Record<
   string,
@@ -80,20 +81,22 @@ type SellerBilling = ReturnType<typeof useSellerListings>['billing'];
 function SecondaryPaymentDialog({ billing, trigger, onSubmit }: {
   billing: SellerBilling;
   trigger: ReactElement;
-  onSubmit: (method: 'bank' | 'card', reference: string) => Promise<void>;
+  onSubmit: (method: 'bank' | 'card', reference: string, acceptedOfferAndRefunds: boolean) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<'bank' | 'card'>(billing.bankAccount ? 'bank' : 'card');
   const [reference, setReference] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [acceptedOfferAndRefunds, setAcceptedOfferAndRefunds] = useState(false);
+  const legalPublished = useLegalDocumentsPublished();
 
   async function submitPayment(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
     try {
-      await onSubmit(method, reference.trim());
+      await onSubmit(method, reference.trim(), acceptedOfferAndRefunds);
       setOpen(false);
       setReference('');
     } catch (reason) {
@@ -109,7 +112,8 @@ function SecondaryPaymentDialog({ billing, trigger, onSubmit }: {
         <DialogTitle>Оплатить размещение</DialogTitle>
         <DialogDescription>Переведите точную сумму по реквизитам. Номер операции отправьте после перевода — суперадмин сверит поступление по банковской выписке.</DialogDescription>
       </DialogHeader>
-      <div className="seller-payment-summary"><span>Сумма за {billing.periodDays} дней</span><strong>{billing.feeUzs.toLocaleString('ru-RU')} сум</strong></div>
+      <div className="seller-payment-summary" data-price-currency-fixed><span>Сумма за {billing.periodDays} дней</span><strong>{billing.feeUzs.toLocaleString('ru-RU')} сум</strong></div>
+      {!legalPublished && <p className="seller-payment-hint">Приём переводов откроется после публикации оферты и правил возврата. Сейчас деньги переводить не нужно.</p>}
       <form id="seller-payment-form" onSubmit={submitPayment} className="seller-payment-form">
         <fieldset><legend>Способ перевода</legend>
           {billing.bankAccount && <label aria-label="Банковский перевод" className={method === 'bank' ? 'selected' : ''}><input type="radio" name="payment-method" checked={method === 'bank'} onChange={() => setMethod('bank')} /><span><strong>Банковский перевод</strong><small>{billing.bankName} · счёт {billing.bankAccount}</small></span></label>}
@@ -117,9 +121,10 @@ function SecondaryPaymentDialog({ billing, trigger, onSubmit }: {
         </fieldset>
         <label className="seller-payment-reference" htmlFor="seller-payment-reference">Номер банковской операции<Input id="seller-payment-reference" value={reference} onChange={(event) => setReference(event.target.value)} minLength={6} maxLength={100} placeholder="Из чека или выписки" required /></label>
         <p className="seller-payment-hint">Наличные не принимаются. Отправка номера операции сама по себе не публикует объявление.</p>
+        <label className="payment-legal-check"><input type="checkbox" checked={acceptedOfferAndRefunds} onChange={event => setAcceptedOfferAndRefunds(event.target.checked)} disabled={!legalPublished} /><span>Перед отправкой перевода я ознакомился с <Link href="/legal/offer">Публичной офертой</Link> и <Link href="/legal/refunds">Правилами возврата</Link>.</span></label>
         {error && <p className="lead-request-error">{error}</p>}
       </form>
-      <DialogFooter><DialogClose render={<Button variant="outline" disabled={busy} />}>Отмена</DialogClose><Button type="submit" form="seller-payment-form" disabled={busy || reference.trim().length < 6}>{busy ? 'Отправляем…' : 'Отправить на проверку'}</Button></DialogFooter>
+      <DialogFooter><DialogClose render={<Button variant="outline" disabled={busy} />}>Отмена</DialogClose><Button type="submit" form="seller-payment-form" disabled={busy || !legalPublished || !acceptedOfferAndRefunds || reference.trim().length < 6}>{busy ? 'Отправляем…' : 'Отправить на проверку'}</Button></DialogFooter>
     </DialogContent>
   </Dialog>;
 }
@@ -137,7 +142,7 @@ function ListingCard({
     name: 'price' | 'sold' | 'resubmit',
   ) => void;
   billing: SellerBilling;
-  onPayment: (method: 'bank' | 'card', reference: string) => Promise<void>;
+  onPayment: (method: 'bank' | 'card', reference: string, acceptedOfferAndRefunds: boolean) => Promise<void>;
 }) {
   const paymentConfigured = Boolean(billing.bankAccount || billing.cardNumber);
   const meta = statusMeta[listing.status] ?? {
@@ -473,7 +478,7 @@ export default function SellerPage() {
                 listing={listing}
                 processing={seller.processing}
                 billing={seller.billing}
-                onPayment={async (method, reference) => { await seller.action(listing.id, 'submit_payment', { method, reference }); }}
+                onPayment={async (method, reference, acceptedOfferAndRefunds) => { await seller.action(listing.id, 'submit_payment', { method, reference, acceptedOfferAndRefunds }); }}
                 onAction={(action) => void runAction(listing, action)}
               />
             ))}

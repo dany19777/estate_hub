@@ -147,6 +147,7 @@ export async function PATCH(request: Request) {
       return Response.json({ listingId, status: 'pending_verification', message: 'Документы отправлены на повторную проверку.' });
     }
     if (action !== 'submit_payment') return Response.json({ error: 'online_payments_disabled', message: 'Оплата на сайте отключена. Используйте перевод по реквизитам после одобрения.' }, { status: 409 });
+    if (process.env.LEGAL_DOCUMENTS_PUBLISHED !== 'yes' || body.acceptedOfferAndRefunds !== true) return Response.json({ error: 'legal_documents_required', message: 'Приём переводов откроется после публикации оферты и правил возврата и вашего согласия с ними.' }, { status: 503 });
     if (listing.verification_status !== 'approved' || listing.status === 'sold') return Response.json({ error: 'approval_required', message: 'Сначала требуется одобрение объявления.' }, { status: 409 });
     const method = body.method === 'bank' ? 'offline_bank_transfer' : body.method === 'card' ? 'offline_card_transfer' : '';
     const reference = typeof body.reference === 'string' ? body.reference.trim() : '';
@@ -163,7 +164,7 @@ export async function PATCH(request: Request) {
     const duplicateReference = await database.prepare(`SELECT id FROM billing_events WHERE provider = ? AND provider_reference = ? LIMIT 1`).bind(method, reference).first();
     if (duplicateReference) return Response.json({ error: 'duplicate_reference', message: 'Этот номер перевода уже использован.' }, { status: 409 });
     await database.batch([
-      database.prepare(`INSERT INTO billing_events (id, listing_id, actor_user_id, event_type, amount_uzs, status, provider, provider_reference, idempotency_key, period_start, period_end, metadata_json) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '{}')`).bind(crypto.randomUUID(), listingId, session.user.id, listing.status === 'published' ? 'secondary_renewal' : 'secondary_purchase', config.secondary_listing_fee_uzs, method, reference, idempotencyKey),
+      database.prepare(`INSERT INTO billing_events (id, listing_id, actor_user_id, event_type, amount_uzs, status, provider, provider_reference, idempotency_key, period_start, period_end, metadata_json) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)`).bind(crypto.randomUUID(), listingId, session.user.id, listing.status === 'published' ? 'secondary_renewal' : 'secondary_purchase', config.secondary_listing_fee_uzs, method, reference, idempotencyKey, JSON.stringify({ acceptedOfferAndRefunds: true, documentVersion: 'launch-v1' })),
       database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'secondary_listing.payment_claimed', 'listing', ?, ?)`).bind(crypto.randomUUID(), session.user.id, listingId, JSON.stringify({ method, reference })),
     ]);
     return Response.json({ listingId, message: 'Номер перевода отправлен. Суперадмин проверит поступление средств; до подтверждения объявление скрыто.' });

@@ -60,12 +60,14 @@ async function developerBillingData(database: D1Database, organizationId: string
 }
 
 export async function POST(request: Request) {
+  if (process.env.LEGAL_DOCUMENTS_PUBLISHED !== 'yes') return Response.json({ error: 'legal_documents_required', message: 'Приём переводов откроется после публикации юридических документов.' }, { status: 503 });
   try {
     const session = await requirePermission(request, 'MANAGE_BILLING');
     if (!session.organization) return Response.json({ error: 'organization_required', message: 'Кабинет не связан с организацией.' }, { status: 403 });
     const bankAccount = (env as Cloudflare.Env & { PLATFORM_PAYMENT_BANK_ACCOUNT?: string }).PLATFORM_PAYMENT_BANK_ACCOUNT;
     if (!bankAccount) return Response.json({ error: 'payment_details_missing', message: 'Реквизиты компании ещё не настроены.' }, { status: 409 });
     const body = await request.json() as Record<string, unknown>;
+    if (body.acceptedOfferAndRefunds !== true) return Response.json({ error: 'legal_consent_required', message: 'Подтвердите ознакомление с офертой и правилами возврата.' }, { status: 400 });
     const planId = typeof body.planId === 'string' ? body.planId : '';
     const contractReference = typeof body.contractReference === 'string' ? body.contractReference.trim() : '';
     const transferReference = typeof body.transferReference === 'string' ? body.transferReference.trim() : '';
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
     if (duplicateReference) return Response.json({ error: 'duplicate_reference', message: 'Этот номер банковской операции уже использован.' }, { status: 409 });
     const eventId = crypto.randomUUID();
     await database.batch([
-      database.prepare(`INSERT INTO billing_events (id, organization_id, actor_user_id, event_type, amount_uzs, status, provider, provider_reference, idempotency_key, period_start, period_end, metadata_json) VALUES (?, ?, ?, ?, ?, 'pending', 'offline_bank_transfer', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)`).bind(eventId, session.organization.id, session.user.id, planId === subscription.plan_id ? 'subscription_charge' : 'plan_change', plan.monthly_price_uzs, transferReference, idempotencyKey, JSON.stringify({ planId, contractReference })),
+      database.prepare(`INSERT INTO billing_events (id, organization_id, actor_user_id, event_type, amount_uzs, status, provider, provider_reference, idempotency_key, period_start, period_end, metadata_json) VALUES (?, ?, ?, ?, ?, 'pending', 'offline_bank_transfer', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)`).bind(eventId, session.organization.id, session.user.id, planId === subscription.plan_id ? 'subscription_charge' : 'plan_change', plan.monthly_price_uzs, transferReference, idempotencyKey, JSON.stringify({ planId, contractReference, acceptedOfferAndRefunds: true, documentVersion: 'launch-v1' })),
       database.prepare(`INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json) VALUES (?, 'user', ?, 'billing.developer_claimed', 'organization', ?, ?)`).bind(crypto.randomUUID(), session.user.id, session.organization.id, JSON.stringify({ eventId, contractReference, transferReference, planId })),
     ]);
     return Response.json({ message: 'Номер договора и перевода отправлены на проверку. Доступ обновится после подтверждения суперадмином.', ...(await developerBillingData(database, session.organization.id, localSandboxEnabled(request))) });

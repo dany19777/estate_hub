@@ -1065,6 +1065,7 @@ export default function BuyerProfile() {
                     trigger={<Button>Подтвердить номер</Button>}
                   />
                 )}
+                <Link className="profile-delete-link" href="/account/delete">Запросить удаление аккаунта и данных</Link>
               </section>
               <section
                 className={`verification-card verification-${verification?.status ?? 'new'}`}

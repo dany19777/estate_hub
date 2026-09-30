@@ -86,6 +86,7 @@ export default function LoginPage() {
             {pending ? 'Входим…' : 'Войти'}
           </Button>
         </form>
+        <p><Link href="/register">Создать аккаунт</Link></p>
       </section>
     </main>
   );
