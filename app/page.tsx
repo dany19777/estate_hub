@@ -166,7 +166,7 @@ export default function HomePage() {
   };
 
   return (
-    <main id="top">
+    <main id="top" className="home-entry">
       <MarketplaceHeader />
 
       <section className="hero-section">
