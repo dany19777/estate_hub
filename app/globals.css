@@ -131,7 +131,7 @@ a {
 .home-entry .trust-strip,
 .home-entry .complexes-section .section-heading,
 .home-entry .complex-grid .complex-card {
-  animation: home-interface-rise 850ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+  animation: home-interface-rise 1500ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
 .home-entry .hero-kicker { animation-delay: 90ms; }
