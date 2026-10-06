@@ -3,10 +3,10 @@
 @import 'shadcn/tailwind.css';
 
 @font-face {
-  font-family: 'Caveat';
-  src: url('/fonts/Caveat-Variable.ttf') format('truetype');
+  font-family: 'Manrope';
+  src: url('/fonts/Manrope-Variable.ttf') format('truetype');
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 200 800;
   font-display: swap;
 }
 
@@ -456,32 +456,34 @@ body:has(.site-header) .global-buyer-preferences {
   color: #dce9ff;
   background: rgba(38, 94, 190, 0.25);
   backdrop-filter: blur(10px);
-  font-family: 'Caveat', var(--font-sans);
-  font-size: 20px;
-  font-weight: 600;
+  font-family: 'Manrope', var(--font-sans);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 .hero-kicker svg {
   color: #79a8ff;
 }
 .hero-content h1 {
-  max-width: 900px;
+  max-width: 1040px;
   margin: 0 auto;
-  font-family: 'Caveat', var(--font-sans);
-  font-size: clamp(64px, 6.8vw, 92px);
-  line-height: 0.9;
-  letter-spacing: -0.025em;
-  font-weight: 700;
+  font-family: 'Manrope', var(--font-sans);
+  font-size: clamp(52px, 5.3vw, 76px);
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+  font-weight: 750;
 }
 .hero-content h1 span {
   color: #79a8ff;
 }
 .hero-content > p {
   max-width: 710px;
-  margin: 24px auto 34px;
+  margin: 26px auto 36px;
   color: #d1dae7;
-  font-family: 'Caveat', var(--font-sans);
-  font-size: 28px;
-  line-height: 1.15;
+  font-family: 'Manrope', var(--font-sans);
+  font-size: 18px;
+  line-height: 1.55;
+  letter-spacing: -0.02em;
 }
 .search-panel {
   width: min(920px, 100%);
@@ -1339,11 +1341,10 @@ body:has(.site-header) .global-buyer-preferences {
     padding-top: 62px;
   }
   .hero-content h1 {
-    font-size: clamp(54px, 10vw, 70px);
-    letter-spacing: -0.025em;
+    font-size: clamp(46px, 6vw, 64px);
   }
   .hero-content > p {
-    font-size: 24px;
+    font-size: 17px;
   }
   .search-form {
     flex-wrap: wrap;
@@ -1416,15 +1417,15 @@ body:has(.site-header) .global-buyer-preferences {
   }
   .hero-kicker {
     margin-bottom: 17px;
-    font-size: 18px;
+    font-size: 12px;
   }
   .hero-content h1 {
-    font-size: 57px;
-    line-height: 0.93;
+    font-size: clamp(37px, 10vw, 46px);
+    line-height: 1.12;
   }
   .hero-content > p {
     margin: 19px auto 26px;
-    font-size: 22px;
+    font-size: 16px;
   }
   .search-panel {
     border-radius: 14px;
