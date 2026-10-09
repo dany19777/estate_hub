@@ -159,12 +159,13 @@ a {
   position: sticky;
   z-index: 40;
   top: 0;
-  height: 72px;
+  height: 84px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.92);
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(18px);
 }
 .header-inner {
+  width: min(1760px, calc(100% - 48px));
   height: 100%;
   display: flex;
   align-items: center;
@@ -174,8 +175,8 @@ a {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 18px;
+  gap: 12px;
+  font-size: 21px;
   font-weight: 750;
   letter-spacing: -0.45px;
 }
@@ -184,8 +185,8 @@ a {
 }
 .brand-mark {
   display: grid;
-  width: 35px;
-  height: 35px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   border-radius: 10px;
   color: white;
@@ -193,8 +194,8 @@ a {
   box-shadow: 0 9px 20px rgba(35, 99, 235, 0.25);
 }
 .brand-mark svg {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
 }
 .desktop-nav {
   display: flex;
@@ -202,7 +203,7 @@ a {
   align-self: stretch;
   align-items: center;
   color: #475467;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 560;
 }
 .header-navigation-menu {
@@ -210,10 +211,10 @@ a {
 }
 .header-navigation-menu summary {
   display: flex;
-  height: 42px;
+  height: 48px;
   align-items: center;
-  gap: 9px;
-  padding: 0 14px;
+  gap: 10px;
+  padding: 0 17px;
   border: 1px solid #dce4ef;
   border-radius: 11px;
   background: #f8faff;
@@ -232,10 +233,10 @@ a {
   background: #f1f5ff;
 }
 .header-navigation-menu summary > svg:first-child {
-  width: 18px;
+  width: 20px;
 }
 .header-navigation-chevron {
-  width: 15px;
+  width: 17px;
   transition: transform 0.2s ease;
 }
 .header-navigation-menu[open] .header-navigation-chevron {
@@ -303,7 +304,7 @@ a {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .preference-select {
   display: inline-flex;
@@ -342,7 +343,7 @@ body:has(.site-header) .global-buyer-preferences {
 .icon-button,
 .profile-button {
   display: inline-flex;
-  height: 40px;
+  height: 46px;
   align-items: center;
   justify-content: center;
   border: 0;
@@ -352,14 +353,14 @@ body:has(.site-header) .global-buyer-preferences {
 }
 .locale-button,
 .currency-button {
-  min-width: 50px;
+  min-width: 56px;
   appearance: none;
   border-radius: 8px;
   text-align: center;
   text-align-last: center;
   gap: 4px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 .locale-button svg,
@@ -368,7 +369,7 @@ body:has(.site-header) .global-buyer-preferences {
 }
 .icon-button {
   position: relative;
-  width: 40px;
+  width: 46px;
   border-radius: 10px;
 }
 .icon-button:hover {
@@ -376,7 +377,7 @@ body:has(.site-header) .global-buyer-preferences {
   background: #f2f6ff;
 }
 .icon-button svg {
-  width: 19px;
+  width: 22px;
 }
 .notification-button span {
   position: absolute;
@@ -389,15 +390,15 @@ body:has(.site-header) .global-buyer-preferences {
   background: #f04438;
 }
 .profile-button {
-  width: 38px;
-  height: 38px;
+  width: 46px;
+  height: 46px;
   margin-left: 4px;
   border-radius: 50%;
   color: white;
   background: linear-gradient(145deg, #223754, #0f1d31);
 }
 .profile-button svg {
-  width: 18px;
+  width: 21px;
 }
 .mobile-menu {
   display: none;
@@ -1303,11 +1304,11 @@ body:has(.site-header) .global-buyer-preferences {
     display: inline-flex;
   }
   .site-header {
-    height: 64px;
+    height: 70px;
   }
   .mobile-header-menu {
     position: absolute;
-    top: 64px;
+    top: 70px;
     right: 12px;
     left: 12px;
     display: grid;
@@ -1392,6 +1393,9 @@ body:has(.site-header) .global-buyer-preferences {
   .shell {
     width: calc(100% - 28px);
   }
+  .header-inner .brand { gap: 8px; font-size: 18px; }
+  .header-inner .brand-mark { width: 37px; height: 37px; }
+  .header-inner .brand-mark svg { width: 21px; height: 21px; }
   .header-actions {
     gap: 0;
   }
@@ -1399,7 +1403,10 @@ body:has(.site-header) .global-buyer-preferences {
   .currency-button {
     min-width: 46px;
     padding: 0 4px;
+    font-size: 12px;
   }
+  .header-actions .profile-button,
+  .header-actions .mobile-menu { width: 40px; height: 40px; }
   .support-heading h2 {
     font-size: 34px;
   }
