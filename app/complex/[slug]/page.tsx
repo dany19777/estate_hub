@@ -31,6 +31,23 @@ type InventoryTab = 'Все' | 'Первичный' | 'Вторичный';
 
 const ignoreMapSelection = (_complex: ComplexSummary) => undefined;
 const sellerLabels: Record<SellerType, string> = { developer: 'Застройщик', owner: 'Собственник', agency: 'Агентство' };
+const emptyInventoryCopy = {
+  ru: {
+    summary: 'Первичных и вторичных квартир в продаже пока нет.',
+    title: 'На данный момент нет доступных квартир',
+    description: 'Как только в этом ЖК появятся предложения от застройщика или продавцов вторичного рынка, они будут показаны здесь.',
+  },
+  uz: {
+    summary: 'Hozircha birlamchi va ikkilamchi kvartiralar sotuvda yo‘q.',
+    title: 'Hozirda sotuvda kvartiralar yo‘q',
+    description: 'Ushbu majmuada quruvchi yoki ikkilamchi bozor sotuvchilarining takliflari paydo bo‘lsa, ular shu yerda ko‘rsatiladi.',
+  },
+  en: {
+    summary: 'No new-build or resale apartments are currently for sale.',
+    title: 'No apartments are currently available',
+    description: 'New listings from the developer or resale sellers will appear here when available.',
+  },
+};
 
 function optionalNumber(value: string) {
   const parsed = Number(value.replace(',', '.'));
@@ -122,6 +139,7 @@ export default function ComplexPage() {
   if (error || !data) return <main className="complex-page">{renderHeader()}<div className="detail-shell"><div className="catalog-state detail-state error-state"><div><strong>Жилой комплекс недоступен</strong><p>{error ?? 'Объект не найден.'}</p></div><Button variant="outline" onClick={retry}>Попробовать снова</Button><Button nativeButton={false} render={<Link href="/catalog" />}>Вернуться в каталог</Button></div></div></main>;
 
   const { summary, description, listings, gallery, buildings, features, documents, similarComplexes } = data;
+  const emptyInventory = emptyInventoryCopy[locale];
   const images = gallery.length > 0 ? gallery : [summary.image];
   const primaryCount = listings.filter((item) => item.marketType === 'PRIMARY_DEVELOPER').length;
   const secondaryCount = listings.length - primaryCount;
@@ -180,8 +198,8 @@ export default function ComplexPage() {
             </section>
 
             <section className="inventory-section" id="inventory">
-              <div className="inventory-heading"><div><span>Доступные предложения</span><h2>{locale === 'uz' ? `${summary.name} majmuasidagi kvartiralar` : <>Квартиры в {summary.name}</>}</h2><p>{locale === 'uz' ? `Shartlarga mos takliflar: ${inventory.length} / ${listings.length}` : <>{inventory.length} из {listings.length} предложений подходят под условия</>}</p></div><a href="#inventory-filters"><SlidersHorizontal /> Фильтры квартир</a></div>
-              <div className="inventory-tabs">{(['Все', 'Первичный', 'Вторичный'] as const).map((tab) => <button type="button" className={inventoryTab === tab ? 'active' : ''} onClick={() => setInventoryTab(tab)} key={tab}>{tab} {tab === 'Все' ? listings.length : tab === 'Первичный' ? primaryCount : secondaryCount}</button>)}</div>
+              <div className="inventory-heading"><div><span>Доступные предложения</span><h2>{locale === 'uz' ? `${summary.name} majmuasidagi kvartiralar` : <>Квартиры в {summary.name}</>}</h2><p>{listings.length === 0 ? emptyInventory.summary : locale === 'uz' ? `Shartlarga mos takliflar: ${inventory.length} / ${listings.length}` : <>{inventory.length} из {listings.length} предложений подходят под условия</>}</p></div>{listings.length > 0 && <a href="#inventory-filters"><SlidersHorizontal /> Фильтры квартир</a>}</div>
+              {listings.length > 0 && <><div className="inventory-tabs">{(['Все', 'Первичный', 'Вторичный'] as const).map((tab) => <button type="button" className={inventoryTab === tab ? 'active' : ''} onClick={() => setInventoryTab(tab)} key={tab}>{tab} {tab === 'Все' ? listings.length : tab === 'Первичный' ? primaryCount : secondaryCount}</button>)}</div>
               <div className="inventory-filter-panel" id="inventory-filters">
                 <div className="inventory-filter-title"><span><SlidersHorizontal /> Уточнить выбор</span><button type="button" onClick={resetInventoryFilters}><RotateCcw /> Сбросить</button></div>
                 <div className="inventory-filter-grid">
@@ -192,7 +210,7 @@ export default function ComplexPage() {
                   <div><span>Этаж</span><div><input value={minFloor} onChange={(event) => setMinFloor(event.target.value)} inputMode="numeric" placeholder="от" aria-label="Минимальный этаж" /><input value={maxFloor} onChange={(event) => setMaxFloor(event.target.value)} inputMode="numeric" placeholder="до" aria-label="Максимальный этаж" /></div></div>
                   <label className="verified-filter"><input type="checkbox" checked={verifiedOnly} onChange={(event) => setVerifiedOnly(event.target.checked)} /><span><ShieldCheck /> Только проверенные продавцы</span></label>
                 </div>
-              </div>
+              </div></>}
               {inventory.length > 0 ? <div className="listing-stack">{inventory.map((listing) => (
                 <article className="listing-row" key={listing.id}>
                   <div className="plan-preview"><div><span>{listing.rooms}</span><i /><i /><i /></div><small>№ {listing.unitNumber}</small></div>
@@ -200,7 +218,7 @@ export default function ComplexPage() {
                   <div className="listing-price"><strong>{formatPriceMillions(listing.priceUzs)} сум</strong><span>{formatPricePerSqm(Math.round(listing.priceUzs / listing.areaSqm))}</span><small>В наличии · цена из реестра</small></div>
                   <div className="listing-actions"><Link className="listing-details-link" href={`/listing/${listing.id}`}>Подробнее <ArrowRight /></Link><Button variant="outline" size="sm" onClick={() => void toggleComparison(listing.id)}><Scale /> {isCompared(listing.id) ? 'В сравнении' : 'Сравнить'}</Button>{listing.marketType === 'PRIMARY_DEVELOPER' ? <LeadRequestDialog type="consultation" complexId={summary.id} complexName={summary.name} listingId={listing.id} unitNumber={listing.unitNumber} trigger={<Button variant="outline" size="sm"><Eye /> Консультация</Button>} /> : <ChatDialog listingId={listing.id} complexName={summary.name} unitNumber={listing.unitNumber} seller={listing.seller} trigger={<Button variant="outline" size="sm"><MessageCircle /> Продавцу</Button>} />}</div>
                 </article>
-              ))}</div> : <div className="inventory-empty"><Search /><strong>Нет квартир по этим условиям</strong><p>Измените диапазон или сбросьте фильтры — исходные предложения останутся на странице.</p><Button variant="outline" onClick={resetInventoryFilters}>Сбросить фильтры</Button></div>}
+              ))}</div> : listings.length === 0 ? <output className="inventory-empty"><Home /><strong>{emptyInventory.title}</strong><p>{emptyInventory.description}</p></output> : <div className="inventory-empty"><Search /><strong>Нет квартир по этим условиям</strong><p>Измените диапазон или сбросьте фильтры — исходные предложения останутся на странице.</p><Button variant="outline" onClick={resetInventoryFilters}>Сбросить фильтры</Button></div>}
             </section>
 
             {comparisonItems.length > 0 && <Link className="compare-mini-bar" href="/compare"><Scale /> В сравнении: {comparisonItems.length} из 4 квартир <span>Открыть</span></Link>}

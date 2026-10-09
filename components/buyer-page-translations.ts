@@ -507,6 +507,18 @@ Object.assign(phrases, {
     uz: 'Birlamchi kvartiralar yo‘q',
     en: 'No new-build apartments',
   },
+  'Первичных и вторичных квартир в продаже пока нет.': {
+    uz: 'Hozircha birlamchi va ikkilamchi kvartiralar sotuvda yo‘q.',
+    en: 'No new-build or resale apartments are currently for sale.',
+  },
+  'На данный момент нет доступных квартир': {
+    uz: 'Hozirda sotuvda kvartiralar yo‘q',
+    en: 'No apartments are currently available',
+  },
+  'Как только в этом ЖК появятся предложения от застройщика или продавцов вторичного рынка, они будут показаны здесь.': {
+    uz: 'Ushbu majmuada quruvchi yoki ikkilamchi bozor sotuvchilarining takliflari paydo bo‘lsa, ular shu yerda ko‘rsatiladi.',
+    en: 'New listings from the developer or resale sellers will appear here when available.',
+  },
   'Нет квартир по этим условиям': {
     uz: 'Bu shartlarga mos kvartiralar yo‘q',
     en: 'No apartments match these criteria',
