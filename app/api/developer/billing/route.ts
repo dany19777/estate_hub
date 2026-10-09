@@ -60,9 +60,9 @@ async function developerBillingData(database: D1Database, organizationId: string
 }
 
 export async function POST(request: Request) {
-  if (process.env.LEGAL_DOCUMENTS_PUBLISHED !== 'yes') return Response.json({ error: 'legal_documents_required', message: 'Приём переводов откроется после публикации юридических документов.' }, { status: 503 });
   try {
     const session = await requirePermission(request, 'MANAGE_BILLING');
+    if (process.env.LEGAL_DOCUMENTS_PUBLISHED !== 'yes') return Response.json({ error: 'legal_documents_required', message: 'Приём переводов откроется после публикации юридических документов.' }, { status: 503 });
     if (!session.organization) return Response.json({ error: 'organization_required', message: 'Кабинет не связан с организацией.' }, { status: 403 });
     const bankAccount = (env as Cloudflare.Env & { PLATFORM_PAYMENT_BANK_ACCOUNT?: string }).PLATFORM_PAYMENT_BANK_ACCOUNT;
     if (!bankAccount) return Response.json({ error: 'payment_details_missing', message: 'Реквизиты компании ещё не настроены.' }, { status: 409 });

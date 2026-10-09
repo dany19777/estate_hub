@@ -134,7 +134,7 @@ const adminViews: Record<string, string> = {
   'Тарифы и биллинг': 'billing',
   Продвижение: 'promotions',
   Аудит: 'audit',
-  Аналитика: 'overview',
+  Аналитика: 'analytics',
   'Настройки системы': 'system-health',
 };
 
@@ -150,6 +150,7 @@ const adminHashLabels: Record<string, string> = {
   billing: 'Тарифы и биллинг',
   promotions: 'Продвижение',
   audit: 'Аудит',
+  analytics: 'Аналитика',
   'system-health': 'Настройки системы',
 };
 
@@ -447,9 +448,9 @@ export default function AdminDashboard() {
         </button>
         <div className="system-status">
           <span>
-            <i /> Все системы работают
+            <i /> Кабинет доступен
           </span>
-          <small>Последняя проверка: сейчас</small>
+          <small>Данные обновляются при открытии разделов</small>
         </div>
       </aside>
       {mobileNav && (
@@ -504,7 +505,7 @@ export default function AdminDashboard() {
         >
           <div className="admin-heading">
             <div>
-              <span>29 августа 2026 · Самарканд</span>
+              <span>EstateHub · Самарканд</span>
               <h1>Контроль платформы</h1>
               <p>Верификация, модерация, бронирования и финансовые операции.</p>
             </div>
@@ -512,7 +513,7 @@ export default function AdminDashboard() {
               variant="outline"
               onClick={() => navigateAdmin('Настройки системы')}
             >
-              <SlidersHorizontal /> Настроить дашборд
+              <SlidersHorizontal /> Состояние системы
             </Button>
           </div>
 
@@ -584,6 +585,34 @@ export default function AdminDashboard() {
               </div>
             </article>
           </div>
+
+          <section className="admin-panel admin-analytics-panel" id="analytics">
+            <div className="admin-panel-heading">
+              <div>
+                <h2>Аналитика платформы</h2>
+                <p>Текущие показатели по опубликованным объектам и работе команд</p>
+              </div>
+            </div>
+            <div className="admin-analytics-grid">
+              {[
+                { label: 'Пользователи', value: dashboard?.stats.users, section: 'Пользователи' },
+                { label: 'Активные ЖК', value: dashboard?.stats.activeComplexes, section: 'Жилые комплексы' },
+                { label: 'Объявления', value: dashboard?.stats.publishedListings, section: 'Модерация' },
+                { label: 'На верификации', value: dashboard?.stats.pendingVerifications, section: 'Верификация' },
+                { label: 'Споры в работе', value: can('MANAGE_FINANCE') && !disputes.loading ? disputes.stats.active : undefined, section: 'Споры и возвраты' },
+                { label: 'Платежи на сверке', value: can('MANAGE_FINANCE') && !finance.loading ? finance.stats.reviewCount : undefined, section: 'Брони и платежи' },
+                { label: 'Активные подписки', value: can('MANAGE_BILLING') && !billing.loading ? billing.stats.activeSubscriptions : undefined, section: 'Тарифы и биллинг' },
+              ].filter((metric) => metric.section === 'Пользователи'
+                ? isSuperadmin
+                : !sectionPermission[metric.section] || can(sectionPermission[metric.section])).map((metric) => (
+                <button type="button" key={metric.label} onClick={() => navigateAdmin(metric.section)}>
+                  <span>{metric.label}</span>
+                  <strong>{metric.value ?? '—'}</strong>
+                  <small>Открыть раздел →</small>
+                </button>
+              ))}
+            </div>
+          </section>
 
           <div className="admin-main-grid">
             <section

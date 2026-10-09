@@ -10342,6 +10342,7 @@ body:has(.site-header) .global-buyer-preferences {
     [data-view='system-health']
   )
   > .admin-lower-grid,
+.admin-view-container[data-view]:not([data-view='analytics']) > #analytics,
 .admin-view-container[data-view]:not([data-view='audit']) .admin-audit-panel,
 .admin-view-container[data-view]:not([data-view='system-health'])
   .system-health {
@@ -10457,6 +10458,45 @@ body:has(.site-header) .global-buyer-preferences {
   font-style: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.admin-analytics-panel {
+  margin-top: 12px;
+  padding: 20px;
+}
+.admin-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 12px;
+}
+.admin-analytics-grid button {
+  display: flex;
+  min-height: 110px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid #24354d;
+  border-radius: 10px;
+  color: #c7d4e7;
+  background: #142238;
+  text-align: left;
+  cursor: pointer;
+}
+.admin-analytics-grid button:hover,
+.admin-analytics-grid button:focus-visible {
+  border-color: #5e85f4;
+  outline: none;
+}
+.admin-analytics-grid span {
+  font-size: 12px;
+}
+.admin-analytics-grid strong {
+  color: #f6f9ff;
+  font-size: 24px;
+}
+.admin-analytics-grid small {
+  color: #8eafff;
+  font-size: 11px;
 }
 .admin-main-grid {
   display: grid;

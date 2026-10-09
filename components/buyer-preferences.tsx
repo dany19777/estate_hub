@@ -183,8 +183,8 @@ const messages = {
       'Ko‘rishga yoziling yoki sotuvchiga savol bering.',
     'Поддержка EstateHub': 'EstateHub yordam xizmati',
     'Мы поможем разобраться': 'Biz sizga yordam beramiz',
-    'Опишите вопрос — обращение сохранится в системе и автоматически поступит на почту службы поддержки.':
-      'Savolingizni yozing — murojaat tizimda saqlanadi va yordam xizmatining pochtasiga avtomatik yuboriladi.',
+    'Опишите вопрос — обращение сохранится в системе и будет доступно службе поддержки.':
+      'Savolingizni yozing — murojaat tizimda saqlanadi va yordam xizmatiga ko‘rinadi.',
     'Электронная почта': 'Elektron pochta',
     'Обычно отвечаем в течение рабочего дня':
       'Odatda bir ish kuni ichida javob beramiz',
@@ -382,8 +382,8 @@ const messages = {
       'Schedule a viewing or ask the seller a question.',
     'Поддержка EstateHub': 'EstateHub support',
     'Мы поможем разобраться': 'We are here to help',
-    'Опишите вопрос — обращение сохранится в системе и автоматически поступит на почту службы поддержки.':
-      'Describe your question. It will be saved and automatically emailed to our support team.',
+    'Опишите вопрос — обращение сохранится в системе и будет доступно службе поддержки.':
+      'Describe your question. It will be saved and available to our support team.',
     'Электронная почта': 'Email',
     'Обычно отвечаем в течение рабочего дня':
       'We usually reply within one business day',
