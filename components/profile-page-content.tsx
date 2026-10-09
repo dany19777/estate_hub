@@ -809,7 +809,7 @@ export default function BuyerProfile() {
             </article>
           </div>
 
-          <div className="profile-main-grid">
+          <div className={`profile-main-grid${activeReservation ? ' has-reservation' : ''}`}>
             <div>
               <section className="active-reservation" id="reservation">
                 {activeReservation ? (
