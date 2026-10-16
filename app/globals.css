@@ -425,7 +425,7 @@ body:has(.site-header) .global-buyer-preferences {
 
 .hero-section {
   position: relative;
-  min-height: 585px;
+  min-height: 700px;
   overflow: hidden;
   color: white;
   background: var(--navy);
@@ -453,19 +453,25 @@ body:has(.site-header) .global-buyer-preferences {
 .hero-content {
   position: relative;
   z-index: 1;
-  padding-top: 92px;
-  padding-bottom: 54px;
+  display: flex;
+  width: min(1760px, calc(100% - 48px));
+  min-height: 700px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 64px;
+  padding-bottom: 64px;
   text-align: center;
 }
 .hero-kicker {
-  min-height: 32px;
-  margin-bottom: 22px;
+  min-height: 38px;
+  margin-bottom: 26px;
   border: 1px solid rgba(136, 179, 255, 0.3);
   color: #dce9ff;
   background: rgba(38, 94, 190, 0.25);
   backdrop-filter: blur(10px);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 650;
   letter-spacing: -0.015em;
 }
@@ -473,10 +479,10 @@ body:has(.site-header) .global-buyer-preferences {
   color: #79a8ff;
 }
 .hero-content h1 {
-  max-width: 1040px;
+  max-width: 1320px;
   margin: 0 auto;
   font-family: var(--font-sans);
-  font-size: clamp(52px, 5.3vw, 76px);
+  font-size: clamp(52px, 4.5vw, 104px);
   line-height: 1.08;
   letter-spacing: -0.055em;
   font-weight: 750;
@@ -485,18 +491,18 @@ body:has(.site-header) .global-buyer-preferences {
   color: #79a8ff;
 }
 .hero-content > p {
-  max-width: 710px;
-  margin: 26px auto 36px;
+  max-width: 870px;
+  margin: 28px auto 40px;
   color: #d1dae7;
   font-family: var(--font-sans);
-  font-size: 18px;
+  font-size: clamp(18px, 1.2vw, 23px);
   line-height: 1.55;
   letter-spacing: -0.02em;
 }
 .search-panel {
-  width: min(920px, 100%);
+  width: min(1180px, 100%);
   margin-inline: auto;
-  padding: 7px 8px 10px;
+  padding: 11px 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
@@ -510,13 +516,13 @@ body:has(.site-header) .global-buyer-preferences {
   padding: 1px 1px 8px;
 }
 .market-tabs button {
-  height: 34px;
-  padding: 0 14px;
+  height: 42px;
+  padding: 0 18px;
   border: 0;
   border-radius: 9px;
   color: #667085;
   background: transparent;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 650;
   cursor: pointer;
 }
@@ -527,7 +533,7 @@ body:has(.site-header) .global-buyer-preferences {
 }
 .search-form {
   display: flex;
-  min-height: 55px;
+  min-height: 68px;
   align-items: center;
   gap: 8px;
   border: 1px solid #d7dee9;
@@ -537,11 +543,11 @@ body:has(.site-header) .global-buyer-preferences {
 }
 .search-form > svg {
   flex: 0 0 auto;
-  width: 20px;
+  width: 23px;
   color: #667085;
 }
 .hero-search-input {
-  height: 42px !important;
+  height: 52px !important;
   flex: 1;
   border: 0 !important;
   background: transparent !important;
@@ -549,14 +555,14 @@ body:has(.site-header) .global-buyer-preferences {
   box-shadow: none !important;
 }
 .filter-button {
-  height: 42px !important;
-  padding: 0 15px !important;
+  height: 52px !important;
+  padding: 0 18px !important;
   color: #344054 !important;
   background: #fff !important;
 }
 .search-button {
-  height: 43px !important;
-  padding: 0 22px !important;
+  height: 52px !important;
+  padding: 0 28px !important;
   background: var(--blue) !important;
   box-shadow: 0 8px 18px rgba(35, 99, 235, 0.24);
 }
@@ -564,9 +570,9 @@ body:has(.site-header) .global-buyer-preferences {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 6px 0;
+  padding: 12px 8px 0;
   color: #526176;
-  font-size: 12px;
+  font-size: 14px;
 }
 .ai-suggestion span {
   display: inline-flex;
@@ -1346,7 +1352,9 @@ body:has(.site-header) .global-buyer-preferences {
       linear-gradient(0deg, rgba(3, 13, 27, 0.55), transparent 60%);
   }
   .hero-content {
+    min-height: 0;
     padding-top: 62px;
+    padding-bottom: 62px;
   }
   .hero-content h1 {
     font-size: clamp(46px, 6vw, 64px);
